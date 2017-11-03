@@ -1,0 +1,11 @@
+# Add any directories, files, or patterns you don't want to be tracked by version control
+*~
+*.pyc
+*.DS_Store
+*.aux
+*.log
+*.gz
+*.out
+*.bbl
+*.blg
+temp
