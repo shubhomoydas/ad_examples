@@ -39,7 +39,7 @@ if __name__ == "__main__":
         sxs = []
         # xx_ = np.arange(x.min(), x.max(), 0.1)
         logger.debug("kernel.factor:\n%s" % str(kernel.factor))
-        for i in range(25):
+        for i in range(len(x)):
             # x_ = x[i]
             # k_ = stats.gaussian_kde(x_, kernel.factor)
             # ts_ = kernel.evaluate(xx_)
