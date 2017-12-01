@@ -1,13 +1,8 @@
-import numpy as np
 import numpy.random as rnd
-from sklearn import svm
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
-import scipy.stats as stats
-from utils import *
-from data_plotter import *
-from gen_samples import *
 
+from common.gen_samples import *
 
 """
 pythonw -m ad.ad_outlier

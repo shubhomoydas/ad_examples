@@ -1,9 +1,8 @@
-import numpy as np
 import numpy.random as rnd
-from utils import *
-from data_plotter import *
-from gen_samples import *
+from common.gen_samples import *
+import numpy.random as rnd
 
+from common.gen_samples import *
 
 """
 pythonw -m ad.kde_outlier

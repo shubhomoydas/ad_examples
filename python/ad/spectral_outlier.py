@@ -1,15 +1,8 @@
-import numpy as np
 import numpy.random as rnd
-from utils import *
-from data_plotter import *
-from gen_samples import *
-
-from sklearn.ensemble import IsolationForest
-from sklearn.neighbors import LocalOutlierFactor
-
 from sklearn import manifold
-from sklearn import decomposition
-from sklearn import preprocessing
+from sklearn.ensemble import IsolationForest
+
+from common.gen_samples import *
 
 """
 pythonw -m ad.spectral_outlier

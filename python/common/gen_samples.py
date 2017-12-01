@@ -1,12 +1,10 @@
-import numpy as np
-import numpy.random as rnd
 from scipy.stats import multivariate_normal as mvn
-from utils import *
-from data_plotter import *
 
+from common.data_plotter import *
+from common.utils import *
 
 """
-pythonw -m ad.gen_samples
+pythonw -m common.gen_samples
 """
 
 
@@ -43,7 +41,7 @@ def interpolate_2D_line_by_slope_and_intercept(x, m, c):
     :return:
     """
     y = m * x + c
-    logger.debug("y:\n%s" % str(list(y)))
+    # logger.debug("y:\n%s" % str(list(y)))
 
     return cbind(x, y)
 
@@ -152,9 +150,10 @@ def get_sample_defs(stype=1):
     return sampledefs, label_order, ns
 
 
-def get_synthetic_samples(stype=1):
+def get_synthetic_samples(sampledefs=None, label_order=None, ns=None, stype=1):
 
-    sampledefs, label_order, ns = get_sample_defs(stype=stype)
+    if sampledefs is None:
+        sampledefs, label_order, ns = get_sample_defs(stype=stype)
 
     s = np.zeros(shape=(0,2))
     for i in xrange(0, len(sampledefs)):
@@ -164,11 +163,18 @@ def get_synthetic_samples(stype=1):
           si = generate_dependent_normal_samples(n, sampledef.mu, sampledef.mcorr, sampledef.dvar)
           s = rbind(s, si)
 
-    label_str = []
+    label_cls = []
+    anomaly_dataset = False
     for i in xrange(len(ns)):
         if ns[i] > 0:
-            label_str.extend([label_order[i]] * ns[i])
-    labels = [1 if ll == "anomaly" else 0 for ll in label_str]
+            if type(label_order[i]) == str and (label_order[i] == "anomaly" or
+                                                label_order[i] == "nominal"):
+                anomaly_dataset = True
+            label_cls.extend([label_order[i]] * ns[i])
+    if anomaly_dataset:
+        labels = [1 if ll == "anomaly" else 0 for ll in label_cls]
+    else:
+        labels = label_cls
 
     # logger.debug("labels:\n%s" % labels)
     # logger.debug("#s: %d, #labels: %d" % (s.shape[0], len(labels)))
@@ -239,13 +245,19 @@ def get_demo_samples(sample_type):
     return x, y
 
 
-def plot_samples_and_lines(x, lines, line_colors, line_legends, top_anoms, pdfpath,
-                           line_widths=None, samplescol="grey", marker='o', s=15):
+def plot_samples_and_lines(x, lines=None, line_colors=None, line_legends=None,
+                           top_anoms=None, pdfpath=None,
+                           line_widths=None, samplescol="grey",
+                           labels=None, lbl_color_map=None,
+                           marker='o', s=15):
+    if pdfpath is None:
+        raise ValueError("Need valid pdf path...")
     dp = DataPlotter(pdfpath=pdfpath, rows=1, cols=1)
     pl = dp.get_next_plot()
     plt.xlabel('x')
     plt.ylabel('y')
-    dp.plot_points(x, pl, marker=marker, s=s, facecolors='none', defaultcol=samplescol)
+    dp.plot_points(x, pl, labels=labels, lbl_color_map=lbl_color_map,
+                   marker=marker, s=s, facecolors='none', defaultcol=samplescol)
     if top_anoms is not None:
         pl.scatter(x[top_anoms, 0], x[top_anoms, 1], marker='o', s=35,
                    edgecolors='red', facecolors='none')

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.markers
-from utils import cbind
+from common.utils import cbind
 
 
 class DataPlotter(object):

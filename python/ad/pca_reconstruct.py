@@ -1,11 +1,7 @@
-import numpy as np
 import numpy.random as rnd
-from utils import *
-from data_plotter import *
-from gen_samples import *
-
 from sklearn.decomposition import PCA
 
+from common.gen_samples import *
 
 """
 pythonw -m ad.pca_reconstruct

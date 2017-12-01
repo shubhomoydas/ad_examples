@@ -1,10 +1,7 @@
-import numpy as np
 import numpy.random as rnd
-from utils import *
-from data_plotter import *
-from sgd_optimization import sgdRMSProp, sgd
-from gen_samples import *
 
+from common.sgd_optimization import sgdRMSProp
+from common.gen_samples import *
 
 """
 pythonw -m ad.outlier_effect

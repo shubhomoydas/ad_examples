@@ -1,5 +1,5 @@
 import numpy as np
-from utils import matrix, logger
+from common.utils import matrix, logger
 
 
 def get_num_batches(n, batch_size):

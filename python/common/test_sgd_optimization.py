@@ -1,12 +1,8 @@
-import numpy as np
-import logging
-from utils import *
-from data_plotter import *
-from sgd_optimization import *
-
+from common.sgd_optimization import *
+from common.utils import *
 
 """
-pythonw -m ad.test_sgd_optimization
+pythonw -m common.test_sgd_optimization
 """
 
 

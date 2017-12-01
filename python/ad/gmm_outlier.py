@@ -1,13 +1,8 @@
-import numpy as np
 import numpy.random as rnd
-from sklearn.mixture.gaussian_mixture import GaussianMixture as GMM
-import scipy.stats as stats
-import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
-from utils import *
-from data_plotter import *
-from gen_samples import *
+from sklearn.mixture.gaussian_mixture import GaussianMixture as GMM
 
+from common.gen_samples import *
 
 """
 pythonw -m ad.gmm_outlier

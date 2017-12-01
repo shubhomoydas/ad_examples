@@ -1,5 +1,5 @@
 import numpy as np
-from utils import *
+from common.utils import *
 
 
 #######################################################
