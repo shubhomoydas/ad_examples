@@ -20,8 +20,12 @@ def interpolate_2D_line_by_point_and_vec(x, mu, m):
     (y - mu_y) / (x - mu_x) = m_y / m_x = m_
     => y = m_*(x - mu_x) + mu_y
 
-    :param p:
-    :param v:
+    :param x: np.array
+        range of x-axis
+    :param mu: np.array
+        point through which the line should pass
+    :param m: np.array
+        vector that represents the line's direction
     :return:
     """
     m_ = m[1] / m[0]
@@ -249,13 +253,17 @@ def plot_samples_and_lines(x, lines=None, line_colors=None, line_legends=None,
                            top_anoms=None, pdfpath=None,
                            line_widths=None, samplescol="grey",
                            labels=None, lbl_color_map=None,
-                           marker='o', s=15):
+                           marker='o', s=15, xlim=None, ylim=None):
     if pdfpath is None:
         raise ValueError("Need valid pdf path...")
     dp = DataPlotter(pdfpath=pdfpath, rows=1, cols=1)
     pl = dp.get_next_plot()
     plt.xlabel('x')
     plt.ylabel('y')
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
     dp.plot_points(x, pl, labels=labels, lbl_color_map=lbl_color_map,
                    marker=marker, s=s, facecolors='none', defaultcol=samplescol)
     if top_anoms is not None:
