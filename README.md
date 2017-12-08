@@ -20,6 +20,18 @@ Python libraries required:
     matplotlib
 
 
+Active Anomaly Discovery
+------------------------
+The 'pyaad' project (https://github.com/shubhomoydas/pyaad) implements an algorithm to actively explore anomalies. The file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements this algorithm in a much more simplified manner. The main observation is that we can normalize all the (transformed) vectors such that they lie on the surface of a unit sphere. With this, the 'tau'-th score can be assumed to be fixed under uniform distribution assumption.
+
+To run (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
+
+    pythonw -m percept.percept
+
+The above command will generate a pdf file with plots illustrating how the data was actively labeled.
+
+*Question: Why should active learning help in anomaly detection with ensembles?* When we treat the ensemble scores as 'features', then most anomaly 'feature' vectors will be closer to the uniform unit vector (same values for all 'features' where 'd' is the number of ensembles) than non-anomalies. This is another way of saying that the average of the anomaly scores would be a good representative of anomalousness (dot product of the transformed 'features' with the uniform weight vector). Seen another way, the uniform weight vector should a good prior for the separating hyper-plane between anomalies and nominals. On real-world data, the true hyper-plane is not exactly same as the uniform vector, but should be close (else the anomaly detectors forming the ensemble are poor). The example 'percept.percept' illustrates this where we have true anomaly distribution at a slight angle from the uniform weights. With active learning, the true anomaly region on the unit sphere can be discovered in a more efficient manner if we set the uniform vector as a prior.
+
 
 Note on Spectral Clustering by label diffusion
 ----------------------------------------------
