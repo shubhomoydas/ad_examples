@@ -22,7 +22,7 @@ Python libraries required:
 
 Active Anomaly Discovery
 ------------------------
-The 'pyaad' project (https://github.com/shubhomoydas/pyaad) implements an algorithm to actively explore anomalies. The file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements this algorithm in a much more simplified manner. The main observation is that we can normalize all the (transformed) vectors such that they lie on the surface of a unit sphere. With this, the top 'tau'-th quantile score can be assumed to be fixed at (1-tau) under uniform distribution assumption.
+The 'pyaad' project (https://github.com/shubhomoydas/pyaad) implements an algorithm (AAD) to actively explore anomalies. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner. The main observation is that we can normalize all the (transformed) vectors such that they lie on the surface of a unit sphere. With this, the top 'tau'-th quantile score can be assumed to be fixed at (1-tau) under uniform distribution assumption.
 
 To run (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
 
