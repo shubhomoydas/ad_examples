@@ -5,6 +5,7 @@ import random
 import os
 import os.path
 import errno
+import pandas as pd
 from pandas import DataFrame
 import sys
 from timeit import default_timer as timer
@@ -211,6 +212,30 @@ def matrix_rank(x):
     return np.linalg.matrix_rank(x)
 
 
+def normalize(w):
+    # normalize ||w|| = 1
+    w_norm = np.sqrt(w.dot(w))
+    if w_norm > 0:
+        w = w / w_norm
+    return w
+
+
+def get_random_item(samples, random_state):
+    i = random_state.randint(0, samples.shape[0])
+    return samples[i]
+
+
+class SetList(list):
+    """ A list class with support for rudimentary set operations
+    This is a convenient class when set operations are required while
+    preserving data ordering
+    """
+    def __init__(self, args):
+        super(SetList, self).__init__(args)
+    def __sub__(self, other):
+        return self.__class__([item for item in self if item not in other])
+
+
 class SKLClassifier(object):
     def __init__(self):
         self.clf = None
@@ -317,7 +342,8 @@ def read_csv(file, header=None, sep=','):
     if header is not None and header:
         header = 0 # first row is header
 
-    data_df = DataFrame.from_csv(file, header=header, sep=sep, index_col=None)
+    # data_df = DataFrame.from_csv(file, header=header, sep=sep, index_col=None)
+    data_df = pd.read_csv(file, header=header, sep=sep, index_col=None)
 
     #datamat = np.ndarray(shape=data_df.shape, dtype=float)
     #datamat[:, :] = data_df.iloc[:, 0:data_df.shape[1]]

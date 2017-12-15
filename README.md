@@ -11,17 +11,18 @@ To execute the code:
 
 Python libraries required:
 --------------------------
-    numpy
-    scipy
+    numpy (1.13.3)
+    scipy (0.19.1)
     scikit-learn (0.19.1)
-    pandas
+    cvxopt
+    pandas (0.21.0)
     ranking
     statsmodels
-    matplotlib
+    matplotlib (2.1.0)
 
 
-Active Anomaly Discovery
-------------------------
+Active Anomaly Discovery (AAD)
+------------------------------
 The 'pyaad' project (https://github.com/shubhomoydas/pyaad) implements an algorithm (AAD) to actively explore anomalies. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner. The main observation is that we can normalize all the (transformed) vectors such that they lie on the surface of a unit sphere. With this, the top 'tau'-th quantile score can be assumed to be fixed at (1-tau) under uniform distribution assumption.
 
 To run (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
@@ -30,7 +31,48 @@ To run (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/p
 
 The above command will generate a pdf file with plots illustrating how the data was actively labeled (https://github.com/shubhomoydas/ad_examples/blob/master/documentation/percept_taurel_fixedtau_prior.pdf).
 
-*Question: Why should active learning help in anomaly detection with ensembles?* When we treat the ensemble scores as 'features', then most anomaly 'feature' vectors will be closer to the uniform unit vector (uniform vector has the same values for all 'features' where 'd' is the number of ensembles) than non-anomalies. This is another way of saying that the average of the anomaly scores would be a good representative of anomalousness (dot product of the transformed 'features' with the uniform weight vector). Seen another way, the hyper-plane perpendicular to the uniform weight vector and offset by (1-tau) should a good prior for the separating hyper-plane between anomalies and nominals. The classification rule is: *sign(w.x - (1-tau))* such that +1 is anomaly, -1 is nominal. On real-world data, the true hyper-plane is not exactly same as the uniform vector, but should be close (else the anomaly detectors forming the ensemble are poor). AAD is basically trying to find this true hyper-plane by solving a large-margin classification problem. The example 'percept.percept' illustrates this where we have true anomaly distribution (red points in the plots) at a slight angle from the uniform weights. With active learning, the true anomaly region on the unit sphere (centered around blue line) can be discovered in a more efficient manner if we set the uniform vector as a prior. Most current theory on active learning revolves around learning hyper-planes passing through the origin. This theory can be applied to ensemble-based anomaly detection by introducing the fixed (1-tau) bias (the green line in the plots represents the learned hyperplane; the red line is perpendicular to it).
+*Question: Why should active learning help in anomaly detection with ensembles?* When we treat the ensemble scores as 'features', then most anomaly 'feature' vectors will be closer to the uniform unit vector (uniform vector has the same values for all 'features' where 'd' is the number of ensembles) than non-anomalies. This is another way of saying that the average of the anomaly scores would be a good representative of anomalousness (dot product of the transformed 'features' with the uniform weight vector). Seen another way, the hyper-plane perpendicular to the uniform weight vector and offset by (pi.tau) should a good prior for the separating hyper-plane between anomalies and nominals. The classification rule is: *sign(w.x - cos(pi.tau))* such that +1 is anomaly, -1 is nominal. On real-world data, the true hyper-plane is not exactly same as the uniform vector, but should be close (else the anomaly detectors forming the ensemble are poor). AAD is basically trying to find this true hyper-plane by solving a large-margin classification problem. The example 'percept.percept' illustrates this where we have true anomaly distribution (red points in the plots) at a slight angle from the uniform weights. With active learning, the true anomaly region on the unit sphere (centered around blue line) can be discovered in a more efficient manner if we set the uniform vector as a prior. Most current theory on active learning revolves around learning hyper-planes passing through the origin. This theory can be applied to ensemble-based anomaly detection by introducing the fixed (pi.tau) bias (the green line in the plots represents the learned hyperplane; the red line is perpendicular to it).
+
+
+##Reference(s):
+  - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2016). Incorporating Expert Feedback into Active Anomaly Discovery in the Proceedings of the IEEE International Conference on Data Mining. (http://web.engr.oregonstate.edu/~wongwe/papers/pdf/ICDM2016.AAD.pdf)
+  (https://github.com/shubhomoydas/aad/blob/master/overview/ICDM2016-AAD.pptx)
+
+  - Das, S., Wong, W-K., Fern, A., Dietterich, T. and Siddiqui, A. (2017). Incorporating Feedback into Tree-based Anomaly Detection, KDD Interactive Data Exploration and Analytics (IDEA) Workshop.
+  (http://poloclub.gatech.edu/idea2017/papers/p25-das.pdf)
+  (https://github.com/shubhomoydas/pyaad/blob/master/presentations/IDEA17_slides.pptx)
+
+
+Running the tree-based AAD
+--------------------------
+This codebase has three different algorithms:
+  - The Isolation Forest based AAD (**does not support streaming incremental update**)
+  - HS Trees based AAD (with streaming support)
+  - RS Forest based AAD (with streaming support)
+
+To run the Isolation Forest / HS-Trees / RS-Forest based algorithms, the command has the following format:
+
+    bash ./tree_aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]>
+
+    for Isolation Forest, set <detector_type>=7; 
+    for HSTrees, set <detector_type>=11;
+    for RSForest, set <detector_type>=12;
+
+example (with Isolation Forest, non-streaming):
+
+    bash ./tree_aad.sh toy2 35 1 0.03 7 1 0 0 512 0
+
+Note: The above will generate 2D plots (tree partitions and score contours) under the 'temp' folder since <i>toy2</i> is a 2D dataset.
+
+example (with HSTrees streaming):
+
+    bash ./tree_aad.sh toy2 35 1 0.03 11 1 0 1 256 0
+
+
+# Note on Streaming
+Streaming currently supports two strategies for data retention:
+  - Retention Type 0: Here the new instances from the stream completely overwrite the older *unlabeled instances* in memory.
+  - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded.
 
 
 Note on Spectral Clustering by label diffusion
