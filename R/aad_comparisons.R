@@ -45,7 +45,7 @@ all_datasets = list(
 )
 
 compare_types = c("batch", "to_reach", "stream", "stream_not_seen")
-compare_type = compare_types[4]
+compare_type = compare_types[3]
 if (compare_type == compare_types[1]) {
   flist = c("baseline", 
             "aad_batch", 
@@ -108,7 +108,11 @@ for (datasetinfo in all_datasets[datasets]) {
       fout_tmp = file.path(outpath, sprintf("tmp_num_seen-%s.pdf", datasetinfo$dataset))
       fout = file.path(outpath, sprintf("num_seen-%s.pdf", datasetinfo$dataset))
       pdf(fout_tmp, family="Arial")
-      budget = min(datasetinfo$budget, ncol(res$numseen))
+      if (compare_type == compare_types[4]) {
+        budget = ncol(res$numseen)
+      } else {
+        budget = min(datasetinfo$budget, ncol(res$numseen))
+      }
       ymax = min(budget, res$anoms)
       plot(0, type="n", xlim=c(1, budget), ylim=c(0, ymax), xlab="iter", ylab="# anomalies seen",
            cex.lab=1.6)
@@ -129,7 +133,7 @@ for (datasetinfo in all_datasets[datasets]) {
       }
   }
   legend("topleft", legend=res$dispnames, 
-         col=colrs[1:nrow(res$numseen)], cex=1.5, lwd=lwds, lty=ltys 
+         col=colrs[1:nrow(res$numseen)], cex=1.5, lwd=lwds, lty=lty 
          )
   dev.off()
   

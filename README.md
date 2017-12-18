@@ -70,11 +70,15 @@ example (with HSTrees streaming):
 
     bash ./tree_aad.sh toy2 35 1 0.03 11 1 0 1 256 0
 
+**Note:** In case the data does not have concept drift, I would **recommend using Isolation forest** instead of HSTrees and RSForest:
+
+    bash ./tree_aad.sh toy2 35 1 0.03 7 1 0 1 512 1
+
 
 # Note on Streaming
 Streaming currently supports two strategies for data retention:
   - Retention Type 0: Here the new instances from the stream completely overwrite the older *unlabeled instances* in memory.
-  - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded.
+  - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded. **This is highly recommended.**
 
 
 Note on Spectral Clustering by label diffusion
