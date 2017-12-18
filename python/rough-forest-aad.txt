@@ -2,65 +2,65 @@
 unset SSH_ASKPASS
 
 # run Isolation Forest based batch active
-bash ./tree_aad.sh toy2 35 1 0.03 7 1 0 0 512 0
+bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0
 
-bash ./tree_aad.sh abalone 50 1 0.03 7 1 0 0 512 0
+bash ./aad.sh abalone 50 1 0.03 7 1 0 0 512 0
 
-nohup bash ./tree_aad.sh toy2 35 1 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0 &
 
-nohup bash ./tree_aad.sh abalone 300 10 0.03 7 1 0 0 512 0 &
-nohup bash ./tree_aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 0 512 0 &
-nohup bash ./tree_aad.sh cardiotocography_1 300 10 0.03 7 1 0 0 512 0 &
-nohup bash ./tree_aad.sh yeast 300 10 0.03 7 1 0 0 512 0 &
-nohup bash ./tree_aad.sh mammography 300 10 0.03 7 1 0 0 512 0 &
-nohup bash ./tree_aad.sh shuttle_1v23567 300 10 0.03 7 1 0 0 512 0 &
-nohup bash ./tree_aad.sh covtype 300 10 0.03 7 1 0 0 512 0 &
-nohup bash ./tree_aad.sh kddcup 300 10 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh yeast 300 10 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh mammography 300 10 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh covtype 300 10 0.03 7 1 0 0 512 0 &
+nohup bash ./aad.sh kddcup 300 10 0.03 7 1 0 0 512 0 &
 
 
 =====================================
 # STREAMING - Sample run on local
 =====================================
 # run Isolation Forest based stream active
-bash ./tree_aad.sh toy2 35 1 0.03 7 1 0 1 64 0
-bash ./tree_aad.sh toy2 35 1 0.03 7 1 1 1 64 0
+bash ./aad.sh toy2 35 1 0.03 7 1 0 1 256 0
+bash ./aad.sh toy2 35 1 0.03 7 1 1 1 64 0
 
-bash ./tree_aad.sh abalone 50 1 0.03 7 1 0 1 512 0
+bash ./aad.sh abalone 50 1 0.03 7 1 0 1 512 0
 
-nohup bash ./tree_aad.sh toy2 35 1 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 0 &
 
-nohup bash ./tree_aad.sh abalone 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./tree_aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./tree_aad.sh cardiotocography_1 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./tree_aad.sh yeast 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./tree_aad.sh mammography 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./tree_aad.sh shuttle_1v23567 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./tree_aad.sh covtype 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./tree_aad.sh kddcup 300 10 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh yeast 300 10 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh mammography 300 10 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh covtype 300 10 0.03 7 1 0 1 512 0 &
+nohup bash ./aad.sh kddcup 300 10 0.03 7 1 0 1 512 0 &
 
 =====================================
 # STREAMING - Sample run on server
 =====================================
 
 # Query Top - Retain Overwrite
-bash ./tree_aad-job.sh abalone 300 10 0.03 7 1 0 1 512 0
-bash ./tree_aad-job.sh ann_thyroid_1v3 300 10 0.03 7 1 0 1 512 0
-bash ./tree_aad-job.sh cardiotocography_1 300 10 0.03 7 1 0 1 512 0
-bash ./tree_aad-job.sh yeast 300 10 0.03 7 1 0 1 512 0
-bash ./tree_aad-job.sh shuttle_1v23567 300 10 0.03 7 1 0 1 512 0
-bash ./tree_aad-job.sh mammography 300 10 0.03 7 1 0 1 512 0
-bash ./tree_aad-job.sh kddcup 300 10 0.03 7 1 0 1 512 0
-bash ./tree_aad-job.sh covtype 300 10 0.03 7 1 0 1 512 0
+bash ./aad-job.sh abalone 300 10 0.03 7 1 0 1 512 0
+bash ./aad-job.sh ann_thyroid_1v3 300 10 0.03 7 1 0 1 512 0
+bash ./aad-job.sh cardiotocography_1 300 10 0.03 7 1 0 1 512 0
+bash ./aad-job.sh yeast 300 10 0.03 7 1 0 1 512 0
+bash ./aad-job.sh shuttle_1v23567 300 10 0.03 7 1 0 1 512 0
+bash ./aad-job.sh mammography 300 10 0.03 7 1 0 1 512 0
+bash ./aad-job.sh kddcup 300 10 0.03 7 1 0 1 512 0
+bash ./aad-job.sh covtype 300 10 0.03 7 1 0 1 512 0
 
 # Query Top - Retain Anomalous
-bash ./tree_aad-job.sh abalone 300 10 0.03 7 1 0 1 512 1
-bash ./tree_aad-job.sh ann_thyroid_1v3 300 10 0.03 7 1 0 1 512 1
-bash ./tree_aad-job.sh cardiotocography_1 300 10 0.03 7 1 0 1 512 1
-bash ./tree_aad-job.sh yeast 300 10 0.03 7 1 0 1 512 1
-bash ./tree_aad-job.sh shuttle_1v23567 300 10 0.03 7 1 0 1 512 1
-bash ./tree_aad-job.sh mammography 300 10 0.03 7 1 0 1 512 1
-bash ./tree_aad-job.sh kddcup 300 10 0.03 7 1 0 1 512 1
-bash ./tree_aad-job.sh covtype 300 10 0.03 7 1 0 1 512 1
+bash ./aad-job.sh abalone 300 10 0.03 7 1 0 1 512 1
+bash ./aad-job.sh ann_thyroid_1v3 300 10 0.03 7 1 0 1 512 1
+bash ./aad-job.sh cardiotocography_1 300 10 0.03 7 1 0 1 512 1
+bash ./aad-job.sh yeast 300 10 0.03 7 1 0 1 512 1
+bash ./aad-job.sh shuttle_1v23567 300 10 0.03 7 1 0 1 512 1
+bash ./aad-job.sh mammography 300 10 0.03 7 1 0 1 512 1
+bash ./aad-job.sh kddcup 300 10 0.03 7 1 0 1 512 1
+bash ./aad-job.sh covtype 300 10 0.03 7 1 0 1 512 1
 
 # results on server at:
 /data/doppa/users/sdas/datasets/results-aad_stream/

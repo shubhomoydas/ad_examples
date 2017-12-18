@@ -4,16 +4,18 @@ import numpy as np
 import logging
 
 from common.utils import *
-from aad.aad_globals import *
-from aad.aad_support import *
-
-from loda.loda import loda
-from loda_support import *
-from classifier.perceptron import Perceptron
 from common.data_plotter import *
 
+from classifier.perceptron import Perceptron
 
-class AadLoda(object):
+from aad.aad_globals import *
+from aad.aad_base import *
+
+from loda.loda import loda
+from aad.loda_support import *
+
+
+class AadLoda(Aad):
     """ Wrapper over LODA
 
     Attributes:
@@ -23,13 +25,17 @@ class AadLoda(object):
          loda_model: LodaResult
             The LODA model containing all projection vectors and histograms
     """
-    def __init__(self, sparsity=np.nan, mink=1, maxk=0):
+    def __init__(self, sparsity=np.nan, mink=1, maxk=0, random_state=None):
+        Aad.__init__(self, LODA)
         self.sparsity = sparsity
         self.mink = mink
         self.maxk = maxk
         self.loda_model = None
-        self.w = None
-        self.m = 0
+        self.m = None
+
+    def get_num_members(self):
+        """Returns the number of ensemble members"""
+        return self.m
 
     def fit(self, x):
         self.loda_model = loda(x, self.sparsity, mink=self.mink, maxk=self.maxk)
@@ -37,13 +43,7 @@ class AadLoda(object):
         w = np.ones(self.m, dtype=float)
         self.w = normalize(w)
 
-    def get_uniform_weights(self):
-        if self.m == 0:
-            raise ValueError("weights not initialized")
-        w = np.ones(self.m, dtype=float)
-        return normalize(w)
-
-    def transform_to_loda_features(self, x, norm_unit=False):
+    def transform_to_ensemble_features(self, x, dense=False, norm_unit=False):
         hpdfs = get_all_hist_pdfs(x, self.loda_model.pvh.pvh.w, self.loda_model.pvh.pvh.hists)
         nlls = -np.log(hpdfs)
         if norm_unit:
@@ -54,22 +54,6 @@ class AadLoda(object):
                 norms = np.sqrt(np.power(nlls, 2).sum(axis=1))
                 logger.debug("norms after:\n%s" % (str(list(norms))))
         return nlls
-
-    def get_score(self, x, w=None):
-        if w is None:
-            w = self.w
-        if w is None:
-            raise ValueError("weights not initialized")
-        score = x.dot(w)
-        return score
-
-    def get_auc(self, scores, labels):
-        n = len(scores)
-        tmp = np.empty(shape=(n, 2), dtype=float)
-        tmp[:, 0] = labels
-        tmp[:, 1] = -scores
-        auc = fn_auc(tmp)
-        return auc
 
 
 def get_angles(x, w):
@@ -150,11 +134,11 @@ def loda_aad_batch():
     model.fit(X_train)
     logger.debug("Projections shape: %s" % str(model.loda_model.pvh.pvh.w.shape))
     if True:
-        X_train_new = model.transform_to_loda_features(X_train, norm_unit=False)
+        X_train_new = model.transform_to_ensemble_features(X_train, norm_unit=False)
         scores = model.get_score(X_train_new)
         ordered_scores = -np.sort(-scores)  # sort descending
         logger.debug("scores:\n%s" % str(list(ordered_scores)))
-    X_train_new = model.transform_to_loda_features(X_train, norm_unit=opts.norm_unit)
+    X_train_new = model.transform_to_ensemble_features(X_train, norm_unit=opts.norm_unit)
     logger.debug("X_train_new.shape: %s" % str(X_train_new.shape))
 
     scores = model.get_score(X_train_new)

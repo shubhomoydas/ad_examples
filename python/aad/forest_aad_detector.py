@@ -9,10 +9,10 @@ import logging
 from common.utils import *
 from aad.aad_globals import *
 from common.sgd_optimization import *
-from aad.aad_support import *
+from aad.aad_base import *
 from aad.query_model import *
 from aad.random_split_trees import *
-from aad.forest_aad_loss import *
+from aad.aad_loss import *
 
 
 class RegionData(object):
@@ -31,6 +31,12 @@ def is_in_region(x, region):
         if not region[i][0] <= x[i] <= region[i][1]:
             return False
     return True
+
+
+def is_forest_detector(detector_type):
+    return (detector_type == AAD_IFOREST or
+            detector_type == AAD_HSTREES or
+            detector_type == AAD_RSFOREST)
 
 
 def transform_features(x, all_regions, d):
@@ -54,7 +60,7 @@ def transform_features(x, all_regions, d):
     return x_new
 
 
-class AadForest(StreamingSupport):
+class AadForest(Aad, StreamingSupport):
 
     def __init__(self, n_estimators=10, max_samples=100, max_depth=10,
                  score_type=IFOR_SCORE_TYPE_INV_PATH_LEN,
@@ -62,12 +68,8 @@ class AadForest(StreamingSupport):
                  random_state=None,
                  add_leaf_nodes_only=False,
                  detector_type=AAD_IFOREST, n_jobs=1):
-        if random_state is None:
-            self.random_state = np.random.RandomState(42)
-        else:
-            self.random_state = random_state
 
-        self.detector_type = detector_type
+        Aad.__init__(self, detector_type, ensemble_score, random_state)
 
         self.n_estimators = n_estimators
         self.max_samples = max_samples
@@ -83,7 +85,6 @@ class AadForest(StreamingSupport):
                 self.score_type == ORIG_TREE_SCORE_TYPE):
             raise NotImplementedError("score_type %d not implemented!" % self.score_type)
 
-        self.ensemble_score = ensemble_score
         self.add_leaf_nodes_only = add_leaf_nodes_only
 
         if detector_type == AAD_IFOREST:
@@ -117,13 +118,10 @@ class AadForest(StreamingSupport):
         # fraction of instances in each region
         # self.frac_insts = None
 
-        # node weights learned through weak-supervision
-        self.w = None
-        self.qval = None
-
-        # quick lookup of the uniform weight vector.
-        # IMPORTANT: Treat this as readonly once set in fit()
-        self.w_unif_prior = None
+    def get_num_members(self):
+        if self.d is not None:
+            return len(self.d)
+        return None
 
     def fit(self, x):
         tm = Timer()
@@ -375,14 +373,6 @@ class AadForest(StreamingSupport):
         """Returns the decision function for the original underlying classifier"""
         return self.clf.decision_function(x)
 
-    def get_auc(self, scores, labels):
-        n = len(scores)
-        tmp = np.empty(shape=(n, 2), dtype=float)
-        tmp[:, 0] = labels
-        tmp[:, 1] = -scores
-        auc = fn_auc(tmp)
-        return auc
-
     def supports_streaming(self):
         return self.clf.supports_streaming()
 
@@ -421,7 +411,7 @@ class AadForest(StreamingSupport):
         else:
             return self.d[region_id] / norm_factor
 
-    def transform_to_region_features(self, x, dense=False, norm_unit=False):
+    def transform_to_ensemble_features(self, x, dense=False, norm_unit=False):
         """ Transforms matrix x to features from isolation forest
 
         :param x: np.ndarray
@@ -523,290 +513,4 @@ class AadForest(StreamingSupport):
                         tdiff = difftime(endtime, starttime, units="secs")
                         logger.debug("processed %d/%d trees, %d/%d (%f) in %f sec(s)" %
                                      (i, len(self.clf.estimators_), j + 1, n, (j + 1)*1./n, tdiff))
-
-    def get_tau_ranked_instance(self, x, w, tau_rank):
-        s = self.get_score(x, w)
-        ps = order(s, decreasing=True)[tau_rank]
-        return matrix(x[ps, :], nrow=1)
-
-    def get_top_quantile(self, x, w, topK):
-        # IMPORTANT: qval will be computed using the linear dot product
-        # s = self.get_score(x, w)
-        s = x.dot(w)
-        return quantile(s, (1.0 - (topK * 1.0 / float(nrow(x)))) * 100.0)
-
-    def get_truncated_constraint_set(self, w, x, y, hf,
-                                     max_anomalies_in_constraint_set=1000,
-                                     max_nominals_in_constraint_set=1000):
-        hf_tmp = np.array(hf)
-        yf = y[hf_tmp]
-        ha_pos = np.where(yf == 1)[0]
-        hn_pos = np.where(yf == 0)[0]
-
-        if len(ha_pos) > 0:
-            ha = hf_tmp[ha_pos]
-        else:
-            ha = np.array([], dtype=int)
-
-        if len(hn_pos) > 0:
-            hn = hf_tmp[hn_pos]
-        else:
-            hn = np.array([], dtype=int)
-
-        if len(ha) > max_anomalies_in_constraint_set or \
-                        len(hn) > max_nominals_in_constraint_set:
-            # logger.debug("len(ha) %d, len(hn) %d; random selection subset" % (len(ha), len(hn)))
-            in_set_ha = np.zeros(len(ha), dtype=int)
-            in_set_hn = np.zeros(len(hn), dtype=int)
-            if len(ha) > max_anomalies_in_constraint_set:
-                tmp = sample(range(len(ha)), max_anomalies_in_constraint_set)
-                in_set_ha[tmp] = 1
-            else:
-                in_set_ha[:] = 1
-            if len(hn) > max_nominals_in_constraint_set:
-                tmp = sample(range(len(hn)), max_nominals_in_constraint_set)
-                in_set_hn[tmp] = 1
-            else:
-                in_set_hn[:] = 1
-            hf = append(ha, hn)
-            in_set = append(in_set_ha, in_set_hn)
-            # logger.debug(in_set)
-        else:
-            in_set = np.ones(len(hf), dtype=int)
-
-        return hf, in_set
-
-    def forest_aad_weight_update(self, w, x, y, hf, w_prior, opts, tau_score=None, tau_rel=False, linear=True):
-        n = x.shape[0]
-        bt = get_budget_topK(n, opts)
-
-        if opts.tau_score_type == TAU_SCORE_FIXED:
-            self.qval = tau_score
-        elif opts.tau_score_type == TAU_SCORE_NONE:
-            self.qval = None
-        else:
-            self.qval = self.get_top_quantile(x, w, bt.topK)
-
-        hf, in_constr_set = self.get_truncated_constraint_set(w, x, y, hf,
-                                                              max_anomalies_in_constraint_set=opts.max_anomalies_in_constraint_set,
-                                                              max_nominals_in_constraint_set=opts.max_nominals_in_constraint_set)
-
-        # logger.debug("Linear: %s, sigma2: %f, with_prior: %s" %
-        #              (str(linear), opts.priorsigma2, str(opts.withprior)))
-
-        x_tau = None
-        if tau_rel:
-            x_tau = self.get_tau_ranked_instance(x, w, bt.topK)
-            # logger.debug("x_tau:")
-            # logger.debug(to_dense_mat(x_tau))
-
-        def if_f(w, x, y):
-            if linear:
-                return forest_aad_loss_linear(w, x, y, self.qval, in_constr_set=in_constr_set, x_tau=x_tau,
-                                              Ca=opts.Ca, Cn=opts.Cn, Cx=opts.Cx,
-                                              withprior=opts.withprior, w_prior=w_prior,
-                                              sigma2=opts.priorsigma2)
-            else:
-                raise ValueError("Only linear loss supported")
-
-        def if_g(w, x, y):
-            if linear:
-                return forest_aad_loss_gradient_linear(w, x, y, self.qval, in_constr_set=in_constr_set, x_tau=x_tau,
-                                                       Ca=opts.Ca, Cn=opts.Cn, Cx=opts.Cx,
-                                                       withprior=opts.withprior, w_prior=w_prior,
-                                                       sigma2=opts.priorsigma2)
-            else:
-                raise ValueError("Only linear loss supported")
-        if False:
-            w_new = sgd(w, x[hf, :], y[hf], if_f, if_g,
-                        learning_rate=0.001, max_epochs=1000, eps=1e-5,
-                        shuffle=True, rng=self.random_state)
-        elif False:
-            w_new = sgdMomentum(w, x[hf, :], y[hf], if_f, if_g,
-                                learning_rate=0.001, max_epochs=1000,
-                                shuffle=True, rng=self.random_state)
-        elif True:
-            # sgdRMSProp seems to run fastest and achieve performance close to best
-            # NOTE: this was an observation on ANNThyroid_1v3 and toy2 datasets
-            w_new = sgdRMSProp(w, x[hf, :], y[hf], if_f, if_g,
-                               learning_rate=0.001, max_epochs=1000,
-                               shuffle=True, rng=self.random_state)
-        elif False:
-            # sgdAdam seems to get best performance while a little slower than sgdRMSProp
-            # NOTE: this was an observation on ANNThyroid_1v3 and toy2 datasets
-            w_new = sgdAdam(w, x[hf, :], y[hf], if_f, if_g,
-                            learning_rate=0.001, max_epochs=1000,
-                            shuffle=True, rng=self.random_state)
-        else:
-            w_new = sgdRMSPropNestorov(w, x[hf, :], y[hf], if_f, if_g,
-                                       learning_rate=0.001, max_epochs=1000,
-                                       shuffle=True, rng=self.random_state)
-        w_len = w_new.dot(w_new)
-        # logger.debug("w_len: %f" % w_len)
-        if np.isnan(w_len):
-            # logger.debug("w_new:\n%s" % str(list(w_new)))
-            raise ArithmeticError("weight vector contains nan")
-        w_new = w_new / np.sqrt(w_len)
-        return w_new
-
-    def get_uniform_weights(self, m=None):
-        if m is None:
-            m = len(self.d)
-        w_unif = np.ones(m, dtype=float)
-        w_unif = w_unif / np.sqrt(w_unif.dot(w_unif))
-        # logger.debug("w_prior:")
-        # logger.debug(w_unif)
-        return w_unif
-
-    def get_zero_weights(self, m=None):
-        if m is None:
-            m = len(self.d)
-        return np.zeros(m, dtype=float)
-
-    def get_random_weights(self, m=None, samples=None, lo=-1.0, hi=1.0):
-        if samples is not None:
-            w_rnd = np.ravel(get_random_item(samples, self.random_state).todense())
-        else:
-            if m is None:
-                m = len(self.d)
-            w_rnd = self.random_state.uniform(lo, hi, m)
-        w_rnd = w_rnd / np.sqrt(w_rnd.dot(w_rnd))
-        return w_rnd
-
-    def init_weights(self, init_type=INIT_UNIF, samples=None):
-        logger.debug("Initializing weights to %s" % initialization_types[init_type])
-        if init_type == INIT_UNIF:
-            self.w = self.get_uniform_weights()
-        elif init_type == INIT_ZERO:
-            self.w = self.get_zero_weights()
-        else:
-            self.w = self.get_random_weights(samples=samples)
-
-    def order_by_score(self, x, w=None):
-        anom_score = self.get_score(x, w)
-        return order(anom_score, decreasing=True), anom_score
-
-    def update_weights(self, x, y, ha, hn, opts, w=None, tau_score=None):
-        """Learns new weights for one feedback iteration
-
-        Args:
-            x: np.ndarray
-                input data
-            y: np.array(dtype=int)
-                labels. Only the values at indexes in ha and hn are relevant. Rest may be np.nan.
-            ha: np.array(dtype=int)
-                indexes of labeled anomalies in x
-            hn: indexes of labeled nominals in x
-            opts: Opts
-            w: np.array(dtype=float)
-                current parameter values
-        """
-
-        if w is None:
-            w = self.w
-
-        w_prior = None
-        if opts.withprior:
-            if opts.unifprior:
-                w_prior = self.w_unif_prior
-            else:
-                w_prior = w
-
-        tau_rel = opts.constrainttype == AAD_CONSTRAINT_TAU_INSTANCE
-        if (opts.detector_type == AAD_IFOREST or
-                    opts.detector_type == AAD_HSTREES or
-                    opts.detector_type == AAD_RSFOREST):
-            w_new = self.forest_aad_weight_update(w, x, y, hf=append(ha, hn),
-                                                  w_prior=w_prior, opts=opts, tau_score=tau_score, tau_rel=tau_rel,
-                                                  linear=(self.ensemble_score == ENSEMBLE_SCORE_LINEAR))
-        else:
-            raise ValueError("Invalid weight update for forest detectors: %d" % opts.detector_type)
-            # logger.debug("w_new:")
-            # logger.debug(w_new)
-
-        self.w = w_new
-
-    def aad_learn_ensemble_weights_with_budget(self, ensemble, opts):
-
-        if opts.budget == 0:
-            return None
-
-        x = ensemble.scores
-        y = ensemble.labels
-
-        n, m = x.shape
-        bt = get_budget_topK(n, opts)
-
-        metrics = get_aad_metrics_structure(opts.budget, opts)
-        ha = []
-        hn = []
-        xis = []
-
-        qstate = Query.get_initial_query_state(opts.qtype, opts=opts, qrank=bt.topK,
-                                               a=1., b=1., budget=bt.budget)
-
-        metrics.all_weights = np.zeros(shape=(opts.budget, m))
-
-        if self.w is None:
-            self.init_weights(init_type=opts.init, samples=None)
-
-        est_tau_val = None
-        if opts.tau_score_type == TAU_SCORE_FIXED:
-            est_tau_val, _, _ = estimate_qtau(x, self, opts, lo=0.0, hi=1.0)
-            logger.debug("Using fixed estimated tau val: %f" % est_tau_val)
-
-        for i in range(bt.budget):
-
-            starttime_iter = timer()
-
-            # save the weights in each iteration for later analysis
-            metrics.all_weights[i, :] = self.w
-            metrics.queried = xis  # xis keeps growing with each feedback iteration
-
-            order_anom_idxs, anom_score = self.order_by_score(x, self.w)
-
-            if False and y is not None and metrics is not None:
-                # gather AUC metrics
-                metrics.train_aucs[0, i] = fn_auc(cbind(y, -anom_score))
-
-                # gather Precision metrics
-                prec = fn_precision(cbind(y, -anom_score), opts.precision_k)
-                metrics.train_aprs[0, i] = prec[len(opts.precision_k) + 1]
-                train_n_at_top = get_anomalies_at_top(-anom_score, y, opts.precision_k)
-                for k in range(len(opts.precision_k)):
-                    metrics.train_precs[k][0, i] = prec[k]
-                    metrics.train_n_at_top[k][0, i] = train_n_at_top[k]
-
-            xi_ = qstate.get_next_query(maxpos=n, ordered_indexes=order_anom_idxs,
-                                        queried_items=xis,
-                                        x=x, lbls=y, y=anom_score,
-                                        w=self.w, hf=append(ha, hn),
-                                        remaining_budget=opts.budget - i)
-            # logger.debug("xi: %d" % (xi,))
-            xi = xi_[0]
-            xis.append(xi)
-            metrics.test_indexes.append(qstate.test_indexes)
-
-            if opts.single_inst_feedback:
-                # Forget the previous feedback instances and
-                # use only the current feedback for weight updates
-                ha = []
-                hn = []
-
-            if y[xi] == 1:
-                ha.append(xi)
-            else:
-                hn.append(xi)
-
-            qstate.update_query_state(rewarded=(y[xi] == 1))
-
-            self.update_weights(x, y, ha=ha, hn=hn, opts=opts, tau_score=est_tau_val)
-
-            if np.mod(i, 1) == 0:
-                endtime_iter = timer()
-                tdiff = difftime(endtime_iter, starttime_iter, units="secs")
-                logger.debug("Completed [%s] fid %d rerun %d feedback %d in %f sec(s)" %
-                             (opts.dataset, opts.fid, opts.runidx, i, tdiff))
-
-        return metrics
 

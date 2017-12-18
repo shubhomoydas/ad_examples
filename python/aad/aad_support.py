@@ -3,63 +3,28 @@ import gzip
 
 from common.utils import *
 from common.metrics import *
+from aad.aad_base import *
 from aad.query_model import *
+from aad.aad_loss import *
+
+from aad.forest_aad_detector import *
+from aad.loda_aad import *
 
 
-class Ensemble(object):
-    """Stores all ensemble scores"""
-
-    def __init__(self, samples, labels, scores, weights,
-                 agg_scores=None, ordered_anom_idxs=None, original_indexes=None,
-                 auc=0.0, model=None):
-        self.samples = samples
-        self.labels = labels
-        self.scores = scores
-        self.weights = weights
-        self.agg_scores = agg_scores
-        self.ordered_anom_idxs = ordered_anom_idxs
-        self.original_indexes = original_indexes
-        self.auc = auc
-        self.model = model
-
-        if original_indexes is None:
-            self.original_indexes = np.arange(samples.shape[0])
-
-        if agg_scores is not None and ordered_anom_idxs is None:
-            self.ordered_anom_idxs = order(agg_scores, decreasing=True)
-
-
-class MetricsStructure(object):
-    def __init__(self, train_aucs=None, test_aucs=None, train_precs=None, test_precs=None,
-                 train_aprs=None, test_aprs=None, train_n_at_top=None, test_n_at_top=None,
-                 all_weights=None, queried=None):
-        self.train_aucs = train_aucs
-        self.test_aucs = test_aucs
-        self.train_precs = train_precs
-        self.test_precs = test_precs
-        self.train_aprs = train_aprs
-        self.test_aprs = test_aprs
-        self.train_n_at_top = train_n_at_top
-        self.test_n_at_top = test_n_at_top
-        self.all_weights = all_weights
-        self.queried = queried
-        self.test_indexes = []
-
-
-def get_aad_metrics_structure(budget, opts):
-    metrics = MetricsStructure(
-        train_aucs=np.zeros(shape=(1, budget)),
-        # for precision@k first two columns are fid,k
-        train_precs=[],
-        train_aprs=np.zeros(shape=(1, budget)),
-        train_n_at_top=[],
-        all_weights=[],
-        queried=[]
-    )
-    for k in range(len(opts.precision_k)):
-        metrics.train_precs.append(np.zeros(shape=(1, budget)))
-        metrics.train_n_at_top.append(np.zeros(shape=(1, budget)))
-    return metrics
+def get_aad_model(x, opts, random_state=None):
+    if opts.detector_type == LODA:
+        model = AadLoda(sparsity=opts.sparsity, mink=opts.mink, maxk=opts.maxk)
+    elif is_forest_detector(opts.detector_type):
+        model = AadForest(n_estimators=opts.forest_n_trees,
+                          max_samples=min(opts.forest_n_samples, x.shape[0]),
+                          score_type=opts.forest_score_type, random_state=random_state,
+                          add_leaf_nodes_only=opts.forest_add_leaf_nodes_only,
+                          max_depth=opts.forest_max_depth,
+                          ensemble_score=opts.ensemble_score,
+                          detector_type=opts.detector_type, n_jobs=opts.n_jobs)
+    else:
+        raise ValueError("Unsupported ensemble")
+    return model
 
 
 class SequentialResults(object):
@@ -128,38 +93,6 @@ def save_aad_summary(alad_summary, opts):
     cansave = opts.resultsdir != "" and os.path.isdir(opts.resultsdir)
     if cansave:
         save(alad_summary, filepath=opts.get_metrics_summary_path())
-
-
-class Budget(object):
-    def __init__(self, topK, budget):
-        self.topK = topK
-        self.budget = budget
-
-
-def get_budget_topK(n, opts):
-    # set topK as per tau or input topK
-    topK = opts.topK
-    if topK <= 0:
-        topK = int(np.round(opts.tau * n))  # function of total number of instances
-    budget = opts.budget
-    if budget <= 0:
-        budget = int(np.round(opts.tau * n))
-    budget = min(opts.maxbudget, budget)
-    return Budget(topK=topK, budget=budget)
-
-
-def estimate_qtau(samples, model, opts, lo=-1.0, hi=1.0):
-    n = samples.shape[0]
-    bt = get_budget_topK(n, opts)
-    scores = np.zeros(0, dtype=float)
-    for i in range(50):
-        w = model.get_random_weights(lo=lo, hi=hi)
-        s = samples.dot(w)
-        scores = np.append(scores, s)
-    qval = quantile(scores, (1.0 - (bt.topK * 1.0 / float(n))) * 100.0)
-    qmin = np.min(scores)
-    qmax = np.max(scores)
-    return qval, qmin, qmax
 
 
 def get_score_ranges(x, w):

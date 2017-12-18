@@ -1,13 +1,13 @@
 #!/bin/bash
 #
 # Example:
-# chmod +x ./tree_aad-job.sh
+# chmod +x ./aad-job.sh
 #
 # To run:
-# bash ./tree_aad-job.sh <dataset> <budget> <reruns> <tau> <inference_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]>
+# bash ./aad-job.sh <dataset> <budget> <reruns> <tau> <inference_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]>
 #
 # Examples:
-# bash ./tree_aad-job.sh toy2 10 1 0 0.03 7 1 0 0 512 0
+# bash ./aad-job.sh toy2 10 1 0 0.03 7 1 0 0 512 0
 
 DATASET=$1
 BUDGET=$2
@@ -30,13 +30,13 @@ fi
 
 JOBNAME="aad_${DATASET}_${BUDGET}_${RERUNS}_tau${TAU}_i${DETECTOR_TYPE}_q${QUERY_TYPE}${STREAMING_SIG}"
 
-BASE_PATH="/data/doppa/users/sdas/temp/tree_aad"
+BASE_PATH="/data/doppa/users/sdas/temp/aad"
 mkdir -p $BASE_PATH
 
 OUTFILE="$BASE_PATH/${JOBNAME}.txt"
 
 # OPERATION="/home/sdas/codebase/pyalad/tree_aad.sh"
-OPERATION="/home/sdas/codebase/bb_python/ad_examples/python/tree_aad.sh"
+OPERATION="/home/sdas/codebase/bb_python/ad_examples/python/aad.sh"
 
 echo "log: $OUTFILE"
 echo "cmd: $OPERATION"

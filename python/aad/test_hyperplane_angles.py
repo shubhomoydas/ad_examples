@@ -1,7 +1,7 @@
-from forest_aad_detector import *
 from classifier.perceptron import Perceptron
 from common.data_plotter import *
 
+from aad.forest_aad_detector import *
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ def test_hyperplane_angles():
         logger.debug("total #nodes: %d" % (len(mdl.all_regions)))
 
         if True:
-            X_train_new = mdl.transform_to_region_features(X_train, dense=dense, norm_unit=False)
+            X_train_new = mdl.transform_to_ensemble_features(X_train, dense=dense, norm_unit=False)
             norms = np.sqrt(X_train_new.power(2).sum(axis=1))
             scores = mdl.get_score(X_train_new)
             ordered_scores_dxs = np.argsort(-scores)  # sort descending
@@ -94,7 +94,7 @@ def test_hyperplane_angles():
             auc = mdl.get_auc(scores, labels)
             logger.debug("AUC: %f" % auc)
 
-        X_train_new = mdl.transform_to_region_features(X_train, dense=dense, norm_unit=opts.norm_unit)
+        X_train_new = mdl.transform_to_ensemble_features(X_train, dense=dense, norm_unit=opts.norm_unit)
         scores = mdl.get_score(X_train_new)
         ordered_scores = -np.sort(-scores)  # sort descending
         logger.debug("scores with norm:\n%s" % str(list(ordered_scores)))

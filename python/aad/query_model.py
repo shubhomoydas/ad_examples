@@ -1,5 +1,6 @@
 from aad.aad_globals import *
 
+
 class Query(object):
     def __init__(self, opts=None, **kwargs):
         self.opts = opts

@@ -48,31 +48,33 @@ The above command will generate a pdf file with plots illustrating how the data 
 Running the tree-based AAD
 --------------------------
 This codebase has three different algorithms:
-  - The Isolation Forest based AAD (**does not support streaming incremental update**)
-  - HS Trees based AAD (with streaming support)
-  - RS Forest based AAD (with streaming support)
+  - The LODA based AAD (**does not support streaming at all**)
+  - The Isolation Forest based AAD (**supports streaming, but not incremental update to model**)
+  - HS Trees based AAD (streaming support with model update)
+  - RS Forest based AAD (streaming support with model update)
 
 To run the Isolation Forest / HS-Trees / RS-Forest based algorithms, the command has the following format:
 
-    bash ./tree_aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]>
+    bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]>
 
     for Isolation Forest, set <detector_type>=7; 
     for HSTrees, set <detector_type>=11;
     for RSForest, set <detector_type>=12;
+    for LODA, set <detector_type>=13;
 
 example (with Isolation Forest, non-streaming):
 
-    bash ./tree_aad.sh toy2 35 1 0.03 7 1 0 0 512 0
+    bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0
 
 Note: The above will generate 2D plots (tree partitions and score contours) under the 'temp' folder since <i>toy2</i> is a 2D dataset.
 
 example (with HSTrees streaming):
 
-    bash ./tree_aad.sh toy2 35 1 0.03 11 1 0 1 256 0
+    bash ./aad.sh toy2 35 1 0.03 11 1 0 1 256 0
 
 **Note:** In case the data does not have concept drift, I would **recommend using Isolation forest** instead of HSTrees and RSForest:
 
-    bash ./tree_aad.sh toy2 35 1 0.03 7 1 0 1 512 1
+    bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 1
 
 
 # Note on Streaming

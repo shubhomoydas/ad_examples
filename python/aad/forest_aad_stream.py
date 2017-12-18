@@ -7,8 +7,8 @@ from common.utils import *
 from aad.aad_globals import *
 from aad.aad_support import *
 
-from forest_aad_detector import *
-from data_stream import *
+from aad.forest_aad_detector import *
+from aad.data_stream import *
 
 
 class StreamingAnomalyDetector(object):
@@ -234,7 +234,7 @@ class StreamingAnomalyDetector(object):
         # logger.debug("transforming data...")
         if opts is None:
             opts = self.opts
-        x_transformed = self.model.transform_to_region_features(
+        x_transformed = self.model.transform_to_ensemble_features(
             x, dense=False, norm_unit=opts.norm_unit)
         return x_transformed
 
