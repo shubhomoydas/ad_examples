@@ -375,6 +375,14 @@ class AadForest(StreamingSupport):
         """Returns the decision function for the original underlying classifier"""
         return self.clf.decision_function(x)
 
+    def get_auc(self, scores, labels):
+        n = len(scores)
+        tmp = np.empty(shape=(n, 2), dtype=float)
+        tmp[:, 0] = labels
+        tmp[:, 1] = -scores
+        auc = fn_auc(tmp)
+        return auc
+
     def supports_streaming(self):
         return self.clf.supports_streaming()
 
@@ -413,7 +421,7 @@ class AadForest(StreamingSupport):
         else:
             return self.d[region_id] / norm_factor
 
-    def transform_to_region_features(self, x, dense=True, norm_unit=False):
+    def transform_to_region_features(self, x, dense=False, norm_unit=False):
         """ Transforms matrix x to features from isolation forest
 
         :param x: np.ndarray
@@ -480,7 +488,7 @@ class AadForest(StreamingSupport):
                 norms = np.sqrt(x_tmp_new.power(2).sum(axis=1))
                 # logger.debug("norms before [%d/%d]:\n%s" % (start_batch, end_batch, str(list(norms.T))))
                 x_tmp_new = x_tmp_new.multiply(1/norms)
-                norms = np.sqrt(x_tmp_new.power(2).sum(axis=1))
+                # norms = np.sqrt(x_tmp_new.power(2).sum(axis=1))
                 # logger.debug("norms after [%d/%d]:\n%s" % (start_batch, end_batch, str(list(norms.T))))
             x_new = vstack([x_new, x_tmp_new.tocsr()])
             start_batch = end_batch

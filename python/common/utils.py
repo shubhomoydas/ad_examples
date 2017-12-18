@@ -16,6 +16,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 import ranking
 from ranking import Ranking
 
+import scipy.sparse
 from scipy.sparse import csr_matrix
 import scipy.stats as stats
 import scipy.optimize as opt
@@ -135,6 +136,8 @@ def ncol(x):
 
 
 def rbind(m1, m2):
+    if m1 is not None and m2 is not None and isinstance(m1, csr_matrix) and isinstance(m2, csr_matrix):
+        return scipy.sparse.vstack([m1, m2])
     if m1 is None:
         return np.copy(m2)
     return np.append(m1, m2, axis=0)
@@ -234,6 +237,126 @@ class SetList(list):
         super(SetList, self).__init__(args)
     def __sub__(self, other):
         return self.__class__([item for item in self if item not in other])
+
+
+class InstanceList(object):
+    def __init__(self, x=None, y=None, ids=None, x_transformed=None):
+        self.x = x
+        self.y = y
+        self.ids = ids
+        # support for feature transform
+        self.x_transformed = x_transformed
+        if self.x is not None and self.x_transformed is not None:
+            if self.x.shape[0] != self.x_transformed.shape[0]:
+                raise ValueError("number of instances in x (%d) and x_transformed (%d) are not same" %
+                                 (self.x.shape[0], self.x_transformed.shape[0]))
+
+    def __len__(self):
+        if self.x is not None:
+            return self.x.shape[0]
+        return 0
+
+    def __repr__(self):
+        return "instances(%s, %s, %s, %s)" % (
+            "-" if self.x is None else str(self.x.shape),
+            "-" if self.y is None else str(len(self.y)),
+            "-" if self.x_transformed is None else str(self.x_transformed.shape),
+            "-" if self.ids is None else str(len(self.ids))
+        )
+
+    def __str__(self):
+        return repr(self)
+
+    def add_instances(self, x, y, ids=None, x_transformed=None):
+        if self.x is None:
+            self.x = x
+        else:
+            self.x = rbind(self.x, x)
+
+        if self.y is None:
+            self.y = y
+        elif y is not None:
+            self.y = append(self.y, y)
+
+        if self.ids is None:
+            self.ids = ids
+        elif ids is not None:
+            self.ids = append(self.ids, ids)
+
+        if self.x_transformed is None:
+            self.x_transformed = x_transformed
+        elif x_transformed is not None:
+            self.x_transformed = rbind(self.x_transformed, x_transformed)
+
+    def get_instance_at(self, index):
+        inst_x = matrix(self.x[index], nrow=1)
+        inst_y = None
+        inst_id = None
+        inst_transformed = None
+        if self.y is not None:
+            inst_y = self.y[index]
+        if self.ids is not None:
+            inst_id = self.ids[index]
+        if self.x_transformed is not None:
+            inst_transformed = self.x_transformed[index]
+        return inst_x, inst_y, inst_id, inst_transformed
+
+    def add_instance(self, x, y=None, id=None, x_transformed=None):
+        if self.x is not None:
+            self.x = rbind(self.x, x)
+        else:
+            self.x = x
+        if y is not None:
+            if self.y is not None:
+                self.y = np.append(self.y, [y])
+            else:
+                self.y = np.array([y], dtype=int)
+        if id is not None:
+            if self.ids is not None:
+                self.ids = np.append(self.ids, [id])
+            else:
+                self.ids = np.array([id], dtype=int)
+        if x_transformed is not None:
+            if self.x_transformed is not None:
+                self.x_transformed = rbind(self.x_transformed, x_transformed)
+            else:
+                self.x_transformed = x_transformed
+
+    def retain_with_mask(self, mask):
+        self.x = self.x[mask]
+        if self.y is not None:
+            self.y = self.y[mask]
+        if self.ids is not None:
+            self.ids = self.ids[mask]
+        if self.x_transformed is not None:
+            self.x_transformed = self.x_transformed[mask]
+
+    def remove_instance_at(self, index):
+        mask = np.ones(self.x.shape[0], dtype=bool)
+        mask[index] = False
+        self.retain_with_mask(mask)
+
+
+def append_instance_lists(list1, list2):
+    """Merge two instance lists
+
+    Args:
+        list1: InstanceList
+        list2: InstanceList
+    """
+    x = None
+    if list1.x is not None and list2.x is not None:
+        x = np.vstack([list1.x, list2.x])
+    y = None
+    if list1.y is not None and list2.y is not None:
+        y = append(list1.y, list2.y)
+    ids = None
+    if list1.ids is not None and list2.ids is not None:
+        ids = append(list1.ids, list2.ids)
+    x_transformed = None
+    if list1.x_transformed is not None and list2.x_transformed is not None:
+        x_transformed = rbind(list1.x_transformed, list2.x_transformed)
+    return InstanceList(x=x, y=y, ids=ids, x_transformed=x_transformed)
 
 
 class SKLClassifier(object):

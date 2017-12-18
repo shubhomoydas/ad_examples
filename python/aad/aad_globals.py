@@ -25,6 +25,12 @@ IFOREST_ORIG = 9
 ATGP_IFOREST = 10
 AAD_HSTREES = 11
 AAD_RSFOREST = 12
+LODA = 13
+
+# Detector type names - first is blank string so these are 1-indexed
+detector_types = ["", "simple_online", "online_optim", "aad",
+                "aad_slack", "baseline", "iter_grad", "iforest",
+                "simple_pairwise", "iforest_orig", "if_atgp", "hstrees", "rsfor", "loda"]
 
 # ==============================
 # Tau Score Types
@@ -52,10 +58,6 @@ ENSEMBLE_SCORE_LINEAR = 0  # linear combination of scores
 ENSEMBLE_SCORE_EXPONENTIAL = 1  # exp(linear combination)
 ensemble_score_names = ["linear", "exp"]
 
-# Detector type names - first is blank string so these are 1-indexed
-detector_types = ["", "simple_online", "online_optim", "aad",
-                "aad_slack", "baseline", "iter_grad", "iforest",
-                "simple_pairwise", "iforest_orig", "if_atgp", "hstrees", "rsfor"]
 # ------------------------------
 
 # ==============================
@@ -135,7 +137,9 @@ def get_aad_option_list():
                         help="Index of the label column (1-indexed) in the input CSV. Lables should be anomaly/nominal")
     parser.add_argument("--dataset", action="store", default="", required=False,
                         help="Which dataset to use")
-    parser.add_argument("--maxk", action="store", type=int, default=200,
+    parser.add_argument("--mink", action="store", type=int, default=1,
+                        help="Minimum number of random projections for LODA")
+    parser.add_argument("--maxk", action="store", type=int, default=100,
                         help="Maximum number of random projections for LODA")
     parser.add_argument("--original_dims", action="store_true", default=False,
                         help="Whether to use original feature space instead of random projections")
@@ -361,7 +365,7 @@ class AadOpts(object):
         self.randseed = args.randseed
 
         # LODA specific
-        self.mink = 100
+        self.mink = args.mink
         self.maxk = max(self.mink, args.maxk)
         self.sparsity = args.sparsity
 

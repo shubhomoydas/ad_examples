@@ -28,70 +28,69 @@ class StreamingAnomalyDetector(object):
         self.opts = opts
         self.retention_type = opts.retention_type
 
-        self.buffer_x = None
-        self.buffer_y = None
+        self.buffer = None
 
-        self.unlabeled_x = unlabeled_x
-        self.unlabeled_y = unlabeled_y
+        self.labeled = None
+        if labeled_x is not None:
+            self.labeled = InstanceList(x=labeled_x, y=labeled_y)
 
-        self.labeled_x = labeled_x
-        self.labeled_y = labeled_y
+        self.unlabeled = None
+        if unlabeled_x is not None:
+            self.unlabeled = InstanceList(x=unlabeled_x, y=unlabeled_y)
+            # transform the features and cache...
+            self.unlabeled.x_transformed = self.get_transformed(self.unlabeled.x)
 
         self.qstate = None
 
     def reset_buffer(self):
-        self.buffer_x = None
-        self.buffer_y = None
+        self.buffer = None
 
-    def add_buffer_xy(self, x, y):
-        if self.buffer_x is None:
-            self.buffer_x = x
+    def add_to_buffer(self, instances):
+        if self.buffer is not None:
+            self.buffer.add_instances(instances.x, instances.y,
+                                      instances.ids, instances.x_transformed)
         else:
-            self.buffer_x = rbind(self.buffer_x, x)
-
-        if self.buffer_y is None:
-            self.buffer_y = y
-        else:
-            if y is not None:
-                self.buffer_y = append(self.buffer_y, y)
+            self.buffer = instances
 
     def move_buffer_to_unlabeled(self):
         if self.retention_type == STREAM_RETENTION_OVERWRITE:
-            missed = int(np.sum(self.unlabeled_y)) if self.unlabeled_y is not None else 0
-            retained = int(np.sum(self.buffer_y)) if self.buffer_y is not None else 0
-            # logger.debug("[overwriting] true anomalies: missed(%d), retained(%d)" % (missed, retained))
-            self.unlabeled_x = self.buffer_x
-            self.unlabeled_y = self.buffer_y
+            if False:
+                missed = int(np.sum(self.unlabeled.y)) if self.unlabeled.y is not None else 0
+                retained = int(np.sum(self.buffer.y)) if self.buffer.y is not None else 0
+                logger.debug("[overwriting] true anomalies: missed(%d), retained(%d)" % (missed, retained))
+            if self.buffer is not None:
+                self.unlabeled = self.buffer
         elif self.retention_type == STREAM_RETENTION_TOP_ANOMALOUS:
             # retain the top anomalous instances from the merged
             # set of instance from both buffer and current unlabeled.
-            tmp_x = self.unlabeled_x
-            tmp_y = self.unlabeled_y
-            if self.buffer_x is not None:
-                tmp_x = np.vstack([tmp_x, self.buffer_x])
-                tmp_y = np.append(tmp_y, self.buffer_y)
-            n = min(tmp_x.shape[0], self.max_buffer)
-            new_x = self.model.transform_to_region_features(tmp_x)
-            idxs, scores = self.model.order_by_score(new_x)
-            self.unlabeled_x = tmp_x[idxs[np.arange(n)]]
-            self.unlabeled_y = tmp_y[idxs[np.arange(n)]]
-            if n < len(tmp_y):
-                missedidxs = idxs[n:len(tmp_y)]
+            if self.buffer is not None:
+                tmp = append_instance_lists(self.unlabeled, self.buffer)
+            else:
+                tmp = self.unlabeled
+            n = min(tmp.x.shape[0], self.max_buffer)
+            idxs, scores = self.model.order_by_score(tmp.x_transformed)
+            top_idxs = idxs[np.arange(n)]
+            self.unlabeled = InstanceList(x=tmp.x[top_idxs],
+                                          y=tmp.y[top_idxs],
+                                          x_transformed=tmp.x_transformed[top_idxs])
+            if n < len(tmp.y):
+                missedidxs = idxs[n:len(tmp.y)]
             else:
                 missedidxs = None
-            missed = int(np.sum(tmp_y[missedidxs])) if missedidxs is not None else 0
-            retained = int(np.sum(self.unlabeled_y)) if self.unlabeled_y is not None else 0
-            # logger.debug("[top anomalous] true anomalies: missed(%d), retained(%d)" % (missed, retained))
+            if False:
+                missed = int(np.sum(tmp.y[missedidxs])) if missedidxs is not None else 0
+                retained = int(np.sum(self.unlabeled.y)) if self.unlabeled.y is not None else 0
+                logger.debug("[top anomalous] true anomalies: missed(%d), retained(%d)" % (missed, retained))
         self.reset_buffer()
 
     def get_num_instances(self):
         """Returns the total number of labeled and unlabeled instances that will be used for weight inference"""
         n = 0
-        if self.unlabeled_x is not None:
-            n += nrow(self.unlabeled_x)
-        if self.labeled_x is not None:
+        if self.unlabeled is not None:
+            n += len(self.unlabeled)
+        if self.labeled is not None:
             # logger.debug("labeled_x: %s" % str(self.labeled_x.shape))
-            n += nrow(self.labeled_x)
+            n += len(self.labeled.x)
         return n
 
     def init_query_state(self, opts):
@@ -100,40 +99,37 @@ class StreamingAnomalyDetector(object):
         self.qstate = Query.get_initial_query_state(opts.qtype, opts=opts, qrank=bt.topK,
                                                     a=1., b=1., budget=bt.budget)
 
-    def get_next_from_stream(self, n=0):
+    def get_next_from_stream(self, n=0, transform=False):
         if n == 0:
             n = self.max_buffer
-        x, y = self.stream.read_next_from_stream(n)
 
-        if x is None:
-            return x, y
+        instances = self.stream.read_next_from_stream(n)
+        if instances is not None:
+            if False:
+                if self.buffer is not None:
+                    logger.debug("buffer shape: %s" % str(self.buffer.x.shape))
+                logger.debug("x.shape: %s" % str(instances.x.shape))
 
-        if False:
-            if self.buffer_x is not None:
-                logger.debug("buffer shape: %s" % str(self.buffer_x.shape))
-            logger.debug("x.shape: %s" % str(x.shape))
+            if transform:
+                instances.x_transformed = self.get_transformed(instances.x)
+            self.add_to_buffer(instances)
+            self.model.add_samples(instances.x, current=False)
 
-        self.add_buffer_xy(x, y)
-
-        self.model.add_samples(x, current=False)
-
-        return x, y
+        return instances
 
     def update_model_from_buffer(self):
         self.model.update_model_from_stream_buffer()
 
-    def get_next_transformed(self, n=1):
-        x, y = self.get_next_from_stream(n)
-        if x is None:
-            return x, y
-        x_new = self.model.transform_to_region_features(x, dense=False)
-        return x_new, y
-
     def stream_buffer_empty(self):
         return self.stream.empty()
 
-    def get_anomaly_scores(self, x):
-        x_new = self.model.transform_to_region_features(x, dense=False)
+    def get_anomaly_scores(self, x, x_transformed=None):
+        if x_transformed is None:
+            x_new = self.get_transformed(x)
+        else:
+            if x.shape[0] != x_transformed.shape[0]:
+                raise ValueError("x(%d) and x_transformed(%d) are inconsistent" % (x.shape[0], x_transformed.shape[0]))
+            x_new = x_transformed
         scores = self.model.get_score(x_new)
         return scores
 
@@ -147,48 +143,35 @@ class StreamingAnomalyDetector(object):
             x - data matrix, y - labels (np.nan for unlabeled),
             ha - indexes of labeled anomalies, hn - indexes of labeled nominals
         """
-        x = None
-        y = None
-        if self.labeled_x is not None:
-            x = self.labeled_x.copy()
-            y = self.labeled_y.copy()
-            ha = np.where(self.labeled_y == 1)[0]
-            hn = np.where(self.labeled_y == 0)[0]
+        if self.labeled is None:
+            tmp = self.unlabeled
+        elif self.unlabeled is None:
+            tmp = self.labeled
+        else:
+            tmp = append_instance_lists(self.labeled, self.unlabeled)
+        if self.labeled is not None:
+            ha = np.where(self.labeled.y == 1)[0]
+            hn = np.where(self.labeled.y == 0)[0]
         else:
             ha = np.zeros(0, dtype=int)
             hn = np.zeros(0, dtype=int)
-        if self.unlabeled_x is not None:
-            if x is None:
-                x = self.unlabeled_x.copy()
-            else:
-                x = np.append(x, self.unlabeled_x, axis=0)
-            if self.unlabeled_y is not None:
-                if y is not None:
-                    y = np.append(y, self.unlabeled_y)
-                else:
-                    y = self.unlabeled_y.copy()
-            else:
-                if y is not None:
-                    y = np.append(y, np.ones(nrow(self.unlabeled_x), dtype=int) * -1)
-                else:
-                    y = np.ones(nrow(self.unlabeled_x), dtype=int) * -1
         if False:
-            logger.debug("x: %d, y: %d, ha: %d, hn:%d" % (nrow(x), len(y), len(ha), len(hn)))
-        return x, y, ha, hn
+            logger.debug("x: %d, ha: %d, hn:%d" % (nrow(tmp.x), len(ha), len(hn)))
+        return tmp, ha, hn
 
     def get_instance_stats(self):
         nha = nhn = nul = 0
-        if self.labeled_y is not None:
-            nha = len(np.where(self.labeled_y == 1)[0])
-            nhn = len(np.where(self.labeled_y == 0)[0])
-        if self.unlabeled_x is not None:
-            nul = nrow(self.unlabeled_x)
+        if self.labeled.y is not None:
+            nha = len(np.where(self.labeled.y == 1)[0])
+            nhn = len(np.where(self.labeled.y == 0)[0])
+        if self.unlabeled is not None:
+            nul = len(self.unlabeled)
         return nha, nhn, nul
 
     def get_num_labeled(self):
         """Returns the number of instances for which we already have label feedback"""
-        if self.labeled_y is not None:
-            return len(self.labeled_y)
+        if self.labeled is not None:
+            return len(self.labeled.y)
         return 0
 
     def get_query_data(self, x=None, y=None, ha=None, hn=None, unl=None, w=None, n_query=1):
@@ -216,15 +199,19 @@ class StreamingAnomalyDetector(object):
             logger.debug("get_query_data() n: %d, n_feedback: %d" % (n, n_feedback))
         if n == 0:
             raise ValueError("No instances available")
+        x_transformed = None
         if x is None:
-            x, y, ha, hn = self.setup_data_for_feedback()
+            tmp, ha, hn = self.setup_data_for_feedback()
+            x, y, x_transformed = tmp.x, tmp.y, tmp.x_transformed
         if w is None:
             w = self.model.w
         if unl is None:
             unl = np.zeros(0, dtype=int)
         # the top n_feedback instances in the instance list are the labeled items
         queried_items = append(np.arange(n_feedback), unl)
-        x_transformed = self.model.transform_to_region_features(x, dense=False)
+        if x_transformed is None:
+            x_transformed = self.get_transformed(x)
+            logger.debug("needs transformation")
         order_anom_idxs, anom_score = self.model.order_by_score(x_transformed)
         xi = self.qstate.get_next_query(maxpos=n, ordered_indexes=order_anom_idxs,
                                         queried_items=queried_items,
@@ -238,18 +225,30 @@ class StreamingAnomalyDetector(object):
                           str(list(ha)), str(list(hn)), str(list(xi))))
         return xi, x, y, x_transformed, ha, hn, order_anom_idxs, anom_score
 
+    def get_transformed(self, x, opts=None):
+        """Returns the instance.x_transformed
+
+        :param instances: InstanceList
+        :return: scipy sparse array
+        """
+        # logger.debug("transforming data...")
+        if opts is None:
+            opts = self.opts
+        x_transformed = self.model.transform_to_region_features(
+            x, dense=False, norm_unit=opts.norm_unit)
+        return x_transformed
+
     def move_unlabeled_to_labeled(self, xi, yi):
         unlabeled_idx = xi - self.get_num_labeled()
-
-        self.labeled_x = rbind(self.labeled_x, matrix(self.unlabeled_x[unlabeled_idx], nrow=1))
-        if self.labeled_y is None:
-            self.labeled_y = np.array([yi], dtype=int)
+        x, _, id, x_trans = self.unlabeled.get_instance_at(unlabeled_idx)
+        if self.labeled is None:
+            self.labeled = InstanceList(x=matrix(self.unlabeled.x[unlabeled_idx], nrow=1),
+                                        y=np.array([yi], dtype=int),
+                                        ids=None if id is None else np.array([id], dtype=int),
+                                        x_transformed=x_trans)
         else:
-            self.labeled_y = np.append(self.labeled_y, [yi])
-        mask = np.ones(self.unlabeled_x.shape[0], dtype=bool)
-        mask[unlabeled_idx] = False
-        self.unlabeled_x = self.unlabeled_x[mask]
-        self.unlabeled_y = self.unlabeled_y[mask]
+            self.labeled.add_instance(x, y=yi, id=id, x_transformed=x_trans)
+        self.unlabeled.remove_instance_at(unlabeled_idx)
 
     def update_weights_with_feedback(self, xi, yi, x, y, x_transformed, ha, hn, opts):
         """Relearns the optimal weights from feedback and updates internal labeled and unlabeled matrices
@@ -279,9 +278,8 @@ class StreamingAnomalyDetector(object):
         if w is None:
             raise ValueError("Model not trained")
         if transform:
-            x = self.model.transform_to_region_features(x, dense=False)
+            x = self.get_transformed(x)
         ordered_indexes, scores = self.model.order_by_score(x, w=w)
-        bt = get_budget_topK(n_instances, opts)
         tn = min(10, nrow(x))
         vars = np.zeros(tn, dtype=float)
         for i in np.arange(tn):
@@ -289,38 +287,11 @@ class StreamingAnomalyDetector(object):
         # logger.debug("top %d vars:\n%s" % (tn, str(list(vars))))
         return vars
 
-
-def get_rearranging_indexes(add_pos, move_pos, n):
-    """Creates an array 0...n-1 and moves value at 'move_pos' to 'add_pos', and shifts others back
-
-    Useful to reorder data when we want to move instances from unlabeled set to labeled.
-    TODO:
-        Use this to optimize the API StreamingAnomalyDetector.get_query_data()
-        since it needs to repeatedly convert the data to transformed [node] features.
-
-    Example:
-        get_rearranging_indexes(2, 2, 10):
-            array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-
-        get_rearranging_indexes(0, 1, 10):
-            array([1, 0, 2, 3, 4, 5, 6, 7, 8, 9])
-
-        get_rearranging_indexes(2, 9, 10):
-            array([0, 1, 9, 2, 3, 4, 5, 6, 7, 8])
-
-    :param add_pos:
-    :param move_pos:
-    :param n:
-    :return:
-    """
-    if add_pos > move_pos:
-        raise ValueError("add_pos must be less or equal to move_pos")
-    rearr_idxs = np.arange(n)
-    if add_pos == move_pos:
-        return rearr_idxs
-    rearr_idxs[(add_pos + 1):(move_pos + 1)] = rearr_idxs[add_pos:move_pos]
-    rearr_idxs[add_pos] = move_pos
-    return rearr_idxs
+    def print_instance_stats(self, msg="debug"):
+        logger.debug("%s:\nlabeled: %s, unlabeled: %s" %
+                     (msg,
+                      '-' if self.labeled is None else str(self.labeled),
+                      '-' if self.unlabeled is None else str(self.unlabeled)))
 
 
 def read_data(opts):
@@ -374,21 +345,18 @@ def run_feedback(sad, min_feedback, max_feedback, opts):
 
     if False:
         # get baseline metrics
-        x_transformed = sad.model.transform_to_region_features(sad.unlabeled_x, dense=False)
+        x_transformed = sad.get_transformed(sad.unlabeled.x)
         ordered_idxs, _ = sad.model.order_by_score(x_transformed)
-        seen_baseline = sad.unlabeled_y[ordered_idxs[0:max_feedback]]
+        seen_baseline = sad.unlabeled.y[ordered_idxs[0:max_feedback]]
         num_seen_baseline = np.cumsum(seen_baseline)
         logger.debug("num_seen_baseline:\n%s" % str(list(num_seen_baseline)))
 
     # baseline scores
     w_baseline = sad.model.get_uniform_weights()
-    x_transformed_baseline = sad.model.transform_to_region_features(sad.unlabeled_x, dense=False)
-    order_baseline, scores_baseline = sad.model.order_by_score(x_transformed_baseline, w_baseline)
-    n_seen_baseline = min(max_feedback, len(sad.unlabeled_y))
+    order_baseline, scores_baseline = sad.model.order_by_score(sad.unlabeled.x_transformed, w_baseline)
+    n_seen_baseline = min(max_feedback, len(sad.unlabeled.y))
     queried_baseline = order_baseline[0:n_seen_baseline]
-    seen_baseline = sad.unlabeled_y[queried_baseline]
-    # seen_baseline = min(max_feedback, len(sad.unlabeled_y))
-    # found_baseline = np.sum(sad.unlabeled_y[order_baseline[0:seen_baseline]])
+    seen_baseline = sad.unlabeled.y[queried_baseline]
 
     seen = np.zeros(0, dtype=int)
     n_unlabeled = np.zeros(0, dtype=int)
@@ -434,8 +402,6 @@ def run_feedback(sad, min_feedback, max_feedback, opts):
                                           means[qpos] - 3. * np.sqrt(vars[qpos]) >= m_tau):
             seen = append(seen, [y[xi]])
             queried = append(queried, xi)
-            # seen += 1
-            # found += y[xi]
             tm_update = Timer()
             sad.update_weights_with_feedback(xi, y[xi], x, y, x_transformed, ha, hn, opts)
             tm_update.end()
@@ -452,10 +418,9 @@ def run_feedback(sad, min_feedback, max_feedback, opts):
             unl = append(unl, [xi])
             # logger.debug("skipping feedback for xi=%d at iter %d; unl: %s" % (xi, i, str(list(unl))))
             # continue
-        n_unlabeled = np.append(n_unlabeled, [int(np.sum(sad.unlabeled_y))])
+        n_unlabeled = np.append(n_unlabeled, [int(np.sum(sad.unlabeled.y))])
         # logger.debug("y:\n%s" % str(list(y)))
     # logger.debug("w:\n%s" % str(list(sad.model.w)))
-    # logger.debug("\nseen   : %s\nqueried: %s" % (str(list(seen)), str(list(queried))))
     return seen, seen_baseline, None, None, n_unlabeled
 
 
@@ -474,6 +439,8 @@ def aad_stream():
 
     if not opts.streaming:
         raise ValueError("Only streaming supported")
+
+    np.random.seed(opts.randseed)
 
     X_full, y_full = read_data(opts)
     # X_train = X_train[0:10, :]
@@ -495,29 +462,19 @@ def aad_stream():
         tm_run = Timer()
         opts.set_multi_run_options(opts.fid, runidx)
 
-        stream = DataStream(X_full, y_full)
-        X_train, y_train = stream.read_next_from_stream(opts.stream_window)
-
-        # logger.debug("X_train:\n%s\nlabels:\n%s" % (str(X_train), str(list(labels))))
+        stream = DataStream(X_full, y_full, IdServer(initial=0))
+        training_set = stream.read_next_from_stream(opts.stream_window)
+        X_train, y_train, ids = training_set.x, training_set.y, training_set.ids
 
         model = prepare_aad_model(X_train, y_train, opts)  # initial model training
         sad = StreamingAnomalyDetector(stream, model, unlabeled_x=X_train, unlabeled_y=y_train,
                                        max_buffer=opts.stream_window, opts=opts)
         sad.init_query_state(opts)
 
-        if False:
-            # use for DEBUG only
-            run_feedback(sad, 0, opts.budget, opts)
-            print "This is experimental/demo code for streaming integration and will be application specific." + \
-                  " Exiting after reading max %d instances from stream and iterating for %d feedback..." % \
-                    (opts.stream_window, opts.budget)
-            exit(0)
-
         all_scores = np.zeros(0)
         all_y = np.zeros(0, dtype=int)
 
-        scores = sad.get_anomaly_scores(X_train)
-        # auc = fn_auc(cbind(y_train, -scores))
+        scores = sad.get_anomaly_scores(sad.unlabeled.x, sad.unlabeled.x_transformed)
         all_scores = np.append(all_scores, scores)
         all_y = np.append(all_y, y_train)
         iter = 0
@@ -536,25 +493,26 @@ def aad_stream():
                              opts.min_feedback_per_window,
                              opts.max_feedback_per_window,
                              opts)
+
+            # gather metrics...
             seen = append(seen, seen_)
             n_unlabeled = append(n_unlabeled, n_unlabeled_)
             seen_baseline = append(seen_baseline, seen_baseline_)
             stream_window_tmp = append(stream_window_tmp, np.ones(len(seen_)) * iter)
             stream_window_baseline = append(stream_window_baseline, np.ones(len(seen_baseline_)) * iter)
-            # queried = append(queried, queried_)
-            # queried_baseline = append(queried_baseline, queried_baseline_)
-            # logger.debug("seen:\n%s;\nbaseline:\n%s" % (str(list(seen)), str(list(seen_baseline))))
 
-            x_eval, y_eval = sad.get_next_from_stream(sad.max_buffer)
-            if x_eval is None or iter >= opts.max_windows:
+            # get the next window of data from stream and transform features...
+            instances = sad.get_next_from_stream(sad.max_buffer, transform=True)
+            if instances is None or iter >= opts.max_windows:
                 if iter >= opts.max_windows:
                     logger.debug("Exceeded %d iters; exiting stream read..." % opts.max_windows)
                 stop_iter = True
             else:
-                scores = sad.get_anomaly_scores(x_eval)  # compute scores before updating the model
+                # compute scores before updating the model
+                scores = sad.get_anomaly_scores(instances.x, instances.x_transformed)
 
                 all_scores = np.append(all_scores, scores)
-                all_y = np.append(all_y, y_eval)
+                all_y = np.append(all_y, instances.y)
 
                 if opts.allow_stream_update:
                     sad.update_model_from_buffer()
@@ -564,7 +522,7 @@ def aad_stream():
             logger.debug(tm.message("Stream window [%d]: algo [%d/%d]; baseline [%d/%d]; unlabeled anoms [%d]: " %
                                     (iter, int(np.sum(seen)), len(seen),
                                      int(np.sum(seen_baseline)), len(seen_baseline),
-                                     int(np.sum(sad.unlabeled_y)))))
+                                     int(np.sum(sad.unlabeled.y)))))
 
         # retained = int(np.sum(sad.unlabeled_y)) if sad.unlabeled_y is not None else 0
         # logger.debug("Final retained unlabeled anoms: %d" % retained)
@@ -573,11 +531,10 @@ def aad_stream():
         # logger.debug("AUC: %f" % auc)
         aucs = append(aucs, [auc])
 
-        # queried_baseline = order(all_scores, decreasing=True)[0:opts.budget]
-        num_seen_tmp = np.cumsum(seen)  # np.cumsum(all_y[queried])
+        num_seen_tmp = np.cumsum(seen)
         # logger.debug("\nnum_seen    : %s" % (str(list(num_seen_tmp)),))
 
-        num_seen_baseline = np.cumsum(seen_baseline)  # np.cumsum(all_y[queried_baseline])
+        num_seen_baseline = np.cumsum(seen_baseline)
         # logger.debug("Numseen in %d budget (overall):\n%s" % (opts.budget, str(list(num_seen_baseline))))
 
         stream_window_baseline = append(np.array([opts.fid, opts.runidx],
@@ -586,9 +543,6 @@ def aad_stream():
         stream_window = np.ones(len(stream_window_baseline) + 2, dtype=stream_window_tmp.dtype) * -1
         stream_window[0:2] = [opts.fid, opts.runidx]
         stream_window[2:(2+len(stream_window_tmp))] = stream_window_tmp
-
-        # queried = append(np.array([opts.fid, opts.runidx], dtype=queried.dtype), queried)
-        # queried_baseline = append(np.array([opts.fid, opts.runidx], dtype=queried_baseline.dtype), queried_baseline)
 
         # num_seen_baseline has the uniformly maximum number of queries.
         # the number of queries in num_seen will vary under the query confidence mode
@@ -605,9 +559,6 @@ def aad_stream():
         num_not_seen[2:(2+len(n_unlabeled))] = n_unlabeled
 
         num_seen_baseline = append(np.array([opts.fid, opts.runidx], dtype=num_seen_baseline.dtype), num_seen_baseline)
-
-        # all_queried = rbind(all_queried, matrix(queried, nrow=1))
-        # all_queried_baseline = rbind(all_queried_baseline, matrix(queried_baseline, nrow=1))
 
         all_num_seen = rbind(all_num_seen, matrix(num_seen, nrow=1))
         all_num_not_seen = rbind(all_num_not_seen, matrix(num_not_seen, nrow=1))
