@@ -31,6 +31,7 @@ class DataPlotter(object):
             # Start a new pdf page
             if self.fig is not None:
                 self.pdf.savefig(self.fig)
+                plt.close(self.fig)
                 self.fig = None
             newfig = True
             self.pidx = 0
