@@ -45,8 +45,8 @@ The above command will generate a pdf file with plots illustrating how the data 
   (https://github.com/shubhomoydas/pyaad/blob/master/presentations/IDEA17_slides.pptx)
 
 
-Running the tree-based AAD
---------------------------
+Running AAD
+-----------
 This codebase supports four different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The Isolation Forest based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
