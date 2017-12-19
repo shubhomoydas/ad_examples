@@ -176,6 +176,13 @@ def rep(val, n, dtype=float):
     return np.ones(n, dtype=dtype) * val
 
 
+def power(x, p):
+    if isinstance(x, scipy.sparse.csr_matrix):
+        return np.sqrt(x.power(p).sum(axis=1))
+    else:
+        return np.sqrt(np.power(x, p).sum(axis=1))
+
+
 def quantile(x, q):
     return np.percentile(x, q)
 

@@ -48,7 +48,7 @@ The above command will generate a pdf file with plots illustrating how the data 
 Running the tree-based AAD
 --------------------------
 This codebase has three different algorithms:
-  - The LODA based AAD (**does not support streaming at all**)
+  - The LODA based AAD (**supports streaming, but not incremental update to model**)
   - The Isolation Forest based AAD (**supports streaming, but not incremental update to model**)
   - HS Trees based AAD (streaming support with model update)
   - RS Forest based AAD (streaming support with model update)

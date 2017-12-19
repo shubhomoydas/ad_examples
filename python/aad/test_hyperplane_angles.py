@@ -1,7 +1,7 @@
 from classifier.perceptron import Perceptron
 from common.data_plotter import *
 
-from aad.forest_aad_detector import *
+from aad.aad_support import *
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,7 @@ def plot_angle_hist(vals, labels, dp):
     anom_v = vals[np.where(labels==1)[0]]
     bins = np.arange(start=np.min(vals), stop=np.max(vals), step=(np.max(vals)-np.min(vals))/50)
     pl = dp.get_next_plot()
+    logger.debug("\n%s" % str(list(nom_v)))
     n1, bins1 = np.histogram(nom_v, bins=bins, normed=True)
     n2, bins2 = np.histogram(anom_v, bins=bins, normed=True)
     width = 0.7 * (bins[1] - bins[0])
@@ -72,37 +73,31 @@ def test_hyperplane_angles():
     for runidx in opts.get_runidxs():
 
         # fit the model
-        mdl = AadForest(n_estimators=opts.forest_n_trees,
-                        max_samples=min(opts.forest_n_samples, X_train.shape[0]),
-                        score_type=opts.forest_score_type, random_state=rng,
-                        add_leaf_nodes_only=opts.forest_add_leaf_nodes_only,
-                        max_depth=opts.forest_max_depth,
-                        ensemble_score=opts.ensemble_score,
-                        detector_type=opts.detector_type, n_jobs=opts.n_jobs)
-        mdl.fit(X_train)
-        mdl.init_weights(opts.init)
+        model = get_aad_model(X_train, opts, rng)
+        model.fit(X_train)
+        model.init_weights(opts.init)
 
-        logger.debug("total #nodes: %d" % (len(mdl.all_regions)))
+        if is_forest_detector(model.detector_type):
+            logger.debug("total #nodes: %d" % (len(model.all_regions)))
 
         if True:
-            X_train_new = mdl.transform_to_ensemble_features(X_train, dense=dense, norm_unit=False)
-            norms = np.sqrt(X_train_new.power(2).sum(axis=1))
-            scores = mdl.get_score(X_train_new)
+            X_train_new = model.transform_to_ensemble_features(X_train, dense=dense, norm_unit=False)
+            norms = power(X_train_new, 2)  # np.sqrt(X_train_new.power(2).sum(axis=1))
+            scores = model.get_score(X_train_new)
             ordered_scores_dxs = np.argsort(-scores)  # sort descending
             logger.debug("scores without norm:\n%s" % str(list(scores[ordered_scores_dxs])))
             logger.debug("instance norms:\n%s" % str(list(norms[ordered_scores_dxs])))
-            auc = mdl.get_auc(scores, labels)
+            auc = model.get_auc(scores, labels)
             logger.debug("AUC: %f" % auc)
 
-        X_train_new = mdl.transform_to_ensemble_features(X_train, dense=dense, norm_unit=opts.norm_unit)
-        scores = mdl.get_score(X_train_new)
+        X_train_new = model.transform_to_ensemble_features(X_train, dense=dense, norm_unit=True)
+        scores = model.get_score(X_train_new)
         ordered_scores = -np.sort(-scores)  # sort descending
         logger.debug("scores with norm:\n%s" % str(list(ordered_scores)))
-        auc = mdl.get_auc(scores, labels)
+        auc = model.get_auc(scores, labels)
         logger.debug("AUC: %f" % auc)
 
-        unif_w = np.ones(len(mdl.d), dtype=float)
-        unif_w = unif_w / np.sqrt(unif_w.dot(unif_w))  # normalized uniform weights
+        unif_w = model.get_uniform_weights()
 
         # logger.debug("w:%s" % str(w))
         # logger.debug("|w| = %f" % (np.sum(w * w)))
