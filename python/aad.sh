@@ -85,7 +85,7 @@ fi
 
 REPS=1  # number of independent data samples (input files)
 
-N_EXPLORE=20  # number of unlabeled top ranked instances to explore (if explore/explore)
+N_EXPLORE=20  # number of unlabeled top ranked instances to explore (if explore/exploit)
 
 # IMPORTANT: If the detector type is LODA, the data will not be normalized
 NORM_UNIT_IND=1
@@ -113,6 +113,10 @@ TOPK=0
 
 MAX_ANOMALIES_CONSTRAINT=1000  # 50
 MAX_NOMINALS_CONSTRAINT=1000  # 50
+
+# LODA specific
+MIN_K=100
+MAX_K=200
 
 N_SAMPLES=256
 
@@ -361,6 +365,7 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     --forest_score_type=${FOREST_SCORE_TYPE} ${FOREST_LEAF_ONLY} \
     --forest_max_depth=${MAX_DEPTH} --tau_score_type=${TAU_SCORE_TYPE} \
     --Ca=$CA --Cn=1 --Cx=$CX $WITH_PRIOR $UNIF_PRIOR $NORM_UNIT \
+    --mink=${MIN_K} --maxk=${MAX_K} \
     --max_anomalies_in_constraint_set=$MAX_ANOMALIES_CONSTRAINT \
     --max_nominals_in_constraint_set=$MAX_NOMINALS_CONSTRAINT \
     --n_explore=${N_EXPLORE} \

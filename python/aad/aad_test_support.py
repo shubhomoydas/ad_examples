@@ -43,7 +43,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
 
     tm = Timer()
     X_train_new = model.transform_to_ensemble_features(X_train, dense=False, norm_unit=opts.norm_unit)
-    logger.debug(tm.message("transformed input to region features"))
+    logger.debug(tm.message("transformed input to ensemble features"))
 
     if plot_dataset:
         tm.start()
