@@ -33,7 +33,7 @@ The above command will generate a pdf file with plots illustrating how the data 
 
 *Question: Why should active learning help in anomaly detection with ensembles?* Let us assume data is uniformly distributed on a 2D unit sphere (this is a setting commonly analysed in active learning theory literature). When we treat the ensemble scores as 'features', then most anomaly 'feature' vectors will be closer to the uniform unit vector (uniform unit vector has the same values for all 'features' where 'd' is the number of ensembles) than non-anomalies because anomaly detectors tend to assign higher scores to anomalies. This is another way of saying that the average of the anomaly scores would be a good representative of anomalousness (dot product of the transformed 'features' with the uniform weight vector). Seen another way, the hyper-plane perpendicular to the uniform weight vector and offset by cos(pi.tau) should a good prior for the separating hyper-plane between anomalies and nominals. The classification rule is: *sign(w.x - cos(pi.tau))* such that +1 is anomaly, -1 is nominal. On real-world data, the true hyper-plane is not exactly same as the uniform vector, but should be close (else the anomaly detectors forming the ensemble are poor). AAD is basically trying to find this true hyper-plane by solving a large-margin classification problem. The example 'percept.percept' illustrates this where we have true anomaly distribution (red points in the plots) at a slight angle from the uniform weights. With active learning, the true anomaly region on the unit sphere (centered around blue line) can be discovered in a more efficient manner if we set the uniform vector as a prior. Most current theory on active learning revolves around learning hyper-planes passing through the origin. This theory can be applied to ensemble-based anomaly detection by introducing the fixed cos(pi.tau) bias (the green line in the plots represents the learned hyperplane; the red line is perpendicular to it).
 
-**Caution: If you are normalizing the scores to unit length such that your data lies on a unit sphere, then the alignment with uniform vector will hold true if the number of ensemble members is very high -- like with IForest where leaf nodes represent the members. I think this is a property of high-dimensional geometry.** You can check out the distribution of angles of instances with the uniform weight vector using aad.test_hyperplane_angles. The true anomalies are usually closer to uniform vector when IForest is used, and the optimal hyperplane (computed with a perceptron) has an acute angle with uniform vector.
+**Caution:** By design, the uniform weight vector is more closely aligned with the ensemble score vectors of **true anomalies** than with the ensemble score vectors of true nominals. However, this alignment cannot be guaranteed when the score vectors are normalized to unit length (such that they all lie on a unit sphere). Still, if the number of ensemble members is very high -- such as with IForest where leaf nodes represent the members -- then the normalization is more likely to preserve the intended alignment. This is probably due to some properties of high-dimensional geometry. The distribution of the angles between the normalized score vectors and the uniform weight vector can be checked with aad.test_hyperplane_angles. The plotted histograms show that true anomalies are usually closer to uniform vector (measured in angles) when IForest is used, and the optimal hyperplane (computed with a perceptron) has an acute angle with uniform vector. As a recommendation: the IForest leaf-based scores may be normalied, but LODA based scores should *not* be normalied to unit length because the number of LODA projections is smaller.
 
 
 **Reference(s)**:
@@ -47,13 +47,13 @@ The above command will generate a pdf file with plots illustrating how the data 
 
 Running the tree-based AAD
 --------------------------
-This codebase has three different algorithms:
+This codebase supports four different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The Isolation Forest based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - HS Trees based AAD (streaming support with model update)
   - RS Forest based AAD (streaming support with model update)
 
-To run the Isolation Forest / HS-Trees / RS-Forest based algorithms, the command has the following format:
+To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format:
 
     bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]>
 
@@ -62,7 +62,7 @@ To run the Isolation Forest / HS-Trees / RS-Forest based algorithms, the command
     for RSForest, set <detector_type>=12;
     for LODA, set <detector_type>=13;
 
-example (with Isolation Forest, non-streaming):
+Example (with Isolation Forest, non-streaming):
 
     bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0
 
@@ -77,8 +77,8 @@ example (with HSTrees streaming):
     bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 1
 
 
-# Running AAD with precomputed anomaly scores
-
+Running AAD with precomputed anomaly scores
+-------------------------------------------
 In case scores from anomaly detector ensembles are available in a CSV file, then AAD can be run with the following command.
 
     pythonw -m aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=../datasets/toy.csv --scoresfile=../datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
@@ -86,7 +86,7 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 **Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (**--init=1**) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
 
 
-# Note on Streaming
+**Note on Streaming**
 Streaming currently supports two strategies for data retention:
   - Retention Type 0: Here the new instances from the stream completely overwrite the older *unlabeled instances* in memory.
   - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded. **This is highly recommended.**
