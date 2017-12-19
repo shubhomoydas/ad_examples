@@ -234,7 +234,7 @@ class Aad(object):
 
         return hf, in_set
 
-    def aad_weight_update(self, w, x, y, hf, w_prior, opts, tau_score=None, tau_rel=False, linear=True):
+    def aad_weight_update(self, w, x, y, hf, w_prior, opts, tau_score=None, tau_rel=True, linear=True):
         n = x.shape[0]
         bt = get_budget_topK(n, opts)
 

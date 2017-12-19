@@ -139,9 +139,9 @@ def get_aad_option_list():
                         help="Index of the label column (1-indexed) in the input CSV. Lables should be anomaly/nominal")
     parser.add_argument("--dataset", action="store", default="", required=False,
                         help="Which dataset to use")
-    parser.add_argument("--mink", action="store", type=int, default=1,
+    parser.add_argument("--mink", action="store", type=int, default=100,
                         help="Minimum number of random projections for LODA")
-    parser.add_argument("--maxk", action="store", type=int, default=100,
+    parser.add_argument("--maxk", action="store", type=int, default=200,
                         help="Maximum number of random projections for LODA")
     parser.add_argument("--original_dims", action="store_true", default=False,
                         help="Whether to use original feature space instead of random projections")
@@ -181,15 +181,15 @@ def get_aad_option_list():
                         help="Parameter initialization type (0: uniform, 1: zeros, 2: random)")
     parser.add_argument("--sigma2", action="store", type=float, default=0.5,
                         help="If prior is used on weights, then the variance of prior")
-    parser.add_argument("--Ca", action="store", type=float, default=100.,
+    parser.add_argument("--Ca", action="store", type=float, default=1.,
                         help="Penalty for anomaly")
     parser.add_argument("--Cn", action="store", type=float, default=1.,
                         help="Penalty on nominals")
-    parser.add_argument("--Cx", action="store", type=float, default=1000.,
+    parser.add_argument("--Cx", action="store", type=float, default=1.,
                         help="Penalty on constraints")
     parser.add_argument("--detector_type", action="store", type=int, default=AAD_UPD_TYPE,
                         help="Inference algorithm (simple_online(1) / online_optim(2) / aad_pairwise(3))")
-    parser.add_argument("--constrainttype", action="store", type=int, default=AAD_CONSTRAINT_PAIRWISE,
+    parser.add_argument("--constrainttype", action="store", type=int, default=AAD_CONSTRAINT_TAU_INSTANCE,
                         help="Inference algorithm (simple_online(1) / online_optim(2) / aad_pairwise(3))")
     parser.add_argument("--orderbyviolated", action="store_true", default=False,
                         help="Order by degree of violation when selecting subset of instances for constraints.")
@@ -243,7 +243,7 @@ def get_aad_option_list():
                         help="Number of samples to build each tree in Isolation Forest")
     parser.add_argument("--ifor_score_type", action="store", type=int, default=IFOR_SCORE_TYPE_CONST,
                         help="Type of anomaly score computation for a node in Isolation Forest")
-    parser.add_argument("--ifor_add_leaf_nodes_only", action="store_true", default=False,
+    parser.add_argument("--ifor_add_leaf_nodes_only", action="store_true", default=True,
                         help="Whether to include only leaf node regions only or intermediate node regions as well.")
     parser.add_argument("--modelfile", action="store", default="",
                         help="Model file path in case the model needs to be saved or loaded. Supported only for Isolation Forest.")
