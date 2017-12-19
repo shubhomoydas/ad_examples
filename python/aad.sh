@@ -32,6 +32,7 @@ if [[ "$ARGC" -gt "0" ]]; then
     #  7 - AAD_IFOREST
     # 11 - AAD_HSTREES
     # 12 - AAD_RSFOREST
+    # 13 - LODA
     # ------------------------------
     DETECTOR_TYPE=$5
 
