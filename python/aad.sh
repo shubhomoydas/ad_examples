@@ -314,7 +314,7 @@ SCRIPT_PATH=./aad/${PYSCRIPT}
 BASE_DIR=
 if [ -d "/Users/moy" ]; then
     # personal laptop
-    BASE_DIR=/Users/moy/work/git/pyaad/${DATASET_FOLDER}
+    BASE_DIR=../${DATASET_FOLDER}
     # BASE_DIR=./${DATASET_FOLDER}
     LOG_PATH=./temp/aad
     PYTHON_CMD=pythonw
