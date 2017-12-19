@@ -1,5 +1,6 @@
 from common.sgd_optimization import *
 from common.utils import *
+from common.data_plotter import *
 
 """
 pythonw -m common.test_sgd_optimization
