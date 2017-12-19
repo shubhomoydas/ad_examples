@@ -29,6 +29,7 @@ from sklearn.ensemble import IsolationForest
 from multiprocessing import Pool
 
 from common.utils import *
+from aad.data_stream import *
 
 __all__ = ["ArrTree", "HSSplitter", "HSTree", "HSTrees",
            "RSForestSplitter", "RSTree", "RSForest",
@@ -572,27 +573,6 @@ class RandomSplitTree(object):
         with the scikit-learn Isolation Forest API.
         """
         raise NotImplementedError("decision_function() has not been implemented.")
-
-
-class StreamingSupport(object):
-
-    def supports_streaming(self):
-        """Whether the stream updating APIs are supported"""
-        return False
-
-    def add_samples(self, X, current=True):
-        """Updates the count of samples at the temporary buffer or at the nodes"""
-        raise NotImplementedError("add_samples() has not been implemented.")
-
-    def update_model_from_stream_buffer(self):
-        """Moves the sample counts from the temporary buffer to the current nodes.
-
-        The buffer sample counts are not used in anomaly score computation.
-        The buffer counts are updated when data streams in, but the node
-        counts are not updated immediately. This method explicitly updates
-        the node counts.
-        """
-        raise NotImplementedError("update_model_from_stream_buffer() has not been implemented.")
 
 
 class RandomSplitForest(StreamingSupport):

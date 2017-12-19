@@ -273,8 +273,8 @@ if [[ "$STREAMING_IND" == "1" ]]; then
     STREAMING="--streaming"
     STREAMING_SIG="_stream"
     STREAMING_FLAGS="${STREAM_WINDOW}${ALLOW_STREAM_UPDATE_SIG}_mw${MAX_WINDOWS}f${MIN_FEEDBACK_PER_WINDOW}_${MAX_FEEDBACK_PER_WINDOW}_ret${RETENTION_TYPE}"
-    PYSCRIPT=forest_aad_stream.py
-    PYMODULE=aad.forest_aad_stream
+    PYSCRIPT=aad_stream.py
+    PYMODULE=aad.aad_stream
 elif [[ "$STREAMING_IND" == "0" ]]; then
     STREAMING=""
     STREAMING_SIG=
@@ -347,7 +347,7 @@ LOAD_MODEL=  # "--load_model"
 SAVE_MODEL=  # "--save_model"
 
 PLOT2D=
-# PLOT2D="--plot2D"
+PLOT2D="--plot2D"
 
 ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --header \
     --filedir=$ORIG_FEATURES_PATH --datafile=$DATA_FILE \

@@ -7,7 +7,6 @@ from common.utils import *
 from aad.aad_globals import *
 from aad.aad_support import *
 
-from aad.forest_aad_detector import *
 from aad.data_stream import *
 
 
@@ -304,15 +303,9 @@ def read_data(opts):
 
 
 def train_aad_model(opts, X_train):
-    rng = np.random.RandomState(opts.randseed + opts.fid * opts.reruns + opts.runidx)
+    random_state = np.random.RandomState(opts.randseed + opts.fid * opts.reruns + opts.runidx)
     # fit the model
-    model = AadForest(n_estimators=opts.forest_n_trees,
-                      max_samples=min(opts.forest_n_samples, X_train.shape[0]),
-                      score_type=opts.forest_score_type, random_state=rng,
-                      add_leaf_nodes_only=opts.forest_add_leaf_nodes_only,
-                      max_depth=opts.forest_max_depth,
-                      ensemble_score=opts.ensemble_score,
-                      detector_type=opts.detector_type, n_jobs=opts.n_jobs)
+    model = get_aad_model(X_train, opts, random_state)
     model.fit(X_train)
     model.init_weights(init_type=opts.init)
     return model
@@ -325,7 +318,8 @@ def prepare_aad_model(X, y, opts):
     else:
         model = train_aad_model(opts, X)
 
-    logger.debug("total #nodes: %d" % (len(model.all_regions)))
+    if is_forest_detector(model.detector_type):
+        logger.debug("total #nodes: %d" % (len(model.all_regions)))
     if False:
         if model.w is not None:
             logger.debug("w:\n%s" % str(list(model.w)))

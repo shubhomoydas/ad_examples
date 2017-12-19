@@ -305,7 +305,7 @@ class InstanceList(object):
         if self.ids is not None:
             inst_id = self.ids[index]
         if self.x_transformed is not None:
-            inst_transformed = self.x_transformed[index]
+            inst_transformed = matrix(self.x_transformed[index], nrow=1)
         return inst_x, inst_y, inst_id, inst_transformed
 
     def add_instance(self, x, y=None, id=None, x_transformed=None):

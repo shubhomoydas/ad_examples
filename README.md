@@ -36,7 +36,7 @@ The above command will generate a pdf file with plots illustrating how the data 
 **Caution: If you are normalizing the scores to unit length such that your data lies on a unit sphere, then the alignment with uniform vector will hold true if the number of ensemble members is very high -- like with IForest where leaf nodes represent the members. I think this is a property of high-dimensional geometry.** You can check out the distribution of angles of instances with the uniform weight vector using aad.test_hyperplane_angles and aad.loda. The true anomalies are usually closer to uniform vector when IForest is used, and the optimal hyperplane (computed with a perceptron) has an acute angle with uniform vector.
 
 
-##Reference(s):
+**Reference(s)**:
   - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2016). Incorporating Expert Feedback into Active Anomaly Discovery in the Proceedings of the IEEE International Conference on Data Mining. (http://web.engr.oregonstate.edu/~wongwe/papers/pdf/ICDM2016.AAD.pdf)
   (https://github.com/shubhomoydas/aad/blob/master/overview/ICDM2016-AAD.pptx)
 
@@ -48,8 +48,8 @@ The above command will generate a pdf file with plots illustrating how the data 
 Running the tree-based AAD
 --------------------------
 This codebase has three different algorithms:
-  - The LODA based AAD (**supports streaming, but not incremental update to model**)
-  - The Isolation Forest based AAD (**supports streaming, but not incremental update to model**)
+  - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
+  - The Isolation Forest based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - HS Trees based AAD (streaming support with model update)
   - RS Forest based AAD (streaming support with model update)
 
@@ -75,6 +75,15 @@ example (with HSTrees streaming):
 **Note:** In case the data does not have concept drift, I would **recommend using Isolation forest** instead of HSTrees and RSForest:
 
     bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 1
+
+
+# Running AAD with precomputed anomaly scores
+
+In case scores from anomaly detector ensembles are available in a CSV file, then AAD can be run with the following command.
+
+    pythonw -m aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=../datasets/toy.csv --scoresfile=../datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
+
+**Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (**--init=1***) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
 
 
 # Note on Streaming

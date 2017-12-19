@@ -26,11 +26,13 @@ ATGP_IFOREST = 10
 AAD_HSTREES = 11
 AAD_RSFOREST = 12
 LODA = 13
+PRECOMPUTED_SCORES = 14
 
 # Detector type names - first is blank string so these are 1-indexed
 detector_types = ["", "simple_online", "online_optim", "aad",
-                "aad_slack", "baseline", "iter_grad", "iforest",
-                "simple_pairwise", "iforest_orig", "if_atgp", "hstrees", "rsfor", "loda"]
+                  "aad_slack", "baseline", "iter_grad", "iforest",
+                  "simple_pairwise", "iforest_orig", "if_atgp", "hstrees", "rsfor",
+                  "loda", "precomputed"]
 
 # ==============================
 # Tau Score Types

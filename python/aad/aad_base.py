@@ -337,7 +337,8 @@ class Aad(object):
         if (opts.detector_type == AAD_IFOREST or
                 opts.detector_type == AAD_HSTREES or
                 opts.detector_type == AAD_RSFOREST or
-                opts.detector_type == LODA):
+                opts.detector_type == LODA or
+                opts.detector_type == PRECOMPUTED_SCORES):
             w_new = self.aad_weight_update(w, x, y, hf=append(ha, hn),
                                                   w_prior=w_prior, opts=opts, tau_score=tau_score, tau_rel=tau_rel,
                                                   linear=(self.ensemble_score == ENSEMBLE_SCORE_LINEAR))

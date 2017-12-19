@@ -46,7 +46,7 @@ def aad_batch():
 
     logger.debug("loaded file: %s" % opts.datafile)
     logger.debug("results dir: %s" % opts.resultsdir)
-    logger.debug("forest_type: %s" % detector_types[opts.detector_type])
+    logger.debug("detector_type: %s" % detector_types[opts.detector_type])
 
     model = None
     X_train_new = None

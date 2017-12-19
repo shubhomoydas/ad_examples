@@ -9,6 +9,7 @@ from aad.aad_loss import *
 
 from aad.forest_aad_detector import *
 from aad.loda_aad import *
+from precomputed_aad import *
 
 
 def get_aad_model(x, opts, random_state=None):
@@ -22,6 +23,8 @@ def get_aad_model(x, opts, random_state=None):
                           max_depth=opts.forest_max_depth,
                           ensemble_score=opts.ensemble_score,
                           detector_type=opts.detector_type, n_jobs=opts.n_jobs)
+    elif opts.detector_type == PRECOMPUTED_SCORES:
+        model = AadPrecomputed(opts, random_state=random_state)
     else:
         raise ValueError("Unsupported ensemble")
     return model

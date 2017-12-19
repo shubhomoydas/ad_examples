@@ -4,18 +4,15 @@ import numpy as np
 import logging
 
 from common.utils import *
-from common.data_plotter import *
-
-from classifier.perceptron import Perceptron
-
 from aad.aad_globals import *
 from aad.aad_base import *
 
 from loda.loda import loda
 from aad.loda_support import *
+from aad.data_stream import StreamingSupport
 
 
-class AadLoda(Aad):
+class AadLoda(Aad, StreamingSupport):
     """ Wrapper over LODA
 
     Attributes:
@@ -26,7 +23,7 @@ class AadLoda(Aad):
             The LODA model containing all projection vectors and histograms
     """
     def __init__(self, sparsity=np.nan, mink=1, maxk=0, random_state=None):
-        Aad.__init__(self, LODA)
+        Aad.__init__(self, LODA, random_state=random_state)
         self.sparsity = sparsity
         self.mink = mink
         self.maxk = maxk
@@ -55,3 +52,12 @@ class AadLoda(Aad):
                 logger.debug("norms after:\n%s" % (str(list(norms))))
         return nlls
 
+    def supports_streaming(self):
+        return False
+
+    def add_samples(self, X, current=False):
+        logger.warning("Model does not support stream update. Retaining old model.")
+
+    def update_model_from_stream_buffer(self):
+        # LODA implementation currently does not support this
+        pass

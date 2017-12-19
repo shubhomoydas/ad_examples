@@ -48,6 +48,27 @@ class DataStream(object):
         return self.X is None or self.X.shape[0] == 0
 
 
+class StreamingSupport(object):
+
+    def supports_streaming(self):
+        """Whether the stream updating APIs are supported"""
+        return False
+
+    def add_samples(self, X, current=True):
+        """Updates the count of samples at the temporary buffer or at the nodes"""
+        raise NotImplementedError("add_samples() has not been implemented.")
+
+    def update_model_from_stream_buffer(self):
+        """Moves the sample counts from the temporary buffer to the current nodes.
+
+        The buffer sample counts are not used in anomaly score computation.
+        The buffer counts are updated when data streams in, but the node
+        counts are not updated immediately. This method explicitly updates
+        the node counts.
+        """
+        raise NotImplementedError("update_model_from_stream_buffer() has not been implemented.")
+
+
 def get_rearranging_indexes(add_pos, move_pos, n):
     """Creates an array 0...n-1 and moves value at 'move_pos' to 'add_pos', and shifts others back
 
