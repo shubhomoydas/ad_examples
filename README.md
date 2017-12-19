@@ -23,7 +23,7 @@ Python libraries required:
 
 Active Anomaly Discovery (AAD)
 ------------------------------
-The 'pyaad' project (https://github.com/shubhomoydas/pyaad) implements an algorithm (AAD) to actively explore anomalies. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
+This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
 
 To run (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
 
