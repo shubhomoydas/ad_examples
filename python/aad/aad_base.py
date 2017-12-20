@@ -234,7 +234,8 @@ class Aad(object):
 
         return hf, in_set
 
-    def aad_weight_update(self, w, x, y, hf, w_prior, opts, tau_score=None, tau_rel=True, linear=True):
+    def aad_weight_update(self, w, x, y, hf, w_prior, opts,
+                          tau_score=None, tau_rel=True, linear=True):
         n = x.shape[0]
         bt = get_budget_topK(n, opts)
 
@@ -258,21 +259,28 @@ class Aad(object):
             # logger.debug("x_tau:")
             # logger.debug(to_dense_mat(x_tau))
 
+        if opts.prior_influence == PRIOR_INFLUENCE_ADAPTIVE:
+            prior_influence = 1. / max(1., 0. if hf is None else len(hf))
+        elif opts.prior_influence == PRIOR_INFLUENCE_FIXED:
+            prior_influence = 1.
+        else:
+            raise ValueError("Invalid prior_influence specified: %d" % opts.prior_influence)
+
         def if_f(w, x, y):
             if linear:
                 return aad_loss_linear(w, x, y, self.qval, in_constr_set=in_constr_set, x_tau=x_tau,
-                                              Ca=opts.Ca, Cn=opts.Cn, Cx=opts.Cx,
-                                              withprior=opts.withprior, w_prior=w_prior,
-                                              sigma2=opts.priorsigma2)
+                                       Ca=opts.Ca, Cn=opts.Cn, Cx=opts.Cx,
+                                       withprior=opts.withprior, w_prior=w_prior,
+                                       sigma2=opts.priorsigma2, prior_influence=prior_influence)
             else:
                 raise ValueError("Only linear loss supported")
 
         def if_g(w, x, y):
             if linear:
                 return aad_loss_gradient_linear(w, x, y, self.qval, in_constr_set=in_constr_set, x_tau=x_tau,
-                                                       Ca=opts.Ca, Cn=opts.Cn, Cx=opts.Cx,
-                                                       withprior=opts.withprior, w_prior=w_prior,
-                                                       sigma2=opts.priorsigma2)
+                                                Ca=opts.Ca, Cn=opts.Cn, Cx=opts.Cx,
+                                                withprior=opts.withprior, w_prior=w_prior,
+                                                sigma2=opts.priorsigma2, prior_influence=prior_influence)
             else:
                 raise ValueError("Only linear loss supported")
         if False:

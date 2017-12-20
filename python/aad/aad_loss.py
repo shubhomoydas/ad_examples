@@ -4,7 +4,7 @@ from common.utils import *
 
 def aad_loss_linear(w, xi, yi, qval, in_constr_set=None, x_tau=None,
                     Ca=1.0, Cn=1.0, Cx=1.0,
-                    withprior=False, w_prior=None, sigma2=1.0):
+                    withprior=False, w_prior=None, sigma2=1.0, prior_influence=1.0):
     """
     Computes AAD loss:
         for square_slack:
@@ -72,14 +72,14 @@ def aad_loss_linear(w, xi, yi, qval, in_constr_set=None, x_tau=None,
 
     if withprior and w_prior is not None:
         w_diff = w - w_prior
-        loss += (1 / (2 * sigma2)) * (w_diff.dot(w_diff))
+        loss += (1. * prior_influence / (2. * sigma2)) * (w_diff.dot(w_diff))
 
     return loss
 
 
 def aad_loss_gradient_linear(w, xi, yi, qval, in_constr_set=None, x_tau=None,
                              Ca=1.0, Cn=1.0, Cx=1.0,
-                             withprior=False, w_prior=None, sigma2=1.0):
+                             withprior=False, w_prior=None, sigma2=1.0, prior_influence=1.0):
     """
     Computes jacobian of AAD loss:
         for square_slack:
@@ -164,8 +164,9 @@ def aad_loss_gradient_linear(w, xi, yi, qval, in_constr_set=None, x_tau=None,
     grad[0:m] = (loss_a / max(1, n_anom)) + (loss_n / max(1, n_noml))
 
     if withprior and w_prior is not None:
+        prior_mul = max(1., n_anom + n_noml)
         w_diff = w - w_prior
-        grad[0:m] += (1 / sigma2) * w_diff
+        grad[0:m] += (1. * prior_influence / sigma2) * w_diff
 
     return grad
 

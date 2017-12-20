@@ -203,6 +203,18 @@ LABELINDEX=1
 SIGMA2=0.5
 
 # =====================================================
+# PRIOR_INFLUENCE
+#   0 - Keep the prior influence fixed
+#   1 - Lower the prior influence as the number of
+#       labeled instances increases
+PRIOR_INFLUENCE=1
+# -----------------------------------------------------
+PRIOR_INFLUENCE_SIG=
+if [[ "$PRIOR_INFLUENCE" == "1" ]]; then
+    PRIOR_INFLUENCE_SIG="_adapt"
+fi
+
+# =====================================================
 # Following option determines whether we want to put 
 #   a prior on weights. The type of prior is determined 
 #   by option UNIF_PRIOR (defined later)
@@ -213,7 +225,7 @@ SIGMA2=0.5
 WITH_PRIOR_IND=1
 if [[ "$WITH_PRIOR_IND" == "1" ]]; then
     WITH_PRIOR="--withprior"
-    WITH_PRIOR_SIG="_s${SIGMA2}"
+    WITH_PRIOR_SIG="_s${SIGMA2}${PRIOR_INFLUENCE_SIG}"
 else
     WITH_PRIOR=""
     WITH_PRIOR_SIG="_noprior"
@@ -370,7 +382,7 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     --forest_score_type=${FOREST_SCORE_TYPE} ${FOREST_LEAF_ONLY} \
     --forest_max_depth=${MAX_DEPTH} --tau_score_type=${TAU_SCORE_TYPE} \
     --Ca=$CA --Cn=1 --Cx=$CX $WITH_PRIOR $UNIF_PRIOR $NORM_UNIT \
-    --mink=${MIN_K} --maxk=${MAX_K} \
+    --mink=${MIN_K} --maxk=${MAX_K} --prior_influence=${PRIOR_INFLUENCE} \
     --max_anomalies_in_constraint_set=$MAX_ANOMALIES_CONSTRAINT \
     --max_nominals_in_constraint_set=$MAX_NOMINALS_CONSTRAINT \
     --n_explore=${N_EXPLORE} \

@@ -63,6 +63,18 @@ ensemble_score_names = ["linear", "exp"]
 # ------------------------------
 
 # ==============================
+# Prior Influence
+# ------------------------------
+# Prior influence is fixed irrespective of how many instances are labeled.
+PRIOR_INFLUENCE_FIXED = 0
+
+# Prior is divided by number of labeled instances such that as more instances
+# are labeled, the prior's influence decreases.
+PRIOR_INFLUENCE_ADAPTIVE = 1
+# ------------------------------
+
+
+# ==============================
 # Constraint types when Detector Type is AAD_PAIRWISE_CONSTR_UPD_TYPE
 # ------------------------------
 AAD_CONSTRAINT_NONE = 0  # no constraints
@@ -173,6 +185,8 @@ def get_aad_option_list():
                         help="Whether to use uniform priors for weights. "
                              "By default, weight from previous iteration "
                              "is used as prior when --withprior is specified.")
+    parser.add_argument("--prior_influence", action="store", type=int, default=PRIOR_INFLUENCE_FIXED,
+                        help="Whether to keep the prior's influence fixed or decrease it as more data is labeled.")
     parser.add_argument("--tau_score_type", action="store", type=int, default=TAU_SCORE_VARIABLE,
                         help="0 - No tau-score hinge loss, " +
                              "1 - Tau-score computed with each iteration, " +
@@ -347,6 +361,7 @@ class AadOpts(object):
         self.orderbyviolated = args.orderbyviolated
         self.withprior = args.withprior  # whether to include prior in loss
         self.unifprior = args.unifprior
+        self.prior_influence = args.prior_influence
         self.priorsigma2 = args.sigma2  # 0.2, #0.5, #0.1,
         self.init = args.init
         self.single_inst_feedback = False
@@ -473,6 +488,12 @@ class AadOpts(object):
         prefix = self.get_alad_metrics_name_prefix()
         return os.path.join(self.resultsdir, prefix + "_alad_summary.pydata")
 
+    def prior_str(self):
+        influence_sig = "" if self.prior_influence == PRIOR_INFLUENCE_FIXED else "_adapt"
+        sig = (("-unifprior" if self.unifprior else "-prevprior") +
+               str(self.priorsigma2) + influence_sig) if self.withprior else "-noprior"
+        return sig
+
     def get_alad_metrics_name_prefix(self):
         if not self.is_simple_run():
             filesig = ("-fid%d" % (self.fid,)) + ("-runidx%d" % (self.runidx,))
@@ -492,8 +513,7 @@ class AadOpts(object):
                       ("-single" if self.single_inst_feedback else "") +
                       ("-" + self.query_name_str()) +
                       ("-orig" if self.original_dims else "") +
-                      (("-unifprior" if self.unifprior else "-prevprior" + str(
-                          self.priorsigma2)) if self.withprior else "-noprior") +
+                      self.prior_str() +
                       ("-init_%s" % (initialization_types[self.init],)) +
                       # ("-with_meanrel" if opts.withmeanrelativeloss else "-no_meanrel") +
                       ("-Ca%.0f" % (self.Ca,)) +
@@ -534,8 +554,7 @@ class AadOpts(object):
                ("-single" if self.single_inst_feedback else "") +
                ("-query_" + self.query_name_str()) +
                ("-orig" if self.original_dims else "") +
-               ((("-unifprior" if self.unifprior else "-prevprior") + str(self.priorsigma2))
-                if self.withprior else "-noprior") +
+               self.prior_str() +
                ("-init_%s" % (initialization_types[self.init],)) +
                ("-Ca" + str(self.Ca)) +
                (("-Cn" + str(self.Cn)) if self.Cn != 1 else "") +
