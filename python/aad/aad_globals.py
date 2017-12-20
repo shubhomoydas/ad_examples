@@ -490,8 +490,7 @@ class AadOpts(object):
 
     def prior_str(self):
         influence_sig = "" if self.prior_influence == PRIOR_INFLUENCE_FIXED else "_adapt"
-        sig = (("-unifprior" if self.unifprior else "-prevprior") +
-               str(self.priorsigma2) + influence_sig) if self.withprior else "-noprior"
+        sig = (("-unifprior" if self.unifprior else "-prevprior") + influence_sig) if self.withprior else "-noprior"
         return sig
 
     def get_alad_metrics_name_prefix(self):
@@ -546,6 +545,9 @@ class AadOpts(object):
         randomInstanceAtStartSig = "-randFirst" if self.random_instance_at_start else ""
         streaming_sig = "-" + self.streaming_str() if self.streaming else ""
         norm_sig = "-norm" if self.norm_unit else ""
+        influence_sig = "" if self.prior_influence == PRIOR_INFLUENCE_FIXED else "_adapt"
+        prior_sig = (("-unifprior" if self.unifprior else "-prevprior") +
+               str(self.priorsigma2) + influence_sig) if self.withprior else "-noprior"
         tau_score_sig = "" if self.tau_score_type == TAU_SCORE_VARIABLE else "-%s" % tau_score_types[self.tau_score_type]
         srr = (("[" + self.dataset + "]") +
                ("-%s" % (self.detector_type_str(),)) +
@@ -554,7 +556,7 @@ class AadOpts(object):
                ("-single" if self.single_inst_feedback else "") +
                ("-query_" + self.query_name_str()) +
                ("-orig" if self.original_dims else "") +
-               self.prior_str() +
+               prior_sig +
                ("-init_%s" % (initialization_types[self.init],)) +
                ("-Ca" + str(self.Ca)) +
                (("-Cn" + str(self.Cn)) if self.Cn != 1 else "") +
