@@ -143,13 +143,17 @@ if [[ "$DETECTOR_TYPE" == "7" ]]; then
     MAX_DEPTH=100
 elif [[ "$DETECTOR_TYPE" == "11" ]]; then
     INFERENCE_NAME="hstrees"
+    NORM_UNIT_IND=0  # DO NOT normalize for HSTrees
     FOREST_SCORE_TYPE=5
-    N_TREES=30
+    N_TREES=100
+    FOREST_LEAF_ONLY=1  # Allow only leaf nodes for HS Trees at this time...
     CA=1
 elif [[ "$DETECTOR_TYPE" == "12" ]]; then
     INFERENCE_NAME="rsforest"
+    NORM_UNIT_IND=0  # DO NOT normalize for RSForest
     FOREST_SCORE_TYPE=7
-    N_TREES=30
+    N_TREES=100
+    FOREST_LEAF_ONLY=1  # Allow only leaf nodes for RS Forest at this time...
     CA=1
 elif [[ "$DETECTOR_TYPE" == "13" ]]; then
     INFERENCE_NAME="loda"
@@ -164,9 +168,10 @@ if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" ==
             # IFOR_SCORE_TYPE_NEG_PATH_LEN supported only for isolation forest leaf-only
             FOREST_SCORE_TYPE=4
         elif [[ "$DETECTOR_TYPE" == "12" ]]; then
-            # NOTE: empirically, scoretype 7 works better than scoretype 6 for RSForest
-            # scoretype 7 is geometric mean. scoretype 6 is arithmetic mean.
-            FOREST_SCORE_TYPE=7  #6
+            # NOTE: scoretype 7 is geometric mean. scoretype 6 is arithmetic mean.
+            # Since this is not properly debugged yet, we will use the original
+            # RS Forest score calculation (arithmetic mean).
+            FOREST_SCORE_TYPE=6  #7
         fi
     else
         FOREST_LEAF_ONLY=""

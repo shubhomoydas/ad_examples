@@ -683,8 +683,11 @@ class RandomSplitForest(StreamingSupport):
 
         p = Pool(n_pool)
         rnd_int = self.random_state.randint(42)
+        if isinstance(max_samples, str):
+            max_samples = min(256, X.shape[0])
+        logger.debug("max_samples: %d" % max_samples)
         trees = p.map(self.get_fitting_function(),
-                      [(max_depth, X, rnd_int + i) for i in range(n_trees)])
+                      [(max_depth, X, max_samples, rnd_int + i) for i in range(n_trees)])
         return trees
 
     def fit(self, X, y=None, sample_weight=None):
@@ -876,11 +879,18 @@ class HSTrees(RandomSplitForest):
 def hstree_fit(args):
     max_depth = args[0]
     X = args[1]
-    random_state = args[2]
+    max_samples = args[2]
+    rnd = args[3]
+    random_state = check_random_state(rnd)
+    n = X.shape[0]
+    max_samples = min(max_samples, n)
+    sample_idxs = np.arange(n)
+    random_state.shuffle(sample_idxs)
+    X_sub = X[sample_idxs[0:max_samples]]
     hst = HSTree(splitter=HSSplitter(random_state=random_state),
-                          max_depth=max_depth, max_features=X.shape[1],
+                          max_depth=max_depth, max_features=X_sub.shape[1],
                           random_state=random_state)
-    hst.fit(X, None)
+    hst.fit(X_sub, None)
     return hst
 
 
@@ -990,11 +1000,18 @@ class RSForest(RandomSplitForest):
 def rsforest_fit(args):
     max_depth = args[0]
     X = args[1]
-    random_state = args[2]
+    max_samples = args[2]
+    rnd = args[3]
+    random_state = check_random_state(rnd)
+    n = X.shape[0]
+    max_samples = min(max_samples, n)
+    sample_idxs = np.arange(n)
+    random_state.shuffle(sample_idxs)
+    X_sub = X[sample_idxs[0:max_samples]]
     rsf = RSTree(splitter=RSForestSplitter(random_state=random_state),
-                 max_depth=max_depth, max_features=X.shape[1],
+                 max_depth=max_depth, max_features=X_sub.shape[1],
                  random_state=random_state)
-    rsf.fit(X, None)
+    rsf.fit(X_sub, None)
     return rsf
 
 

@@ -332,9 +332,9 @@ class AadForest(Aad, StreamingSupport):
             elif self.score_type == IFOR_SCORE_TYPE_NEG_PATH_LEN:
                 d[i] = -region.path_length
             elif self.score_type == HST_SCORE_TYPE:
-                # d[i] = -region.node_samples * (2. ** region.path_length)
+                d[i] = -region.node_samples * (2. ** region.path_length)
                 # d[i] = -region.node_samples * region.path_length
-                d[i] = -np.log(region.node_samples + 1) + region.path_length
+                # d[i] = -np.log(region.node_samples + 1) + region.path_length
             elif self.score_type == RSF_SCORE_TYPE:
                 d[i] = -region.node_samples * np.exp(region.log_frac_vol)
             elif self.score_type == RSF_LOG_SCORE_TYPE:
@@ -476,6 +476,10 @@ class AadForest(Aad, StreamingSupport):
                              (end_batch + 1, n, (end_batch + 1)*1./n, batch_size, tdiff))
             if norm_unit:
                 norms = np.sqrt(x_tmp_new.power(2).sum(axis=1))
+                zero_idxs = np.where(norms == 0)[0]
+                if len(zero_idxs) > 0:
+                    # in order to avoid a divide by zero warning
+                    norms[zero_idxs] = 1
                 # logger.debug("norms before [%d/%d]:\n%s" % (start_batch, end_batch, str(list(norms.T))))
                 x_tmp_new = x_tmp_new.multiply(1/norms)
                 # norms = np.sqrt(x_tmp_new.power(2).sum(axis=1))

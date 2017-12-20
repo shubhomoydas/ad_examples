@@ -30,7 +30,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     output_forest_original = False
     output_transformed_to_file = False
     plot_dataset = data_2D and True
-    plot_rectangular_regions = plot_dataset and is_forest_detector(model.detector_type) and True
+    plot_rectangular_regions = plot_dataset and is_forest_detector(model.detector_type) and False
     plot_forest_contours = data_2D and is_forest_detector(model.detector_type) and True
     plot_baseline = data_2D and False
     plot_aad = metrics is not None and data_2D and True
@@ -56,6 +56,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
                    n_found, fmt='%3.2f', delimiter=",")
 
     if plot_forest_contours:
+        print "plotting contours to file %s" % pdfpath_orig_if_contours
         tm.start()
         plot_forest_contours_2D(X_train, labels, xx, yy, opts.budget, model,
                                 pdfpath_orig_if_contours, dash_xy, dash_wh)
@@ -73,8 +74,11 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
                                         pdfpath_baseline, dash_xy, dash_wh, opts)
 
     if plot_aad and metrics is not None:
+        print "plotting feedback iterations in folder %s" % outputdir
+        tm.start()
         plot_aad_2D(X_train, labels, X_train_new, xx, yy, model,
                     metrics, outputdir, dash_xy, dash_wh, opts)
+        logger.debug(tm.message("plotted feedback iterations"))
 
 
 def check_random_vector_angle(model, vec, samples=None):
@@ -226,8 +230,8 @@ def plot_forest_contours_2D(x, y, xx, yy, budget, forest, pdfpath_contours, dash
     queried = np.argsort(-baseline_scores)
     # logger.debug("baseline scores:%s\n%s" % (str(baseline_scores.shape), str(list(baseline_scores))))
 
-    n_found = np.cumsum(y[queried[np.arange(budget)]])
-    print n_found
+    # n_found = np.cumsum(y[queried[np.arange(budget)]])
+    # print n_found
 
     Z_if = 0.5 - forest.decision_function(np.c_[xx.ravel(), yy.ravel()])
     Z_if = Z_if.reshape(xx.shape)

@@ -99,6 +99,11 @@ def aad_batch():
             baseline_w = model.get_uniform_weights()
 
             agg_scores = model.get_score(X_train_new, baseline_w)
+            if True and is_forest_detector(opts.detector_type):
+                original_scores = 0.5 - model.decision_function(X_train)
+                queried = np.argsort(-original_scores)
+                n_found = np.cumsum(labels[queried[np.arange(opts.budget)]])
+                logger.debug("#anomalies found by original detector:\n%s" % str(list(n_found)))
 
             if baseline_query_indexes_only:
                 baseline_query_info.append(get_queried_indexes(agg_scores, labels, opts))
