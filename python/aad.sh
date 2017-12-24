@@ -40,12 +40,12 @@ if [[ "$ARGC" -gt "0" ]]; then
     # Query types
     # ------------------------------
     # QUERY_DETERMINISIC = 1
-    # QUERY_BETA_ACTIVE = 2
+    # QUERY_TOP_RANDOM = 2
     # QUERY_QUANTILE = 3
     # QUERY_RANDOM = 4
     # QUERY_SEQUENTIAL = 5
     # QUERY_GP = 6 (Gaussian Process)
-    # QUERY_SCORE_VAR = 7
+    # QUERY_SCORE_VAR = 7 (Score Variance)
     # ------------------------------
     QUERY_TYPE=$6
     
@@ -85,7 +85,12 @@ fi
 
 REPS=1  # number of independent data samples (input files)
 
-N_EXPLORE=20  # number of unlabeled top ranked instances to explore (if explore/exploit)
+# Specific to QUERY_TOP_RANDOM, QUERY_GP, QUERY_SCORE_VAR
+N_EXPLORE=2  # number of unlabeled top ranked instances to explore (if explore/exploit)
+QUERY_SIG="q${QUERY_TYPE}"
+if [[ "${QUERY_TYPE}" == "2" ]]; then
+    QUERY_SIG="q${QUERY_TYPE}n${N_EXPLORE}"
+fi
 
 # IMPORTANT: If the detector type is LODA, the data will not be normalized
 NORM_UNIT_IND=1
@@ -291,6 +296,7 @@ if [[ "$ALLOW_STREAM_UPDATE_IND" == "1" ]]; then
     ALLOW_STREAM_UPDATE_SIG="asu"
 fi
 
+OPERATION="aad"
 if [[ "$STREAMING_IND" == "1" ]]; then
     STREAMING="--streaming"
     STREAMING_SIG="_stream"
@@ -304,6 +310,7 @@ elif [[ "$STREAMING_IND" == "0" ]]; then
     PYSCRIPT=aad_batch.py
     PYMODULE=aad.aad_batch
 else
+    OPERATION="angles"
     STREAMING=""
     STREAMING_SIG=""
     STREAMING_FLAGS="_angle"
@@ -320,11 +327,11 @@ RUN_TYPE=multi
 
 NAME_PREFIX="undefined"
 if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" ]]; then
-    NAME_PREFIX="${INFERENCE_NAME}_trees${N_TREES}_samples${N_SAMPLES}_i${DETECTOR_TYPE}_q${QUERY_TYPE}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_nscore${FOREST_SCORE_TYPE}${FOREST_LEAF_ONLY_SIG}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}_d${MAX_DEPTH}${STREAMING_SIG}${STREAMING_FLAGS}${NORM_UNIT_SIG}${FIXED_TAU_SCORE_SIG}"
+    NAME_PREFIX="${INFERENCE_NAME}_trees${N_TREES}_samples${N_SAMPLES}_i${DETECTOR_TYPE}_${QUERY_SIG}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_nscore${FOREST_SCORE_TYPE}${FOREST_LEAF_ONLY_SIG}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}_d${MAX_DEPTH}${STREAMING_SIG}${STREAMING_FLAGS}${NORM_UNIT_SIG}${FIXED_TAU_SCORE_SIG}"
 elif [[ "$DETECTOR_TYPE" == "9" ]]; then
     NAME_PREFIX="${INFERENCE_NAME}_trees${N_TREES}_samples${N_SAMPLES}"
 elif [[ "$DETECTOR_TYPE" == "13" ]]; then
-    NAME_PREFIX="${INFERENCE_NAME}_i${DETECTOR_TYPE}_q${QUERY_TYPE}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}${STREAMING_SIG}${STREAMING_FLAGS}${NORM_UNIT_SIG}"
+    NAME_PREFIX="${INFERENCE_NAME}_i${DETECTOR_TYPE}_${QUERY_SIG}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}${STREAMING_SIG}${STREAMING_FLAGS}${NORM_UNIT_SIG}"
 fi
 
 DATASET_FOLDER=datasets
@@ -338,9 +345,9 @@ if [ -d "/Users/moy" ]; then
     # personal laptop
     BASE_DIR=../${DATASET_FOLDER}
     # BASE_DIR=./${DATASET_FOLDER}
-    LOG_PATH=./temp/aad
+    LOG_PATH=./temp/${OPERATION}
     PYTHON_CMD=pythonw
-    RESULTS_PATH="temp/aad/$DATASET/${NAME_PREFIX}"
+    RESULTS_PATH="temp/${OPERATION}/$DATASET/${NAME_PREFIX}"
 elif [ -d "/home/sdas/codebase/bb_python/ad_examples" ]; then
     # cluster environment
     BASE_DIR=/data/doppa/users/sdas/${DATASET_FOLDER}

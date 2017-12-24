@@ -101,15 +101,15 @@ RELATIVE_TO_NAMES = ["", "mean", "quantile"]
 # Query types
 # ------------------------------
 QUERY_DETERMINISIC = 1
-QUERY_BETA_ACTIVE = 2
+QUERY_TOP_RANDOM = 2
 QUERY_QUANTILE = 3
 QUERY_RANDOM = 4
-QUERY_SEQUENTIAL = 5
-QUERY_GP = 6
-QUERY_SCORE_VAR = 7
+QUERY_SEQUENTIAL = 5  # Some MDP/reinforcement learning based stuff for later
+QUERY_GP = 6  # Gaussian Process support for later
+QUERY_SCORE_VAR = 7  # Based on variance of scores assigned at the leaves
 
 # first blank string makes the other names 1-indexed
-query_type_names = ["", "top", "beta_active", "quantile", "random", "sequential", "gp", "scvar"]
+query_type_names = ["", "top", "toprandom", "quantile", "random", "sequential", "gp", "scvar"]
 # ------------------------------
 
 
@@ -285,8 +285,10 @@ def get_aad_option_list():
     parser.add_argument("--forest_max_depth", action="store", type=int, default=15,
                         help="Number of samples to build each tree in Forest")
 
-    parser.add_argument("--n_explore", action="store", type=int, default=20,
-                        help="Number of top ranked instances to evaluate during exploration (query types GP and score variance)")
+    parser.add_argument("--n_explore", action="store", type=int, default=2,
+                        help="Number of top ranked instances to evaluate during exploration. " +
+                             "Applies to querytype(s) [toprandom(%d) | gp(%d) | scvar(%d)]" %
+                             (QUERY_TOP_RANDOM, QUERY_GP, QUERY_SCORE_VAR))
 
     parser.add_argument("--streaming", action="store_true", default=False,
                         help="Whether to run the algorithm in streaming setting")

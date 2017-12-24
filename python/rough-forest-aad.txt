@@ -8,6 +8,12 @@ bash ./aad.sh abalone 50 1 0.03 7 1 0 0 512 0
 
 nohup bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0 &
 
+# plot node value histogram
+pythonw -m aad.test_tree_properties
+
+=====================================
+# BATCH - QueryTopRandom
+=====================================
 nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 0 512 0 &
 nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 0 512 0 &
 nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 1 0 0 512 0 &
@@ -16,6 +22,24 @@ nohup bash ./aad.sh mammography 300 10 0.03 7 1 0 0 512 0 &
 nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 1 0 0 512 0 &
 nohup bash ./aad.sh covtype 300 10 0.03 7 1 0 0 512 0 &
 nohup bash ./aad.sh kddcup 300 10 0.03 7 1 0 0 512 0 &
+
+
+=====================================
+# BATCH - QueryTopRandom
+=====================================
+# run Isolation Forest based batch active
+bash ./aad.sh toy2 35 1 0.03 7 2 0 0 512 0
+
+nohup bash ./aad.sh toy2 35 10 0.03 7 2 0 0 512 0 &
+
+nohup bash ./aad.sh abalone 300 10 0.03 7 2 0 0 512 0 &
+nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 2 0 0 512 0 &
+nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 2 0 0 512 0 &
+nohup bash ./aad.sh yeast 300 10 0.03 7 2 0 0 512 0 &
+nohup bash ./aad.sh mammography 300 10 0.03 7 2 0 0 512 0 &
+nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 2 0 0 512 0 &
+nohup bash ./aad.sh covtype 300 10 0.03 7 2 0 0 512 0 &
+nohup bash ./aad.sh kddcup 300 10 0.03 7 2 0 0 512 0 &
 
 
 =====================================
@@ -29,14 +53,29 @@ bash ./aad.sh abalone 50 1 0.03 7 1 0 1 512 0
 
 nohup bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 0 &
 
-nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./aad.sh yeast 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./aad.sh mammography 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./aad.sh covtype 300 10 0.03 7 1 0 1 512 0 &
-nohup bash ./aad.sh kddcup 300 10 0.03 7 1 0 1 512 0 &
+# Query Top - Retain Overwrite
+nohup bash ./aad.sh abalone 300 10 0.03 7 2 0 1 512 0 &
+nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 2 0 1 512 0 &
+nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 2 0 1 512 0 &
+nohup bash ./aad.sh yeast 300 10 0.03 7 2 0 1 512 0 &
+nohup bash ./aad.sh mammography 300 10 0.03 7 2 0 1 512 0 &
+nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 2 0 1 512 0 &
+nohup bash ./aad.sh covtype 300 10 0.03 7 2 0 1 512 0 &
+nohup bash ./aad.sh kddcup 300 10 0.03 7 2 0 1 512 0 &
+
+# Query Top - Retain Anomalous
+nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 1 512 1 &
+nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 1 512 1 &
+nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 1 0 1 512 1 &
+nohup bash ./aad.sh yeast 300 10 0.03 7 1 0 1 512 1 &
+nohup bash ./aad.sh mammography 300 10 0.03 7 1 0 1 512 1 &
+nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 1 0 1 512 1 &
+nohup bash ./aad.sh covtype 300 10 0.03 7 1 0 1 512 1 &
+nohup bash ./aad.sh kddcup 300 10 0.03 7 1 0 1 512 1 &
+
+# Query Top - Retain Anomalous, Query Confident
+nohup bash ./aad.sh abalone 300 10 0.03 7 1 1 1 512 1 &
+
 
 =====================================
 # STREAMING - Sample run on server

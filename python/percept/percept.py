@@ -32,7 +32,7 @@ def get_sphere_samples(sampledef):
 def plot_learning(x, y, q, queried, aad, u_theta, dp, title=None,
                   plot_true_w=True, plot_xtau=True, plot_hyperplane=True, plot_w=True):
     lbl_color_map = {0: "blue", 1: "red", 2: "green"}
-    line_colors = ["blue", "green", "red"]
+    line_colors = ["blue", "red", "red"]
     line_types = ["--", "-", "--"]
     line_widths = [1, 1, 1]
     xlim = [-1.1, 1.1]
@@ -168,8 +168,9 @@ if __name__ == "__main__":
     # logger.debug("Oracle: %s" % str(oracle.y))
     u = np.array([np.cos(u_theta), np.sin(u_theta)])
     plot_learning(x, y, None, queried, aad, u_theta, dp,
-                  title="initial (%1.2f)" %
-                        (np.arccos(u.dot(aad.w)) * 180. / np.pi))
+                  title="initial angle: %1.2f" % (np.arccos(u.dot(aad.w)) * 180. / np.pi)
+                  # title=None
+                  )
     budget = 30
     for iter in range(budget):
         # active learning step

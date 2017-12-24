@@ -22,6 +22,8 @@ def plot_angle_hist(vals, labels, dp):
     anom_v = vals[np.where(labels==1)[0]]
     bins = np.arange(start=np.min(vals), stop=np.max(vals), step=(np.max(vals)-np.min(vals))/50)
     pl = dp.get_next_plot()
+    plt.xlabel("angle (degrees)")
+    plt.ylabel("fraction (%)")
     logger.debug("\n%s" % str(list(nom_v)))
     n1, bins1 = np.histogram(nom_v, bins=bins, normed=True)
     n2, bins2 = np.histogram(anom_v, bins=bins, normed=True)
@@ -66,7 +68,7 @@ def test_hyperplane_angles():
     rng = np.random.RandomState(args.randseed)
 
     compute_angles = True
-    compute_optimal_plane = True
+    compute_optimal_plane = False
 
     a = []
     first_run = True
@@ -80,7 +82,7 @@ def test_hyperplane_angles():
         if is_forest_detector(model.detector_type):
             logger.debug("total #nodes: %d" % (len(model.all_regions)))
 
-        if True:
+        if False:
             X_train_new = model.transform_to_ensemble_features(X_train, dense=dense, norm_unit=False)
             norms = power(X_train_new, 2)  # np.sqrt(X_train_new.power(2).sum(axis=1))
             scores = model.get_score(X_train_new)
@@ -136,9 +138,10 @@ def test_hyperplane_angles():
         # and will not plot histogram of angles.
         first_run = False
 
-    angles = np.array(a, dtype=float)
-    logger.debug("Mean Angle: %f (%f)" % (float(np.mean(angles)),
-                                          1.95*np.std(angles)/np.sqrt(1.*len(angles))))
+    if compute_optimal_plane:
+        angles = np.array(a, dtype=float)
+        logger.debug("Mean Angle: %f (%f)" % (float(np.mean(angles)),
+                                              1.95*np.std(angles)/np.sqrt(1.*len(angles))))
 
 
 if __name__ == "__main__":
