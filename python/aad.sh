@@ -344,7 +344,6 @@ BASE_DIR=
 if [ -d "/Users/moy" ]; then
     # personal laptop
     BASE_DIR=../${DATASET_FOLDER}
-    # BASE_DIR=./${DATASET_FOLDER}
     LOG_PATH=./temp/${OPERATION}
     PYTHON_CMD=pythonw
     RESULTS_PATH="temp/${OPERATION}/$DATASET/${NAME_PREFIX}"
@@ -356,9 +355,14 @@ elif [ -d "/home/sdas/codebase/bb_python/ad_examples" ]; then
     RESULTS_PATH="${BASE_DIR}/results-aad${STREAMING_SIG}/$DATASET/${NAME_PREFIX}"
     source /home/sdas/py_venv/bin/activate
     export PYTHONPATH=$PYTHONPATH:/home/sdas/codebase/bb_python/ad_examples/python
-    #SCRIPT_PATH=/home/sdas/codebase/pyalad/pyalad/${PYSCRIPT}
-    #SCRIPT_PATH=/home/sdas/codebase/bb_python/ad_examples/python/aad/${PYSCRIPT}
     SCRIPT_PATH=${PYMODULE}
+else
+    # default setting...
+    echo "Using default file paths..."
+    BASE_DIR=../${DATASET_FOLDER}
+    LOG_PATH=./temp/${OPERATION}
+    PYTHON_CMD=pythonw
+    RESULTS_PATH="temp/${OPERATION}/$DATASET/${NAME_PREFIX}"
 fi
 
 DATASET_DIR="${BASE_DIR}/anomaly/$DATASET"
