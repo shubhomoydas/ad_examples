@@ -13,11 +13,16 @@ from aad.data_stream import *
 class StreamingAnomalyDetector(object):
     """
     Attributes:
-        model: AadForest
+        model: Aad
+            trained AAD model
         stream: DataStream
         max_buffer: int
             Determines the window size
-        buffer_instances_x: list
+        labeled: InstanceList
+        unlabeled: InstanceList
+        buffer: InstanceList
+            test set from stream
+        opts: AadOpts
     """
     def __init__(self, stream, model, labeled_x=None, labeled_y=None,
                  unlabeled_x=None, unlabeled_y=None, opts=None, max_buffer=512):
@@ -25,7 +30,6 @@ class StreamingAnomalyDetector(object):
         self.stream = stream
         self.max_buffer = max_buffer
         self.opts = opts
-        self.retention_type = opts.retention_type
 
         self.buffer = None
 
@@ -52,14 +56,14 @@ class StreamingAnomalyDetector(object):
             self.buffer = instances
 
     def move_buffer_to_unlabeled(self):
-        if self.retention_type == STREAM_RETENTION_OVERWRITE:
+        if self.opts.retention_type == STREAM_RETENTION_OVERWRITE:
             if False:
                 missed = int(np.sum(self.unlabeled.y)) if self.unlabeled.y is not None else 0
                 retained = int(np.sum(self.buffer.y)) if self.buffer.y is not None else 0
                 logger.debug("[overwriting] true anomalies: missed(%d), retained(%d)" % (missed, retained))
             if self.buffer is not None:
                 self.unlabeled = self.buffer
-        elif self.retention_type == STREAM_RETENTION_TOP_ANOMALOUS:
+        elif self.opts.retention_type == STREAM_RETENTION_TOP_ANOMALOUS:
             # retain the top anomalous instances from the merged
             # set of instance from both buffer and current unlabeled.
             if self.buffer is not None:
@@ -92,10 +96,10 @@ class StreamingAnomalyDetector(object):
             n += len(self.labeled.x)
         return n
 
-    def init_query_state(self, opts):
+    def init_query_state(self):
         n = self.get_num_instances()
-        bt = get_budget_topK(n, opts)
-        self.qstate = Query.get_initial_query_state(opts.qtype, opts=opts, qrank=bt.topK,
+        bt = get_budget_topK(n, self.opts)
+        self.qstate = Query.get_initial_query_state(self.opts.qtype, opts=self.opts, qrank=bt.topK,
                                                     a=1., b=1., budget=bt.budget)
 
     def get_next_from_stream(self, n=0, transform=False):
@@ -224,17 +228,17 @@ class StreamingAnomalyDetector(object):
                           str(list(ha)), str(list(hn)), str(list(xi))))
         return xi, x, y, x_transformed, ha, hn, order_anom_idxs, anom_score
 
-    def get_transformed(self, x, opts=None):
+    def get_transformed(self, x):
         """Returns the instance.x_transformed
 
-        :param instances: InstanceList
-        :return: scipy sparse array
+        Args:
+            instances: InstanceList
+
+        Returns: scipy sparse array
         """
         # logger.debug("transforming data...")
-        if opts is None:
-            opts = self.opts
         x_transformed = self.model.transform_to_ensemble_features(
-            x, dense=False, norm_unit=opts.norm_unit)
+            x, dense=False, norm_unit=self.opts.norm_unit)
         return x_transformed
 
     def move_unlabeled_to_labeled(self, xi, yi):
@@ -249,7 +253,7 @@ class StreamingAnomalyDetector(object):
             self.labeled.add_instance(x, y=yi, id=id, x_transformed=x_trans)
         self.unlabeled.remove_instance_at(unlabeled_idx)
 
-    def update_weights_with_feedback(self, xi, yi, x, y, x_transformed, ha, hn, opts):
+    def update_weights_with_feedback(self, xi, yi, x, y, x_transformed, ha, hn):
         """Relearns the optimal weights from feedback and updates internal labeled and unlabeled matrices
 
         IMPORTANT:
@@ -257,6 +261,22 @@ class StreamingAnomalyDetector(object):
             the internal labeled/unlabeled matrices, i.e., the top rows/values in
             these matrices are from labeled data and bottom ones are from internally
             stored unlabeled data.
+
+        Args:
+            xi: int
+                index of instance in Union(self.labeled, self.unlabeled)
+            yi: int
+                label {0, 1} of instance (supposedly provided by an Oracle)
+            x: numpy.ndarray
+                set of all instances
+            y: list of int
+                set of all labels (only those at locations in the lists ha and hn are relevant)
+            x_transformed: numpy.ndarray
+                x transformed to ensemble features
+            ha: list of int
+                indexes of labeled anomalies
+            hn: list of int
+                indexes of labeled nominals
         """
 
         # Add the newly labeled instance to the corresponding list of labeled
@@ -268,23 +288,93 @@ class StreamingAnomalyDetector(object):
         else:
             hn = append(hn, [xi])
 
-        self.model.update_weights(x_transformed, y, ha, hn, opts)
+        self.model.update_weights(x_transformed, y, ha, hn, self.opts)
 
-    def get_score_variance(self, x, n_instances, opts, transform=False):
-        """Computes variance in scores of top ranked instances
-        """
-        w = self.model.w
-        if w is None:
-            raise ValueError("Model not trained")
-        if transform:
-            x = self.get_transformed(x)
-        ordered_indexes, scores = self.model.order_by_score(x, w=w)
-        tn = min(10, nrow(x))
-        vars = np.zeros(tn, dtype=float)
-        for i in np.arange(tn):
-            vars[i] = get_linear_score_variance(x[ordered_indexes[i], :], w)
-        # logger.debug("top %d vars:\n%s" % (tn, str(list(vars))))
-        return vars
+    def run_feedback(self):
+        """Runs active learning loop for current unlabeled window of data."""
+
+        min_feedback = self.opts.min_feedback_per_window
+        max_feedback = self.opts.max_feedback_per_window
+
+        if False:
+            # get baseline metrics
+            x_transformed = self.get_transformed(self.unlabeled.x)
+            ordered_idxs, _ = self.model.order_by_score(x_transformed)
+            seen_baseline = self.unlabeled.y[ordered_idxs[0:max_feedback]]
+            num_seen_baseline = np.cumsum(seen_baseline)
+            logger.debug("num_seen_baseline:\n%s" % str(list(num_seen_baseline)))
+
+        # baseline scores
+        w_baseline = self.model.get_uniform_weights()
+        order_baseline, scores_baseline = self.model.order_by_score(self.unlabeled.x_transformed, w_baseline)
+        n_seen_baseline = min(max_feedback, len(self.unlabeled.y))
+        queried_baseline = order_baseline[0:n_seen_baseline]
+        seen_baseline = self.unlabeled.y[queried_baseline]
+
+        seen = np.zeros(0, dtype=int)
+        n_unlabeled = np.zeros(0, dtype=int)
+        queried = np.zeros(0, dtype=int)
+        unl = np.zeros(0, dtype=int)
+        i = 0
+        while i < max_feedback:
+            i += 1
+            # scores based on current weights
+            xi_, x, y, x_transformed, ha, hn, order_anom_idxs, anom_score = \
+                self.get_query_data(unl=unl, n_query=max_feedback)
+
+            order_anom_idxs_minus_ha_hn = get_first_vals_not_marked(
+                order_anom_idxs, append(ha, hn), n=len(order_anom_idxs))
+
+            bt = get_budget_topK(x_transformed.shape[0], self.opts)
+
+            # Note: We will ensure that the tau-th instance is atleast 10-th (or lower) ranked
+            tau_rank = min(max(bt.topK, 10), x.shape[0])
+
+            xi = xi_[0]
+            means = vars = qpos = m_tau = v_tau = None
+            if self.opts.query_confident:
+                # get the mean score and its variance for the top ranked instances
+                # excluding the instances which have already been queried
+                means, vars, test, v_eval, _ = get_score_variances(x_transformed, self.model.w,
+                                                                   n_test=tau_rank,
+                                                                   ordered_indexes=order_anom_idxs,
+                                                                   queried_indexes=append(ha, hn))
+                # get the mean score and its variance for the tau-th ranked instance
+                m_tau, v_tau, _, _, _ = get_score_variances(x_transformed[order_anom_idxs_minus_ha_hn[tau_rank]],
+                                                            self.model.w, n_test=1,
+                                                            test_indexes=np.array([0], dtype=int))
+                qpos = np.where(test == xi)[0]  # top-most ranked instance
+
+            if False and self.opts.query_confident:
+                logger.debug("tau score:\n%s (%s)" % (str(list(m_tau)), str(list(v_tau))))
+                strmv = ",".join(["%f (%f)" % (means[j], vars[j]) for j in np.arange(len(means))])
+                logger.debug("scores:\n%s" % strmv)
+
+            # check if we are confident that this is larger than the tau-th ranked instance
+            if (not self.opts.query_confident) or (i <= min_feedback or
+                                              means[qpos] - 3. * np.sqrt(vars[qpos]) >= m_tau):
+                seen = append(seen, [y[xi]])
+                queried = append(queried, xi)
+                tm_update = Timer()
+                self.update_weights_with_feedback(xi, y[xi], x, y, x_transformed, ha, hn)
+                tm_update.end()
+                # reset the list of queried test instances because their scores would have changed
+                unl = np.zeros(0, dtype=int)
+                if False:
+                    nha, nhn, nul = self.get_instance_stats()
+                    # logger.debug("xi:%d, test indxs: %s, qpos: %d" % (xi, str(list(test)), qpos))
+                    # logger.debug("orig scores:\n%s" % str(list(anom_score[order_anom_idxs[0:tau_rank]])))
+                    logger.debug("[%d] #feedback: %d; ha: %d; hn: %d, mnw: %d, mxw: %d; update: %f sec(s)" %
+                                 (i, nha + nhn, nha, nhn, min_feedback, max_feedback, tm_update.elapsed()))
+            else:
+                # ignore this instance from query
+                unl = append(unl, [xi])
+                # logger.debug("skipping feedback for xi=%d at iter %d; unl: %s" % (xi, i, str(list(unl))))
+                # continue
+            n_unlabeled = np.append(n_unlabeled, [int(np.sum(self.unlabeled.y))])
+            # logger.debug("y:\n%s" % str(list(y)))
+        # logger.debug("w:\n%s" % str(list(sad.model.w)))
+        return seen, seen_baseline, None, None, n_unlabeled
 
     def print_instance_stats(self, msg="debug"):
         logger.debug("%s:\nlabeled: %s, unlabeled: %s" %
@@ -293,21 +383,21 @@ class StreamingAnomalyDetector(object):
                       '-' if self.unlabeled is None else str(self.unlabeled)))
 
 
-def train_aad_model(opts, X_train):
+def train_aad_model(opts, x):
     random_state = np.random.RandomState(opts.randseed + opts.fid * opts.reruns + opts.runidx)
     # fit the model
-    model = get_aad_model(X_train, opts, random_state)
-    model.fit(X_train)
+    model = get_aad_model(x, opts, random_state)
+    model.fit(x)
     model.init_weights(init_type=opts.init)
     return model
 
 
-def prepare_aad_model(X, y, opts):
+def prepare_aad_model(x, y, opts):
     if opts.load_model and opts.modelfile != "" and os.path.isfile(opts.modelfile):
         logger.debug("Loading model from file %s" % opts.modelfile)
         model = load_aad_model(opts.modelfile)
     else:
-        model = train_aad_model(opts, X)
+        model = train_aad_model(opts, x)
 
     if is_forest_detector(model.detector_type):
         logger.debug("total #nodes: %d" % (len(model.all_regions)))
@@ -317,96 +407,6 @@ def prepare_aad_model(X, y, opts):
         else:
             logger.debug("model weights are not set")
     return model
-
-
-def run_feedback(sad, min_feedback, max_feedback, opts):
-    """
-
-    :param sad: StreamingAnomalyDetector
-    :param max_feedback: int
-    :param opts: Opts
-    :return:
-    """
-
-    if False:
-        # get baseline metrics
-        x_transformed = sad.get_transformed(sad.unlabeled.x)
-        ordered_idxs, _ = sad.model.order_by_score(x_transformed)
-        seen_baseline = sad.unlabeled.y[ordered_idxs[0:max_feedback]]
-        num_seen_baseline = np.cumsum(seen_baseline)
-        logger.debug("num_seen_baseline:\n%s" % str(list(num_seen_baseline)))
-
-    # baseline scores
-    w_baseline = sad.model.get_uniform_weights()
-    order_baseline, scores_baseline = sad.model.order_by_score(sad.unlabeled.x_transformed, w_baseline)
-    n_seen_baseline = min(max_feedback, len(sad.unlabeled.y))
-    queried_baseline = order_baseline[0:n_seen_baseline]
-    seen_baseline = sad.unlabeled.y[queried_baseline]
-
-    seen = np.zeros(0, dtype=int)
-    n_unlabeled = np.zeros(0, dtype=int)
-    queried = np.zeros(0, dtype=int)
-    unl = np.zeros(0, dtype=int)
-    i = 0
-    while i < max_feedback:
-        i += 1
-        # scores based on current weights
-        xi_, x, y, x_transformed, ha, hn, order_anom_idxs, anom_score = \
-            sad.get_query_data(unl=unl, n_query=max_feedback)
-
-        order_anom_idxs_minus_ha_hn = get_first_vals_not_marked(
-            order_anom_idxs, append(ha, hn), n=len(order_anom_idxs))
-
-        bt = get_budget_topK(x_transformed.shape[0], opts)
-
-        # Note: We will ensure that the tau-th instance is atleast 10-th (or lower) ranked
-        tau_rank = min(max(bt.topK, 10), x.shape[0])
-
-        xi = xi_[0]
-        means = vars = qpos = m_tau = v_tau = None
-        if opts.query_confident:
-            # get the mean score and its variance for the top ranked instances
-            # excluding the instances which have already been queried
-            means, vars, test, v_eval, _ = get_score_variances(x_transformed, sad.model.w,
-                                                               n_test=tau_rank,
-                                                               ordered_indexes=order_anom_idxs,
-                                                               queried_indexes=append(ha, hn))
-            # get the mean score and its variance for the tau-th ranked instance
-            m_tau, v_tau, _, _, _ = get_score_variances(x_transformed[order_anom_idxs_minus_ha_hn[tau_rank]],
-                                                        sad.model.w, n_test=1,
-                                                        test_indexes=np.array([0], dtype=int))
-            qpos = np.where(test == xi)[0]  # top-most ranked instance
-
-        if False and opts.query_confident:
-            logger.debug("tau score:\n%s (%s)" % (str(list(m_tau)), str(list(v_tau))))
-            strmv = ",".join(["%f (%f)" % (means[j], vars[j]) for j in np.arange(len(means))])
-            logger.debug("scores:\n%s" % strmv)
-
-        # check if we are confident that this is larger than the tau-th ranked instance
-        if (not opts.query_confident) or (i <= min_feedback or
-                                          means[qpos] - 3. * np.sqrt(vars[qpos]) >= m_tau):
-            seen = append(seen, [y[xi]])
-            queried = append(queried, xi)
-            tm_update = Timer()
-            sad.update_weights_with_feedback(xi, y[xi], x, y, x_transformed, ha, hn, opts)
-            tm_update.end()
-            # reset the list of queried test instances because their scores would have changed
-            unl = np.zeros(0, dtype=int)
-            if False:
-                nha, nhn, nul = sad.get_instance_stats()
-                # logger.debug("xi:%d, test indxs: %s, qpos: %d" % (xi, str(list(test)), qpos))
-                # logger.debug("orig scores:\n%s" % str(list(anom_score[order_anom_idxs[0:tau_rank]])))
-                logger.debug("[%d] #feedback: %d; ha: %d; hn: %d, mnw: %d, mxw: %d; update: %f sec(s)" %
-                             (i, nha + nhn, nha, nhn, min_feedback, max_feedback, tm_update.elapsed()))
-        else:
-            # ignore this instance from query
-            unl = append(unl, [xi])
-            # logger.debug("skipping feedback for xi=%d at iter %d; unl: %s" % (xi, i, str(list(unl))))
-            # continue
-        n_unlabeled = np.append(n_unlabeled, [int(np.sum(sad.unlabeled.y))])
-        # logger.debug("y:\n%s" % str(list(y)))
-    # logger.debug("w:\n%s" % str(list(sad.model.w)))
-    return seen, seen_baseline, None, None, n_unlabeled
 
 
 def aad_stream():
@@ -454,7 +454,7 @@ def aad_stream():
         model = prepare_aad_model(X_train, y_train, opts)  # initial model training
         sad = StreamingAnomalyDetector(stream, model, unlabeled_x=X_train, unlabeled_y=y_train,
                                        max_buffer=opts.stream_window, opts=opts)
-        sad.init_query_state(opts)
+        sad.init_query_state()
 
         all_scores = np.zeros(0)
         all_y = np.zeros(0, dtype=int)
@@ -473,11 +473,7 @@ def aad_stream():
             iter += 1
 
             tm = Timer()
-            seen_, seen_baseline_, queried_, queried_baseline_, n_unlabeled_ = \
-                run_feedback(sad,
-                             opts.min_feedback_per_window,
-                             opts.max_feedback_per_window,
-                             opts)
+            seen_, seen_baseline_, queried_, queried_baseline_, n_unlabeled_ = sad.run_feedback()
 
             # gather metrics...
             seen = append(seen, seen_)
@@ -512,6 +508,7 @@ def aad_stream():
         # retained = int(np.sum(sad.unlabeled_y)) if sad.unlabeled_y is not None else 0
         # logger.debug("Final retained unlabeled anoms: %d" % retained)
 
+        # NOTE: The below AUC is only for DEBUG. It does not mean much...
         auc = fn_auc(cbind(all_y, -all_scores))
         # logger.debug("AUC: %f" % auc)
         aucs = append(aucs, [auc])
