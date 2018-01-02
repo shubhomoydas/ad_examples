@@ -76,13 +76,7 @@ def test_node_values():
     logger.debug("results dir: %s" % opts.resultsdir)
     logger.debug("forest_type: %s" % detector_types[opts.detector_type])
 
-    data = pd.read_csv(opts.datafile, header=0, sep=',', index_col=None)
-    X_train = np.zeros(shape=(data.shape[0], data.shape[1]-1))
-    for i in range(X_train.shape[1]):
-        X_train[:, i] = data.iloc[:, i + 1]
-
-    # labels in {0, 1} for AUC computation
-    labels = np.array([1 if data.iloc[i, 0] == "anomaly" else 0 for i in range(data.shape[0])], dtype=int)
+    X_train, labels = read_data_as_matrix(opts)
 
     rng = np.random.RandomState(args.randseed)
 

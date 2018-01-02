@@ -25,6 +25,7 @@ class DataPlotter(object):
 
     def get_next_plot(self):
         if self.pdf is None:
+            plt.rc('pdf', fonttype=42)
             self.pdf = PdfPages(self.pdfpath)
         newfig = False
         if self.pidx == 0 or self.pidx == self.rows * self.cols:

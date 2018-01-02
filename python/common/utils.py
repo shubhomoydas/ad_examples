@@ -481,6 +481,29 @@ def read_csv(file, header=None, sep=','):
     return data_df
 
 
+def read_data_as_matrix(opts):
+    """Reads data from CSV file and returns numpy matrix.
+
+    Important: Assumes that the first column has the label \in {anomaly, nominal}
+
+    :param opts: AadOpts
+        Supplies parameters like file name, whether first row contains header, etc...
+    :return: numpy.ndarray
+    """
+    if opts.labelindex != 1:
+        raise ValueError("Invalid label index parameter %d" % opts.labelindex)
+
+    data = read_csv(opts.datafile, header=opts.header, sep=',')
+    labelindex = opts.labelindex
+    startcol = opts.startcol - 1
+    cols = data.shape[1] - startcol
+    x = np.zeros(shape=(data.shape[0], cols))
+    for i in range(cols):
+        x[:, i] = data.iloc[:, i + startcol]
+    labels = np.array([1 if data.iloc[i, labelindex-1] == "anomaly" else 0 for i in range(data.shape[0])], dtype=int)
+    return x, labels
+
+
 def save(obj, filepath):
     filehandler = open(filepath, 'w')
     pickle.dump(obj, filehandler)

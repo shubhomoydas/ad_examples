@@ -148,7 +148,7 @@ def get_aad_option_list():
     parser.add_argument("--startcol", action="store", type=int, default=2,
                         help="Starting column (1-indexed) for data in input CSV")
     parser.add_argument("--labelindex", action="store", type=int, default=1,
-                        help="Index of the label column (1-indexed) in the input CSV. Lables should be anomaly/nominal")
+                        help="Index of the label column (1-indexed) in the input CSV. Labels should be anomaly/nominal")
     parser.add_argument("--dataset", action="store", default="", required=False,
                         help="Which dataset to use")
     parser.add_argument("--mink", action="store", type=int, default=100,
@@ -285,9 +285,13 @@ def get_aad_option_list():
     parser.add_argument("--forest_max_depth", action="store", type=int, default=15,
                         help="Number of samples to build each tree in Forest")
 
+    parser.add_argument("--num_query_choices", action="store", type=int, default=1,
+                        help="Applies only to querytype %d. " % QUERY_TOP_RANDOM +
+                             "Specifies how many top ranked items to use when " +
+                             "choosing the instance to query")
     parser.add_argument("--n_explore", action="store", type=int, default=2,
                         help="Number of top ranked instances to evaluate during exploration. " +
-                             "Applies to querytype(s) [toprandom(%d) | gp(%d) | scvar(%d)]" %
+                             "Applies to querytype(s) [toprandom(%d) | gp(%d) | scvar(%d))" %
                              (QUERY_TOP_RANDOM, QUERY_GP, QUERY_SCORE_VAR))
 
     parser.add_argument("--streaming", action="store_true", default=False,
@@ -392,6 +396,7 @@ class AadOpts(object):
         self.dataset = args.dataset
         self.header = args.header
         self.startcol = args.startcol
+        self.labelindex = args.labelindex
         self.filedir = args.filedir
         self.cachedir = args.cachedir
         self.resultsdir = args.resultsdir

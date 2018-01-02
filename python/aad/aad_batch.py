@@ -35,11 +35,7 @@ def aad_batch():
 
     baseline_query_indexes_only = False
 
-    data = read_csv(opts.datafile, header=0, sep=',')
-    X_train = np.zeros(shape=(data.shape[0], data.shape[1]-1))
-    for i in range(X_train.shape[1]):
-        X_train[:, i] = data.iloc[:, i + 1]
-    labels = np.array([1 if data.iloc[i, 0] == "anomaly" else 0 for i in range(data.shape[0])], dtype=int)
+    X_train, labels = read_data_as_matrix(opts)
 
     # X_train = X_train[0:10, :]
     # labels = labels[0:10]
