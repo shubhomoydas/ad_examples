@@ -24,6 +24,13 @@ class RegionData(object):
         self.node_samples = node_samples
         self.log_frac_vol = log_frac_vol
 
+    def __str__(self):
+        return "None" if self.region is None \
+            else " ".join(["(%d %s)" % (k, self.region[k]) for k in self.region.keys()])
+
+    def __repr__(self):
+        return self.__str__()
+
 
 def is_in_region(x, region):
     d = len(x)

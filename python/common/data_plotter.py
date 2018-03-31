@@ -85,9 +85,8 @@ class DataPlotter(object):
 
     def close(self):
         if self.fig is not None and self.pdf is not None:
-            self.pdf.savefig(self.fig, bbox_inches='tight')
-        if self.pdf is not None:
             self.save_fig()
+        if self.pdf is not None:
             self.pdf.close()
 
 

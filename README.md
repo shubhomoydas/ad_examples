@@ -55,7 +55,7 @@ This codebase supports four different anomaly detection algorithms:
 
 To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format:
 
-    bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]>
+    bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]> <with_prior[0|1]> <init_type[0|1|2]>
 
     for Isolation Forest, set <detector_type>=7; 
     for HSTrees, set <detector_type>=11;
@@ -64,23 +64,36 @@ To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the 
 
 Example (with Isolation Forest, non-streaming):
 
-    bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0
+    bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0 1 1
 
 Note: The above will generate 2D plots (tree partitions and score contours) under the 'temp' folder since <i>toy2</i> is a 2D dataset.
 
 example (with HSTrees streaming):
 
-    bash ./aad.sh toy2 35 1 0.03 11 1 0 1 256 0
+    bash ./aad.sh toy2 35 1 0.03 11 1 0 1 256 0 1 1
 
 **Note:** In case the data does not have concept drift, I would **recommend using Isolation forest** instead of HSTrees and RSForest:
 
-    bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 1
+    bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 1 1 1
 
 
 **Note on Streaming**
 Streaming currently supports two strategies for data retention:
   - Retention Type 0: Here the new instances from the stream completely overwrite the older *unlabeled instances* in memory.
   - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded. **This is highly recommended.**
+
+
+Generating compact descriptions with AAD
+-------------------------------------------
+ADD, when used with a forest-based detector such as Isolation Forest, can output a compact set of subspaces that contain all labeled anomalies. The idea is explained in https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf. Following illustrations show the results of this approach.
+
+To generate the below, use the command:
+    
+    bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0 1 1
+
+![Contours](figures/aad/contours.png)
+
+![Descriptions](figures/aad/description.png)
 
 
 Running AAD with precomputed anomaly scores

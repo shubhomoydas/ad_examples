@@ -1,0 +1,60 @@
+raw_about.txt for WISDM_Act_v1.1 dataset
+
+See readme.txt for information about the WISDM Lab, rights,
+and other general information.
+
+Associated tasks: classification
+Number of examples: 1,098,207
+Number of attributes: 6
+Missing attribute values: None
+Class distribution: {
+	Walking -> 424,400 -> 38.6%,
+	Jogging -> 342,177 -> 31.2%,
+	Upstairs -> 122,869 -> 11.2%,
+	Downstairs -> 100,427 -> 9.1%,
+	Sitting -> 59,939 -> 5.5%,
+	Standing -> 48,395 -> 4.4% }
+
+raw.txt follows this format:
+[user],[activity],[timestamp],[x-acceleration],[y-accel],[z-accel];
+
+This line is a representative example:
+33,Jogging,49105962326000,-0.6946377,12.680544,0.50395286;
+
+Sampling rate: 
+20Hz (1 sample every 50ms)
+
+Fields:
+*user
+	nominal, 1..36
+
+*activity
+	nominal, {
+		Walking
+		Jogging
+		Sitting
+		Standing
+		Upstairs
+		Downstairs }
+
+*timestamp
+	numeric, generally the phone's uptime in nanoseconds
+		(In future datasets this will be miliseconds
+		since unix epoch.)
+
+*x-acceleration
+	numeric, floating-point values between -20 .. 20
+		The acceleration in the x direction as measured
+		by the android phone's accelerometer. 
+		A value of 10 = 1g = 9.81 m/s^2, and
+		0 = no acceleration.
+		The acceleration recorded includes gravitational
+		acceleration toward the center of the Earth, so
+		that when the phone is at rest on a flat surface
+		the vertical axis will register +-10. 
+
+*y-accel
+	numeric, see x-acceleration
+
+*z-accel
+        numeric, see x-acceleration

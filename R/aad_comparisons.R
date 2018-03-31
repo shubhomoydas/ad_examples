@@ -11,7 +11,7 @@ if (F) {
 }
 
 script_base = "/Users/moy/work/git/bb_python/ad_examples/R"
-if (T) {
+if (F) {
   input_base  = "/Users/moy/work/WSU/Aeolus/server/results-aad_stream"
   output_base = "/Users/moy/work/WSU/Aeolus/server"
 } else {
@@ -33,37 +33,67 @@ get_n_intermediate <- function(x, n) {
 }
 
 all_datasets = list(
-  "abalone"=list(dataset="abalone", budget=300, anoms=29), 
-  "ann_thyroid_1v3"=list(dataset="ann_thyroid_1v3", budget=300, anoms=73), 
-  "cardiotocography_1"=list(dataset="cardiotocography_1", budget=300, anoms=45), 
-  "yeast"=list(dataset="yeast", budget=300, anoms=55), 
-  "covtype"=list(dataset="covtype", budget=300, anoms=2747), 
-  "kddcup"=list(dataset="kddcup", budget=300, anoms=2416), 
-  "mammography"=list(dataset="mammography", budget=300, anoms=260), 
-  "shuttle_1v23567"=list(dataset="shuttle_1v23567", budget=300, anoms=867),
-  "toy2"=list(dataset="toy2", budget=300, anoms=35)
+  "abalone"=list(dataset="abalone", budget=300, anoms=29, n_win=30, sz_win=512), 
+  "ann_thyroid_1v3"=list(dataset="ann_thyroid_1v3", budget=300, anoms=73, n_win=30, sz_win=512), 
+  "cardiotocography_1"=list(dataset="cardiotocography_1", budget=300, anoms=45, n_win=30, sz_win=512), 
+  "yeast"=list(dataset="yeast", budget=300, anoms=55, n_win=30, sz_win=512), 
+  "covtype"=list(dataset="covtype", budget=3000, anoms=2747, n_win=1000, sz_win=4096), 
+  "kddcup"=list(dataset="kddcup", budget=3000, anoms=2416, n_win=30, sz_win=4096), 
+  "mammography"=list(dataset="mammography", budget=1500, anoms=260, n_win=30, sz_win=4096), 
+  "shuttle_1v23567"=list(dataset="shuttle_1v23567", budget=1500, anoms=867, n_win=30, sz_win=4096),
+  "toy2"=list(dataset="toy2", budget=300, anoms=35, n_win=30, sz_win=512)
 )
 
-compare_types = c("batch", "to_reach", "stream", "stream_not_seen")
-compare_type = compare_types[3]
+compare_types = c("batch", "to_reach", "stream", "stream_total", 
+                  "stream_adapt_vs_not", "query_top_random", "batch_vs_stream",
+                  "stream_adapt_vs_fixed_prior", "stream_fixed_vs_adapt_total")
+compare_type = compare_types[1]  # 1|4
 if (compare_type == compare_types[1]) {
   flist = c("baseline", 
-            "aad_batch", 
-            "aad_batch_noprior_unif", "aad_batch_noprior_zero", "aad_batch_noprior_rand",
-            "aad_batch_noprior_no_xtau_unif")
+            "aad_batch_adapt_prior"
+            , "aad_batch_noprior_unif"
+            , "aad_batch_noprior_zero", "aad_batch_noprior_rand"
+            # , "aad_batch", "aad_batch_noprior_no_xtau_unif"
+            )
   colrs = c("blue", "red", "green", "orange", "black", "magenta", "cyan", "brown", "grey80")
   lty = 1
   outpath = file.path(output_base, "plots-batch")
 } else if (compare_type == compare_types[3]) {
-  flist = c("baseline_stream", "aad_stream_ovr")
+  flist = c("baseline_stream", "aad_stream_top", "aad_stream_ovr")
   colrs = c("blue", "red", "green", "orange", "black", "magenta", "cyan", "brown", "grey80")
   lty = 1
   outpath = file.path(output_base, "plots-stream")
 } else if (compare_type == compare_types[4]) {
-  flist = c("aad_stream_ovr", "aad_stream_top", "aad_stream_ovr_not_seen","aad_stream_top_not_seen")
+  # flist = c("aad_stream_ovr", "aad_stream_top", "aad_stream_ovr_total", "aad_stream_top_total")
+  flist = c("baseline", "aad_batch_adapt_prior", "aad_stream_top", "aad_stream_ovr") # , "aad_stream_top_total", "aad_stream_ovr_total")
+  colrs = c("blue", "red", "darkgreen", "black", "darkgreen", "black")
+  lty = c(1, 1, 1, 1, 2, 2)
+  outpath = file.path(output_base, "plots-stream-total")
+} else if (compare_type == compare_types[5]) {
+  flist = c("aad_stream_adapt_ovr", "aad_stream_adapt_top", "aad_stream_adapt_ovr_total","aad_stream_adapt_top_total")
   colrs = c("blue", "red", "blue", "red")
   lty = c(1, 1, 2, 2)
-  outpath = file.path(output_base, "plots-stream-not_seen")
+  outpath = file.path(output_base, "plots-stream-total-adapt_v_not")
+} else if (compare_type == compare_types[6]) {
+  flist = c("aad_batch_adapt_prior", "aad_batch_adapt_prior_qt")
+  colrs = c("blue", "red")
+  lty = c(1, 1)
+  outpath = file.path(output_base, "plots-batch-toprandom")
+} else if (compare_type == compare_types[7]) {
+  flist = c("aad_batch_adapt_prior", "aad_stream_adapt_top")
+  colrs = c("blue", "red")
+  lty = c(1, 1)
+  outpath = file.path(output_base, "plots-batch_vs_stream")
+} else if (compare_type == compare_types[8]) {
+  flist = c("aad_stream_top", "aad_stream_adapt_top")
+  colrs = c("blue", "red")
+  lty = c(1, 1)
+  outpath = file.path(output_base, "plots-stream_adapt_vs_fixed_prior")
+} else if (compare_type == compare_types[9]) {
+  flist = c("aad_stream_top_total", "aad_stream_adapt_top_total")
+  colrs = c("blue", "red")
+  lty = c(1, 1)
+  outpath = file.path(output_base, "plots-stream_fixed_vs_adapt_total")
 }
 
 dir.create(outpath, recursive=T, showWarnings=F)
@@ -72,12 +102,14 @@ datasets = c("abalone",
              "ann_thyroid_1v3", 
              "cardiotocography_1",
              "yeast"
-             , "mammography", "shuttle_1v23567"
+             , "mammography"
+             , "shuttle_1v23567"
              , "covtype"
              , "kddcup"
              )
+# datasets = c("abalone", "ann_thyroid_1v3", "cardiotocography_1", "yeast")
 # datasets = c("abalone")
-# datasets = c("covtype")
+# datasets = c("kddcup")
 
 pchs = 1:7
 
@@ -93,7 +125,7 @@ for (datasetinfo in all_datasets[datasets]) {
     plot(0, type="n", 
          xlim=c(1, max(res$budgets)), ylim=c(0, max(res$numseen)), 
          xlab="k-th anomaly", ylab="#queries to reach k-th anomaly",
-         cex.lab=1.6)
+         cex.lab=1.8, cex.axis=1.4)
     lwds = c()
     for (i in 1:nrow(res$numseen)) {
       lwd = 2
@@ -109,13 +141,15 @@ for (datasetinfo in all_datasets[datasets]) {
       fout = file.path(outpath, sprintf("num_seen-%s.pdf", datasetinfo$dataset))
       pdf(fout_tmp, family="Arial")
       if (compare_type == compare_types[4]) {
-        budget = ncol(res$numseen)
+        # budget = ncol(res$numseen)
+        budget = res$budgets[1]
       } else {
         budget = min(datasetinfo$budget, ncol(res$numseen))
       }
-      ymax = min(budget, res$anoms)
-      plot(0, type="n", xlim=c(1, budget), ylim=c(0, ymax), xlab="iter", ylab="# anomalies seen",
-           cex.lab=1.6)
+      # ymax = min(budget, datasetinfo$anoms)
+      ymax = 100.0
+      plot(0, type="n", xlim=c(1, budget), ylim=c(0, ymax), xlab="# queries", ylab="% of total anomalies seen",
+           cex.lab=1.8, cex.axis=1.6)
       lwds = c()
       ltys = c()
       for (i in 1:nrow(res$numseen)) {
@@ -131,9 +165,12 @@ for (datasetinfo in all_datasets[datasets]) {
         suppressWarnings(error.bar(pts, res$numseen[i, pts], upper=std_errs, 
                                    len=0.05, col=colrs[i]))
       }
+      if (F && datasetinfo$anoms <= 300) {
+        lines(1:res$budgets[i], rep(datasetinfo$anoms, res$budgets[i]), col="grey", lwd=1, lty=1)
+      }
   }
-  legend("topleft", legend=res$dispnames, 
-         col=colrs[1:nrow(res$numseen)], cex=1.5, lwd=lwds, lty=lty 
+  legend("bottomright", legend=res$dispnames, 
+         col=colrs[1:nrow(res$numseen)], cex=1.8, lwd=lwds, lty=lty 
          )
   dev.off()
   

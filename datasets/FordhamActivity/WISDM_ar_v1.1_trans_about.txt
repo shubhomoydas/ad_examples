@@ -1,0 +1,70 @@
+trans_about.txt for WISDM_Act_v1.1 dataset
+
+See readme.txt for information about the WISDM Lab, rights,
+and other general information.
+
+Associated tasks: classification
+Number of examples: 5,424
+Number of attributes: 46
+Missing attribute values: None
+Class distribution: {
+        Walking -> 2,082 -> 38.4%,
+        Jogging -> 1,626 -> 30.0%,
+        Upstairs -> 633 -> 11.7%,
+        Downstairs -> 529 -> 9.8%,
+        Sitting -> 307 -> 5.7%,
+        Standing -> 247 -> 4.6% }
+
+
+transformed.arff follows the Attribute-Relation File Format
+specified here: 
+<http://weka.wikispaces.com/ARFF+%28stable+version%29>
+
+
+For our transformation process, we take 10 seconds worth of
+accelerometer samples (200 records/lines in the raw file) 
+and transform them into a single example/tuple of 46 values.
+Most of the features we generate are simple statistical 
+measures.
+
+
+Field descriptions:
+(To see the field definitions, read the arff file's header.)
+For a detailed specification, see section 2.2 of:
+Jennifer R. Kwapisz, Gary M. Weiss and Samuel A. Moore (2010). 
+	"Activity Recognition using Cell Phone Accelerometers," 
+	Proceedings of the Fourth International Workshop on 
+	Knowledge Discovery from Sensor Data (at KDD-10), 
+	Washington DC. 
+	<http://www.cis.fordham.edu/wisdm/public_files/sensorKDD-2010.pdf>
+
+UNIQUE_ID is just that, a unique identifier for each tuple.
+	We exclude this field when making predictions
+
+user is the id number of the userthat the data is from. 
+
+X0..x9, Y0..Y9, Z0..Z9 are bins, their values are the fraction
+	of accelerometer samples that fell within that bin
+
+XAVG, YAVG, ZAVG are the average x, y, and z values over the
+	200 records in the example.
+
+XPEAK, YPEAK, ZPEAK are approximations of the dominant 
+	frequency. First, the greatest value in the series is 
+	identified, then all local peak values within 10% of
+	its amplitude are identified. If the number of peaks 
+	is less than 3, then the threshhold is lowered until 
+	at least 3 peaks can be found. The times between 
+	consecutive peaks are summed and divided by the number
+	of peaks.
+	
+XABSOLDEV, YABSOLDEV, ZABSOLDEV are the average absolute 
+	deviations from the mean value for each axis.
+
+XSTANDDEV, YSTANDDEV, ZSTANDDEV are the standard deviations
+	for each axis.
+
+RESULTANT is the average of the square roots of the sum of the values 
+	of each axis squared √(xi^2 + yi^2 + zi^2).
+
+class is the activity that the user was performing during this example.

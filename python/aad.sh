@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # To run:
-# bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]>
+# bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]> <with_prior[0|1]> <init_type[0|1|2]>
 #
 # =========
 # Examples:
@@ -9,15 +9,15 @@
 #
 # Batch Mode Isolation Forest
 # ---------------------------
-# bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0
+# bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0 1 1
 #
 # Streaming Mode Isolation Forest
 # -------------------------------
-# bash ./aad.sh toy2 35 1 0.03 11 1 0 1 512 0
+# bash ./aad.sh toy2 35 1 0.03 11 1 0 1 512 0 1 1
 #
 # Compute angle between optimal hyperplane and uniform weight Isolation Forest
 # -------------------------------
-# bash ./aad.sh toy2 35 1 0.03 7 1 0 2 512 0
+# bash ./aad.sh toy2 35 1 0.03 7 1 0 2 512 0 1 1
 
 ARGC=$#
 if [[ "$ARGC" -gt "0" ]]; then
@@ -81,6 +81,45 @@ if [[ "$ARGC" -gt "0" ]]; then
     # -------------------------------------------
     RETENTION_TYPE=${10}
 
+    # =====================================================
+    # Following option determines whether we want to put 
+    #   a prior on weights. The type of prior is determined 
+    #   by option UNIF_PRIOR (defined later)
+    # WITH_PRIOR="" - Puts no prior on weights
+    # WITH_PRIOR="--withprior" - Adds prior to weights as 
+    #   determined by UNIF_PRIOR
+    # -----------------------------------------------------
+    WITH_PRIOR_IND=${11}
+
+    # ===========================================
+    # INIT_TYPE: Determines how the weight vector
+    #   should be initialized.
+    # 0 - zeros
+    # 1 - uniform (and normalized to unit length)
+    # 2 -  random (and normalized to unit length)
+    # -------------------------------------------
+    INIT_TYPE=${12}
+
+fi
+
+# =====================================================
+# The option UNIF_PRIOR is applicable only when WITH_PRIOR_IND=1
+# When UNIF_PRIOR_IND = 0:
+#   UNIF_PRIOR="" - Puts previous iteration weights as prior
+# When UNIF_PRIOR_IND = 1:
+#   UNIF_PRIOR="--unifprior" - Adds uniform prior on weights
+# -----------------------------------------------------
+UNIF_PRIOR_IND=1
+
+# =====================================================
+# PRIOR_INFLUENCE
+#   0 - Keep the prior influence fixed
+#   1 - Lower the prior influence as the number of
+#       labeled instances increases
+PRIOR_INFLUENCE=1
+# -----------------------------------------------------
+if [[ "$STREAMING_IND" == "1" ]]; then
+    PRIOR_INFLUENCE=0 # to protect against noise in streaming setting
 fi
 
 REPS=1  # number of independent data samples (input files)
@@ -113,7 +152,7 @@ fi
 CA=1  #100
 CX=1
 #CX=0.001
-MAX_BUDGET=300
+MAX_BUDGET=10000
 TOPK=0
 
 MAX_ANOMALIES_CONSTRAINT=1000  # 50
@@ -196,6 +235,7 @@ else
 fi
 
 RAND_SEED=42
+OPERATION="aad"
 
 # =========================================
 # Input CSV file properties.
@@ -206,51 +246,6 @@ LABELINDEX=1
 
 # SIGMA2 determines the weight on prior.
 SIGMA2=0.5
-
-# =====================================================
-# PRIOR_INFLUENCE
-#   0 - Keep the prior influence fixed
-#   1 - Lower the prior influence as the number of
-#       labeled instances increases
-PRIOR_INFLUENCE=1
-# -----------------------------------------------------
-PRIOR_INFLUENCE_SIG=
-if [[ "$PRIOR_INFLUENCE" == "1" ]]; then
-    PRIOR_INFLUENCE_SIG="_adapt"
-fi
-
-# =====================================================
-# Following option determines whether we want to put 
-#   a prior on weights. The type of prior is determined 
-#   by option UNIF_PRIOR (defined later)
-# WITH_PRIOR="" - Puts no prior on weights
-# WITH_PRIOR="--withprior" - Adds prior to weights as 
-#   determined by UNIF_PRIOR
-# -----------------------------------------------------
-WITH_PRIOR_IND=1
-if [[ "$WITH_PRIOR_IND" == "1" ]]; then
-    WITH_PRIOR="--withprior"
-    WITH_PRIOR_SIG="_s${SIGMA2}${PRIOR_INFLUENCE_SIG}"
-else
-    WITH_PRIOR=""
-    WITH_PRIOR_SIG="_noprior"
-fi
-
-UNIF_PRIOR_IND=1
-if [[ "$UNIF_PRIOR_IND" == "1" ]]; then
-    UNIF_PRIOR="--unifprior"
-else
-    UNIF_PRIOR=""
-fi
-
-# ===========================================
-# INIT_TYPE: Determines how the weight vector
-#   should be initialized.
-# 0 - zeros
-# 1 - uniform (and normalized to unit length)
-# 2 -  random (and normalized to unit length)
-# -------------------------------------------
-INIT_TYPE=1
 
 # ===================================================
 # TAU_SCORE_TYPE: Determines whether the
@@ -266,6 +261,33 @@ INIT_TYPE=1
 # 2 - Estimate tau-th score once and keep fixed.
 # ---------------------------------------------------
 TAU_SCORE_TYPE=1
+
+MIN_FEEDBACK_PER_WINDOW=2
+MAX_FEEDBACK_PER_WINDOW=20
+MAX_WINDOWS=30
+
+TILL_BUDGET_IND=1
+ALLOW_STREAM_UPDATE_IND=1
+
+PRIOR_INFLUENCE_SIG=
+if [[ "$PRIOR_INFLUENCE" == "1" ]]; then
+    PRIOR_INFLUENCE_SIG="_adapt"
+fi
+
+if [[ "$WITH_PRIOR_IND" == "1" ]]; then
+    WITH_PRIOR="--withprior"
+    WITH_PRIOR_SIG="_s${SIGMA2}${PRIOR_INFLUENCE_SIG}"
+else
+    WITH_PRIOR=""
+    WITH_PRIOR_SIG="_noprior"
+fi
+
+if [[ "$UNIF_PRIOR_IND" == "1" ]]; then
+    UNIF_PRIOR="--unifprior"
+else
+    UNIF_PRIOR=""
+fi
+
 if [[ "$TAU_SCORE_TYPE" == "0" ]]; then
     FIXED_TAU_SCORE_SIG="_notau"
 elif [[ "$TAU_SCORE_TYPE" == "2" ]]; then
@@ -275,9 +297,13 @@ else
     FIXED_TAU_SCORE_SIG=""
 fi
 
-MIN_FEEDBACK_PER_WINDOW=2
-MAX_FEEDBACK_PER_WINDOW=20
-MAX_WINDOWS=30
+if [[ "$TILL_BUDGET_IND" == "1" ]]; then
+    TILL_BUDGET="--till_budget"
+    TILL_BUDGET_SIG="_tillbudget"
+else
+    TILL_BUDGET=
+    TILL_BUDGET_SIG=
+fi
 
 if [[ "$QUERY_CONFIDENT" == "1" ]]; then
     QUERY_CONFIDENT="--query_confident"
@@ -290,17 +316,22 @@ fi
 
 ALLOW_STREAM_UPDATE=
 ALLOW_STREAM_UPDATE_SIG=
-ALLOW_STREAM_UPDATE_IND=1
 if [[ "$ALLOW_STREAM_UPDATE_IND" == "1" ]]; then
     ALLOW_STREAM_UPDATE="--allow_stream_update"
     ALLOW_STREAM_UPDATE_SIG="asu"
 fi
 
-OPERATION="aad"
+DATASET_FOLDER=datasets
+#if [[ "$DATASET" == "covtype" || "$DATASET" == "kddcup" ]]; then
+if [[ "$DATASET" == "covtype" ]]; then
+    DATASET_FOLDER=datasets #${STREAMING_SIG}
+    MAX_WINDOWS=1000
+fi
+
 if [[ "$STREAMING_IND" == "1" ]]; then
     STREAMING="--streaming"
     STREAMING_SIG="_stream"
-    STREAMING_FLAGS="${STREAM_WINDOW}${ALLOW_STREAM_UPDATE_SIG}_mw${MAX_WINDOWS}f${MIN_FEEDBACK_PER_WINDOW}_${MAX_FEEDBACK_PER_WINDOW}_ret${RETENTION_TYPE}"
+    STREAMING_FLAGS="${STREAM_WINDOW}${ALLOW_STREAM_UPDATE_SIG}_mw${MAX_WINDOWS}f${MIN_FEEDBACK_PER_WINDOW}_${MAX_FEEDBACK_PER_WINDOW}_ret${RETENTION_TYPE}${TILL_BUDGET_SIG}"
     PYSCRIPT=aad_stream.py
     PYMODULE=aad.aad_stream
 elif [[ "$STREAMING_IND" == "0" ]]; then
@@ -334,11 +365,6 @@ elif [[ "$DETECTOR_TYPE" == "13" ]]; then
     NAME_PREFIX="${INFERENCE_NAME}_i${DETECTOR_TYPE}_${QUERY_SIG}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}${STREAMING_SIG}${STREAMING_FLAGS}${NORM_UNIT_SIG}"
 fi
 
-DATASET_FOLDER=datasets
-if [[ "$DATASET" == "covtype" || "$DATASET" == "kddcup" ]]; then
-    DATASET_FOLDER=datasets${STREAMING_SIG}
-fi
-
 SCRIPT_PATH=./aad/${PYSCRIPT}
 BASE_DIR=
 if [ -d "/Users/moy" ]; then
@@ -368,6 +394,7 @@ fi
 DATASET_DIR="${BASE_DIR}/anomaly/$DATASET"
 
 LOG_FILE=$LOG_PATH/${NAME_PREFIX}_${DATASET}.log
+echo ${LOG_FILE}
 
 ORIG_FEATURES_PATH=${DATASET_DIR}/fullsamples
 DATA_FILE=${ORIG_FEATURES_PATH}/${DATASET}_1.csv
@@ -403,5 +430,5 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     --min_feedback_per_window=${MIN_FEEDBACK_PER_WINDOW} \
     --max_feedback_per_window=${MAX_FEEDBACK_PER_WINDOW} \
     ${STREAMING} ${ALLOW_STREAM_UPDATE} --stream_window=${STREAM_WINDOW} \
-    --retention_type=${RETENTION_TYPE} \
+    --retention_type=${RETENTION_TYPE} ${TILL_BUDGET} \
     ${PLOT2D} --debug

@@ -161,6 +161,12 @@ def sample(x, n):
     return shuffle[0:n]
 
 
+def get_sample_feature_ranges(x):
+    min_vals = np.min(x, axis=0)
+    max_vals = np.max(x, axis=0)
+    return np.hstack([np.transpose([min_vals]), np.transpose([max_vals])])
+
+
 def append(a1, a2):
     if isinstance(a1, np.ndarray) and len(a1.shape) == 1:
         return np.append(a1, a2)

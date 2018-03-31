@@ -296,6 +296,13 @@ class StreamingAnomalyDetector(object):
         min_feedback = self.opts.min_feedback_per_window
         max_feedback = self.opts.max_feedback_per_window
 
+        # For the last window, we query till the buffer is exhausted
+        # irrespective of whether we exceed max_feedback per window limit
+        if self.stream_buffer_empty() and self.opts.till_budget:
+            bk = get_budget_topK(self.unlabeled.x.shape[0], self.opts)
+            max_feedback = max(0, bk.budget - len(self.labeled.y))
+            max_feedback = min(max_feedback, self.unlabeled.x.shape[0])
+
         if False:
             # get baseline metrics
             x_transformed = self.get_transformed(self.unlabeled.x)
@@ -320,7 +327,7 @@ class StreamingAnomalyDetector(object):
             i += 1
             # scores based on current weights
             xi_, x, y, x_transformed, ha, hn, order_anom_idxs, anom_score = \
-                self.get_query_data(unl=unl, n_query=max_feedback)
+                self.get_query_data(unl=unl, n_query=self.opts.n_explore)
 
             order_anom_idxs_minus_ha_hn = get_first_vals_not_marked(
                 order_anom_idxs, append(ha, hn), n=len(order_anom_idxs))

@@ -10,6 +10,7 @@ from aad.aad_support import *
 from aad.aad_test_support import aad_unit_tests_battery, \
     get_queried_indexes, write_baseline_query_indexes, \
     evaluate_forest_original, debug_qvals, check_random_vector_angle
+from aad.forest_description import *
 
 
 def aad_batch():
@@ -113,6 +114,9 @@ def aad_batch():
             model.init_weights(init_type=opts.init, samples=None)
 
             metrics = model.aad_learn_ensemble_weights_with_budget(ensemble, opts)
+
+            if metrics is not None and opts.describe_anomalies and is_forest_detector(opts.detector_type):
+                descriptions = get_anomaly_descriptions(X_train, labels, model, metrics, opts)
 
             if metrics is not None:
                 num_seen, num_seen_baseline, queried_indexes, queried_indexes_baseline = \

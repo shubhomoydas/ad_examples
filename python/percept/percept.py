@@ -30,12 +30,14 @@ def get_sphere_samples(sampledef):
 
 
 def plot_learning(x, y, q, queried, aad, u_theta, dp, title=None,
-                  plot_true_w=True, plot_xtau=True, plot_hyperplane=True, plot_w=True):
+                  plot_true_w=True, plot_xtau=True, plot_hyperplane=True, plot_w=True,
+                  plot_theta=False, plot_legends=False):
     lbl_color_map = {0: "blue", 1: "red", 2: "green"}
     line_colors = ["blue", "red", "red"]
-    line_types = ["--", "-", "--"]
+    line_types = ["--", "--", "-"]
     line_widths = [1, 1, 1]
-    xlim = [-1.1, 1.1]
+    xmx = 4.1 if plot_legends else 1.1
+    xlim = [-1.1, xmx]
     ylim = [-1.1, 1.1]
     marker = '+'
     s = 15
@@ -43,6 +45,7 @@ def plot_learning(x, y, q, queried, aad, u_theta, dp, title=None,
     linewidth = 2
 
     pl = dp.get_next_plot()
+    pl.set_aspect('equal')
     # plt.xlabel('x')
     # plt.ylabel('y')
     plt.xticks([])
@@ -55,8 +58,13 @@ def plot_learning(x, y, q, queried, aad, u_theta, dp, title=None,
         plt.ylim(ylim)
 
     qidxs = np.array(queried.keys())
-    dp.plot_points(x, pl, labels=y, lbl_color_map=lbl_color_map,
-                   marker=marker, s=s, facecolors='none', defaultcol=samplescol)
+
+    nomls = np.where(y==0)[0]
+    anoms = np.where(y==1)[0]
+    pl.scatter(x[nomls, 0], x[nomls, 1], marker=marker, s=s, facecolors='blue', edgecolors="blue", label="Nominal")
+    pl.scatter(x[anoms, 0], x[anoms, 1], marker=marker, s=s, facecolors='red', edgecolors="red", label="Anomaly")
+    # dp.plot_points(x, pl, labels=y, lbl_color_map=lbl_color_map,
+    #                marker=marker, s=s, facecolors='none', defaultcol=samplescol)
     if len(qidxs) > 0:
         pl.scatter(x[qidxs, 0], x[qidxs, 1], marker='o', s=45,
                    edgecolors='brown', facecolors='none')
@@ -77,11 +85,13 @@ def plot_learning(x, y, q, queried, aad, u_theta, dp, title=None,
     # logger.debug("r: %s" % str(r))
 
     lines = list()
+    line_labels = list()
     if plot_true_w:
         # plot the true weight vector
         u = interpolate_2D_line_by_point_and_vec(np.array([0., 1.]), [0., 0.],
                                                  [np.cos(u_theta), np.sin(u_theta)])
         lines.append(u)
+        line_labels.append(r"True weights ${\bf u}$")
 
     # w0*x + w1*y = (1-aad.tau)
     if aad.fixed_tau:
@@ -91,20 +101,29 @@ def plot_learning(x, y, q, queried, aad, u_theta, dp, title=None,
     else:
         raise ValueError("q_tau could not be determined")
 
-    if plot_hyperplane:
-        # draw the hyper-plane passing through tau-th score
-        zw = interpolate_2D_line_by_slope_and_intercept(r, -w[0] / w[1], q_tau / w[1])
-        lines.append(zw)
-
     if plot_w:
         # draw the computed weighted vector passing through the center
         # Tis is perpendicular to the hyper-plane
         zd = interpolate_2D_line_by_point_and_vec(np.array([0., w[0]]), [0., 0.], w)
         lines.append(zd)
+        line_labels.append(r"Uniform weights ${\bf w}_{unif}$")
+
+    if plot_hyperplane:
+        # draw the hyper-plane passing through tau-th score
+        zw = interpolate_2D_line_by_slope_and_intercept(r, -w[0] / w[1], q_tau / w[1])
+        lines.append(zw)
+        line_labels.append(r"hyperplane $\perp$ ${\bf w}_{unif}$")
+
+    if plot_theta:
+        pl.text(0.22, 0.33, r"${\theta}$", fontsize=20)
 
     for i, line in enumerate(lines):
         color = "blue" if line_colors is None else line_colors[i]
-        pl.plot(line[:, 0], line[:, 1], line_types[i], color=color, linewidth=line_widths[i])
+        pl.plot(line[:, 0], line[:, 1], line_types[i], color=color, linewidth=line_widths[i],
+                label=line_labels[i] if plot_legends else None)
+
+    if plot_legends:
+        pl.legend(loc='lower right', prop={'size': 14})
 
 
 def get_param_sig(tau_relative, fixed_tau, use_prior, update_only_on_error):
@@ -168,8 +187,8 @@ if __name__ == "__main__":
     # logger.debug("Oracle: %s" % str(oracle.y))
     u = np.array([np.cos(u_theta), np.sin(u_theta)])
     plot_learning(x, y, None, queried, aad, u_theta, dp,
-                  title="initial angle: %1.2f" % (np.arccos(u.dot(aad.w)) * 180. / np.pi)
-                  # title=None
+                  title=r"initial (${\theta}$: %1.2f)" % (np.arccos(u.dot(aad.w)) * 180. / np.pi)
+                  # title=None, plot_xtau=False, plot_theta=True, plot_legends=True
                   )
     budget = 30
     for iter in range(budget):
@@ -187,7 +206,7 @@ if __name__ == "__main__":
         if iter % 1 == 0:
             idxs, y_ = aad.as_arrays(queried)
             anoms, noms = aad.separate_label_indexes(y_)
-            plot_learning(x, y, q, queried, aad, u_theta, dp, title="iter %d (%1.2f) [%d/%d]" %
+            plot_learning(x, y, q, queried, aad, u_theta, dp, title=r"iter %d (${\theta}$: %1.2f) [%d/%d]" %
                                                                     (iter + 1, np.arccos(u.dot(aad.w)) * 180. / np.pi,
                                                                      len(anoms), len(noms)))
             logger.debug("iter %d: anoms: %d, noms: %d" % (iter+1, len(anoms), len(noms)))

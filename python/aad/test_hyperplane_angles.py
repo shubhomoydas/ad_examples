@@ -89,7 +89,7 @@ def test_hyperplane_angles():
         X_train_new = model.transform_to_ensemble_features(X_train, dense=dense, norm_unit=True)
         scores = model.get_score(X_train_new)
         ordered_scores = -np.sort(-scores)  # sort descending
-        logger.debug("scores with norm:\n%s" % str(list(ordered_scores)))
+        # logger.debug("scores with norm:\n%s" % str(list(ordered_scores)))
         auc = model.get_auc(scores, labels)
         logger.debug("AUC: %f" % auc)
 

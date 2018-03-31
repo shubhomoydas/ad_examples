@@ -36,7 +36,8 @@ class QueryTop(Query):
     def get_next_query(self, **kwargs):
         ordered_indexes = kwargs.get("ordered_indexes")
         queried_items = kwargs.get("queried_items")
-        n = kwargs.get("n", 1)
+        # n = kwargs.get("n", 1)
+        n = 1
         items = get_first_vals_not_marked(ordered_indexes, queried_items, start=0, n=n)
         if len(items) == 0:
             return None

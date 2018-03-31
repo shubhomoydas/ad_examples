@@ -9,6 +9,7 @@ from common.data_plotter import *
 
 from aad.aad_globals import *
 from aad.aad_support import *
+from aad.forest_description import *
 
 
 def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
@@ -34,6 +35,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     plot_forest_contours = data_2D and is_forest_detector(model.detector_type) and True
     plot_baseline = data_2D and False
     plot_aad = metrics is not None and data_2D and True
+    plot_anomalous_regions = plot_dataset and is_forest_detector(model.detector_type) and True
 
     pdfpath_baseline = "%s/tree_baseline.pdf" % outputdir
     pdfpath_orig_if_contours = "%s/score_contours.pdf" % outputdir
@@ -49,6 +51,12 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
         tm.start()
         plot_dataset_2D(X_train, labels, model, plot_rectangular_regions, regcols, outputdir)
         logger.debug(tm.message("plotted dataset"))
+
+    if plot_anomalous_regions:
+        tm.start()
+        plot_anomalous_2D(X_train, labels, model, metrics, outputdir,
+                          n_top=opts.describe_n_top, p=opts.describe_volume_p)
+        logger.debug(tm.message("plotted anomalous regions"))
 
     if output_forest_original:
         n_found = evaluate_forest_original(X_train, labels, opts.budget, model, x_new=X_train_new)
@@ -278,3 +286,75 @@ def plot_dataset_2D(x, y, model, plot_regions, regcols, pdf_folder):
                 region = region.region
                 plot_rect_region(pl, region, regcols[i % len(regcols)], axis_lims)
     dp.close()
+
+
+def plot_selected_regions(x, y, model, region_indexes, title=None, path=None):
+    dp = DataPlotter(pdfpath=path, rows=1, cols=1)
+
+    pl = dp.get_next_plot()
+    if title is not None: plt.title(title, fontsize=8)
+    # dp.plot_points(x, pl, labels=y, lbl_color_map={0: "grey", 1: "red"})
+    dp.plot_points(x[y == 0, :], pl, labels=y[y == 0], defaultcol="grey")
+    dp.plot_points(x[y == 1, :], pl, labels=y[y == 1], defaultcol="red", s=26, linewidths=1.5)
+
+    # plot the isolation model tree regions
+    axis_lims = (plt.xlim(), plt.ylim())
+    for i in region_indexes:
+        region = model.all_regions[i].region
+        # logger.debug(str(region))
+        plot_rect_region(pl, region, "red", axis_lims)
+
+    dp.close()
+
+
+def plot_anomalous_2D(x, y, model, metrics, pdf_folder, n_top=10, p=1):
+    # use this to plot the dataset
+
+    if is_forest_detector(model.detector_type):
+        treesig = "_%d_trees" % model.n_estimators
+    else:
+        treesig = ""
+
+    feature_ranges = get_sample_feature_ranges(x)  # will be used to compute volumes
+    # logger.debug("feature_ranges:\n%s" % feature_ranges)
+
+    wd = np.multiply(model.w, model.d)
+    ordered_wd_idxs = np.argsort(-wd)[0:n_top]  # sort in reverse order
+    # logger.debug("ordered_wd:\n%s" % str(wd[ordered_wd_idxs]))
+
+    volumes = get_region_volumes(model, ordered_wd_idxs, feature_ranges)
+    ordered_compact_idxs1 = get_compact_regions(x, y, model, metrics, ordered_wd_idxs, volumes, p=p)
+
+    ordered_d_idxs = np.argsort(-model.d)[0:n_top]  # sort in reverse order
+    # logger.debug("ordered_d:\n%s" % str(model.d[ordered_d_idxs]))
+
+    plot_selected_regions(x, y, model, ordered_d_idxs,
+                          # title="Baseline Top %d Regions" % n_top,
+                          path="%s/top_%d_anomalous_regions%s_baseline.pdf" % (pdf_folder, n_top, treesig))
+    plot_selected_regions(x, y, model, ordered_wd_idxs,
+                          # title="AAD Top %d Regions" % n_top,
+                          path="%s/top_%d_anomalous_regions%s_aad.pdf" % (pdf_folder, n_top, treesig))
+
+    plot_selected_regions(x, y, model, ordered_compact_idxs1,
+                          # title="AAD Top %d Regions Compact" % n_top,
+                          path="%s/top_%d_anomalous_regions%s_compact.pdf" % (pdf_folder, n_top, treesig))
+
+
+def test_ilp():
+    """
+    Problem defined in:
+        https://en.wikipedia.org/wiki/Integer_programming#Example
+    Solution from:
+        https://stackoverflow.com/questions/33785396/python-the-integer-linear-programming-ilp-function-in-cvxopt-is-not-generati
+    """
+    import cvxopt
+    from cvxopt import glpk
+
+    glpk.options['msg_lev'] = 'GLP_MSG_OFF'
+    c = cvxopt.matrix([0, -1], tc='d')
+    G = cvxopt.matrix([[-1, 1], [3, 2], [2, 3], [-1, 0], [0, -1]], tc='d')
+    h = cvxopt.matrix([1, 12, 12, 0, 0], tc='d')
+    (status, x) = cvxopt.glpk.ilp(c, G.T, h, I=set([0, 1]))
+    print status
+    print x[0], x[1]
+    print sum(c.T * x)

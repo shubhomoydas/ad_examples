@@ -304,12 +304,20 @@ def get_aad_option_list():
                         help="Min. number of instances to query per streaming window")
     parser.add_argument("--max_feedback_per_window", action="store", type=int, default=20,
                         help="Max. number of instances to query per streaming window")
+    parser.add_argument("--till_budget", action="store_true", default=False,
+                        help="Whether to run the streaming algorithm till at least budget")
     parser.add_argument("--allow_stream_update", action="store_true", default=False,
                         help="Update the model when the window buffer is full in the streaming setting")
     parser.add_argument("--retention_type", action="store", type=int, default=STREAM_RETENTION_OVERWRITE,
                         help="Determines which instances to retain im memory when a new window of data streams in.")
     parser.add_argument("--query_confident", action="store_true", default=False,
                         help="Whether to query only those top ranked instances for which we are confident the score is at least 1 std-dev higher than tau-th ranked instance' score")
+    parser.add_argument("--describe_anomalies", action="store_true", default=False,
+                        help="Whether to report compact descriptions for discovered anomalies (supported only for forest-based detectors)")
+    parser.add_argument("--describe_n_top", action="store", type=int, default=30,
+                        help="Number of top ranked subspaces to use for anomaly descriptions")
+    parser.add_argument("--describe_volume_p", action="store", type=int, default=1,
+                        help="Exponent for region volume while computing descriptions. Higher power encourages selection of smaller volumes")
     return parser
 
 
@@ -432,9 +440,14 @@ class AadOpts(object):
         self.max_windows = args.max_windows
         self.min_feedback_per_window = args.min_feedback_per_window
         self.max_feedback_per_window = args.max_feedback_per_window
+        self.till_budget = args.till_budget
         self.allow_stream_update = args.allow_stream_update
         self.retention_type = args.retention_type
         self.query_confident = args.query_confident
+
+        self.describe_anomalies = args.describe_anomalies
+        self.describe_n_top = args.describe_n_top
+        self.describe_volume_p = args.describe_volume_p
 
         self.modelfile = args.modelfile
         self.load_model = args.load_model
@@ -483,6 +496,12 @@ class AadOpts(object):
                     "_leaf" if self.forest_add_leaf_nodes_only else "")
         else:
             return s
+
+    def till_budget_str(self):
+        if self.streaming and self.till_budget:
+            return "_tillbudget"
+        else:
+            return ""
 
     def model_file_prefix(self):
         return "%s_%d_r%d" % (self.dataset, self.fid, self.runidx)
@@ -538,7 +557,7 @@ class AadOpts(object):
                       ignoreAATPlosssig +
                       norm_sig +
                       tau_score_sig +
-                      streaming_sig
+                      streaming_sig + self.till_budget_str()
                       )
         return nameprefix.replace(".", "_")
 
@@ -584,7 +603,7 @@ class AadOpts(object):
                ignoreAATPlosssig +
                norm_sig +
                tau_score_sig +
-               streaming_sig
+               streaming_sig + self.till_budget_str()
                )
         return srr
 
