@@ -15,7 +15,7 @@
 
 \section{Compact Description For Anomalies}
 
-Providing explanations for anomalies is important and some recent work (among others) can be found in \cite{macha:2017}. We illustrate a very simple approach when AAD is used with \textit{Isolation Forest}.
+Providing explanations for anomalies is important and some recent work (among others) can be found in \cite{macha:2017}. We illustrate a different and yet very simple approach when AAD is used with \textit{Isolation Forest}.
 
 The Isolation Forest version of AAD works by partitioning the space into smaller subspaces and weights each subspace to fit the expert feedback. The end result is: (1) a set of default (unsupervised) anomaly scores for each subspace and, (2) weights for each subspace inferred from feedback. We can generate compact descriptions for the anomalies using this information. The idea is to select some combination of (preferably) the smallest subspaces that \textbf{cover} all \textbf{discovered} anomalies. Therefore, we treat this as an instance of the \emph{set covering} problem. We illustrate this on a toy dataset below.
 
@@ -37,9 +37,11 @@ The selection of the compact set of subspaces to describe all discovered anomali
 
 The parameter $p$ determines how severely to penalize larger volumes. This is usually $1$. However, a larger value will strongly discourage bigger volume subspaces from being selected.
 
-Note that we have not considered labeled nominals in the optimization objective, but a more sophisticated objective might include them too.
-
 We apply this idea on a toy data shown in Figure~\ref{fig:dataset}. The compact descriptions are shown in Figure~\ref{fig:compact_rects}.
+
+Note that we have not considered labeled nominals in the optimization objective, but a more sophisticated objective might include them too. For instance, we could add another term in the objective which penalizes whenever a nominal is present in the selected subspace.
+
+A different approach to generate descriptions might train a cost-based decision tree with the labeled anomalies and nominals. Once trained, the extracted rules would correspond to `descriptions'. This approach is possibly more principled because the decision tree splits are [usually] based on information gain or gini-index and are therefore more informative. The downside is that this would be separate from the anomaly detector and therefore it would not offer much insight into the anomaly detector's behavior -- ideally we would like the explanation or description of anomalies to reflect the detector's internals.
 
 \begin{figure}
 	\centering
