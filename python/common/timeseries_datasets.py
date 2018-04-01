@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 # from pandas import datetime
+from common.utils import *
 
 
 class TsFileDef(object):
@@ -65,37 +66,106 @@ def invert_difference_series(series, initial, interval=1):
     return inv
 
 
-def prepare_n_lag_samples(series, n_lag=1):
-    new = [series]
-    tmp = series
-    for i in range(n_lag):
-        tmp = np.roll(tmp, 1, axis=0)
-        tmp[0, :] = 0
-        new.append(tmp)
-    new.reverse()
-    return new
-
-
 class TSeries(object):
-    def __init__(self, tseries):
-        self.tseries = tseries
-        self.dim = self.tseries[0].shape[1]
-        self.series_len = self.tseries[0].shape[0]
-        self.n_lag = len(self.tseries) - 1
+    """ Provides simple APIs for iterating over a timeseries """
+    def __init__(self, samples, y=None):
+        self.samples = samples
+        self.y = y
+        self.series_len = self.samples.shape[0]
+        self.dim = self.samples.shape[1]
 
-    def iter_series_batch(self, i, batch_size):
-        n = self.series_len
-        start = i * batch_size
-        end = min(n, start + batch_size)
-        if start >= self.series_len:
-            return None, None, None
-        # arrs = list()
-        # for arr in self.tseries:
-        #     tmp = arr[start:end, :]
-        return [arr[start:end, :] for arr in self.tseries], start, end
+    def get_batches(self, n_lags, batch_size, single_output_only=False):
+        """ Iterate over timeseries where current values are functions of previous values
 
-    def iter_series_batch_rnn(self, i, batch_size):
-        batch, start, end = self.iter_series_batch(i, batch_size)
-        # return x, y
-        return np.stack(batch[0:(self.n_lag)], axis=1), batch[self.n_lag], start, end
+        The assumption is that the model is:
+            (y_{t+1}, y_{t}, ..., y_{t-n_lag+1}) = f(x_t, x_{t-1}, ..., x_{t-n_lag+1})
 
+        returns: np.ndarray(shape=(batch_size, n_lags, d))
+            where d = samples.shape[1]
+        """
+        n = self.samples.shape[0]
+        d_in = self.samples.shape[1]
+        d_out = 0 if self.y is None else self.y.shape[1]
+        for i in xrange(0, n, batch_size):
+            x = np.zeros(shape=(batch_size, n_lags, d_in), dtype=np.float32)
+            y = None
+            if self.y is not None and not single_output_only:
+                y = np.zeros(shape=(batch_size, n_lags, d_out), dtype=np.float32)
+            e = min(n, i + batch_size)
+            sz = e - i
+            # logger.debug("i, e, sz: %d, %d, %d" % (i, e, sz))
+            for t in range(n_lags):
+                st = max(0, i - t)  # maximum time we can go back in the past
+                et = e - t
+                # logger.debug("st, et: %d, %d" % (st, et))
+                if et >= st:
+                    x[(sz-(et-st)):sz, n_lags - 1 - t, :] = self.samples[st:et, :]
+                    if y is not None and not single_output_only:
+                        y[(sz - (et - st)):sz, n_lags - 1 - t, :] = self.y[st:et, :]
+                else:
+                    break
+            if self.y is not None and single_output_only:
+                y = self.y[i:e, :]
+            elif y is not None:
+                y = y[0:sz, :, :]
+            yield x[0:sz, :, :], y
+
+    def get_shingles(self, window_size, skip_size=None, batch_size=100):
+        """ Creates feature vectors out of windows of data and iterates over these
+
+        The instances are of the form:
+            (x_t, ..., x_{t-window_size+1})
+
+        returns: np.ndarray(shape=(batch_size, n_lags, d))
+            where d = samples.shape[1]
+        """
+        skip_size = window_size if skip_size is None else skip_size
+        n = self.samples.shape[0]
+        d = self.samples.shape[1]
+        if batch_size < 0:
+            batch_size = 1 + n // skip_size
+        x = np.zeros(shape=(batch_size, window_size, d), dtype=np.float32)
+        w = np.zeros(batch_size, dtype=np.int)  # window id
+        y = None
+        if self.y is not None: y = np.zeros(batch_size, dtype=np.int)
+        l = 0
+        for i in xrange(0, n, skip_size):
+            st = max(0, i - window_size)
+            if i < window_size: st = None  # zero indexing in reverse requires this
+            et = min(i + 1, window_size)
+            # logger.debug("i, l, st, et: %d %d, %d, %d" % (i, l, 0 if st is None else st, et))
+            x[l, 0:et, :] = self.samples[i:st:-1, :]
+            w[l] = i
+            if self.y is not None:
+                y[l] = self.y[i]
+            l += 1
+            if l == batch_size or i + skip_size >= n:
+                # logger.debug("l: %d" % l)
+                yield x[0:l, :, :], None if self.y[0:l] is None else self.y[0:l], w[0:l]
+                if i + skip_size < n:
+                    l = 0
+                    x = np.zeros(shape=(batch_size, window_size, d), dtype=np.float32)
+                    w = np.zeros(batch_size, dtype=np.int)
+                    if self.y is not None: y = np.zeros(batch_size, dtype=np.int)
+
+    def log_batches(self, n_lags, batch_size, single_output_only=False):
+        logger.debug("Logging timeseries (nlags: %d, batch_size: %d)" % (n_lags, batch_size))
+        i = 0
+        for x, y in self.get_batches(n_lags, batch_size, single_output_only=single_output_only):
+            logger.debug("x: (%s), y: (%s)" % (str(x.shape), "-" if y is None else str(y.shape)))
+            if y is not None:
+                # logger.debug("y[%d](%d)\n%s" % (i, y.shape[0], str(np.reshape(y, newshape=(-1,)))))
+                if single_output_only:
+                    batch = np.hstack([y, np.reshape(x, newshape=(x.shape[0],-1))])
+                else:
+                    batch = np.hstack([np.reshape(y, newshape=(y.shape[0],-1)), np.reshape(x, newshape=(x.shape[0], -1))])
+            else:
+                batch = x
+            logger.debug("batch[%d](%d)\n%s" % (i, x.shape[0], str(np.round(batch, 3))))
+            i += 1
+
+
+def prepare_tseries(series):
+    x = series[:-1]
+    y = series[1:]
+    return TSeries(x, y)

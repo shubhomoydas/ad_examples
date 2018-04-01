@@ -14,7 +14,7 @@ detects time points with largest forecasting errors on the last 1/3 data. Are th
 'anomalies'? - depends on the application context.
 
 Some examples motivated by:
-    https://machinelearningmastery.com/arima-for-time-tr_series-forecasting-with-python/
+    https://machinelearningmastery.com/arima-for-time-train_series-forecasting-with-python/
 
 pythonw -m timeseries.timeseries_arima
 '''
@@ -62,11 +62,11 @@ def plot_lag_difference():
     data = get_univariate_timeseries_data(dataset)
     tseries = np.array(data.iloc[:, 0], dtype=float)
     diffs = time_lag_diff(tseries)
-    pdfpath = "temp/timeseries_lag_diff_%s.pdf" % dataset
+    pdfpath = "temp/timeseries/timeseries_lag_diff_%s.pdf" % dataset
     dp = DataPlotter(pdfpath=pdfpath, rows=3, cols=1)
 
     pl = dp.get_next_plot()
-    plt.title("Time tr_series %s" % dataset, fontsize=8)
+    plt.title("Time train_series %s" % dataset, fontsize=8)
     pl.plot(np.arange(0, len(diffs)), diffs, 'b-')
     dp.close()
 
@@ -106,11 +106,11 @@ def forecast_and_report_anomalies():
         logger.debug("largest errors[%d]:\n%s" % (len(err_ordered), str(list(errors[err_ordered]))))
 
         if True:
-            pdfpath = "temp/timeseries_plot_%s.pdf" % dataset
+            pdfpath = "temp/timeseries/timeseries_plot_%s.pdf" % dataset
             dp = DataPlotter(pdfpath=pdfpath, rows=3, cols=1)
 
             pl = dp.get_next_plot()
-            plt.title("Time tr_series %s" % dataset, fontsize=8)
+            plt.title("Time train_series %s" % dataset, fontsize=8)
             pl.plot(np.arange(0, len(tseries)), tseries, 'b-')
 
             pl = dp.get_next_plot()
@@ -139,8 +139,10 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
-    args = get_command_args(debug=True, debug_args=["--log_file=temp/timeseries_explore.log", "--debug"])
+    args = get_command_args(debug=True, debug_args=["--log_file=temp/timeseries/timeseries_explore.log", "--debug"])
     configure_logger(args)
+
+    dir_create("./temp/timeseries")  # for logging and plots
 
     np.random.seed(42)
 

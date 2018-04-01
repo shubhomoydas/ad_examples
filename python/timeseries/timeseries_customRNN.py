@@ -14,7 +14,7 @@ Simple time-series modeling with custom RNN
 
 Some code motivated by:
     Hands-On Machine Learning with Scikit-Learn and TensorFlow by Aurelien Geron
-    https://machinelearningmastery.com/time-tr_series-forecasting-long-short-term-memory-network-python/
+    https://machinelearningmastery.com/time-train_series-forecasting-long-short-term-memory-network-python/
     https://r2rt.com/recurrent-neural-networks-in-tensorflow-i.html
 """
 
@@ -62,8 +62,6 @@ class TsRNNCustom(object):
 
         n_data = ts.series_len
         self.n_inputs = ts.dim
-        if ts.n_lag != self.n_lag:
-            raise ValueError("Expected lag %d, found %d" % (self.n_lag, ts.n_lag))
         batch_size = n_data if self.batch_size < 0 else self.batch_size
         logger.debug("n_inputs: %d, state_size: %d, n_lag: %d; batch_size: %d" %
                      (self.n_inputs, self.state_size, self.n_lag, batch_size))
@@ -71,7 +69,6 @@ class TsRNNCustom(object):
         tf.set_random_seed(42)
 
         self.init_state = tf.placeholder(tf.float32, shape=(None, self.state_size))
-        # tf.zeros([self.batch_size, self.state_size])
 
         self.X = tf.placeholder(tf.float32, shape=(None, self.n_lag, self.n_inputs))
         self.Y = tf.placeholder(tf.float32, shape=(None, self.n_inputs))
@@ -89,12 +86,8 @@ class TsRNNCustom(object):
             V = tf.get_variable('V', shape=[self.state_size, self.n_inputs], dtype=np.float32)
 
         state = self.init_state
-        # rnn_outputs = []
         for rnn_input in rnn_inputs:
             state = self.rnn_cell(rnn_input, state)
-            # rnn_outputs.append(output)
-        # y_hat = tf.stack(rnn_outputs, axis=0)
-        # final_y = rnn_outputs[-1]
         final_y = tf.matmul(state, V) + c
 
         self.predict_op = final_y
@@ -115,15 +108,16 @@ class TsRNNCustom(object):
     def train(self, ts, n_predict=0):
         n_data = ts.series_len
         preds = None
-        x_train = np.stack(ts.tseries[0:self.n_lag], axis=1)
-        y_train = ts.tseries[self.n_lag]
+        x_train = y_train = None
+        for x_train, y_train in ts.get_batches(self.n_lag, self.batch_size, single_output_only=True):
+            pass
         z_train = np.zeros(shape=(x_train.shape[0], self.state_size))
         zero_state = np.zeros(shape=(self.batch_size, self.state_size))
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             for epoch in range(self.n_epochs):
-                for i in range(n_data // self.batch_size + 1):
-                    x, y, start, end = ts.iter_series_batch_rnn(i, self.batch_size)
+                for i, batch in enumerate(ts.get_batches(self.n_lag, self.batch_size, single_output_only=True)):
+                    x, y = batch
                     sess.run([self.training_op],
                              feed_dict={self.X: x, self.Y: y,
                                         self.init_state: zero_state[0:x.shape[0], :]})
@@ -133,8 +127,7 @@ class TsRNNCustom(object):
                 logger.debug("epoch: %d, mse: %f" % (epoch, mse))
 
             if n_predict > 0:
-                start_ts = [ts.tseries[i][n_data-1, 0] for i in range(self.n_lag)]
-                preds = self.predict(start_ts, n=n_predict)
+                preds = self.predict(ts.samples[-self.n_lag:, :], n=n_predict)
 
         return preds
 
@@ -145,17 +138,16 @@ class TsRNNCustom(object):
         """
         if self.n_inputs != 1:
             raise ValueError("Currently only supports univariate input per time-step")
+        seq = list(np.reshape(start_ts, newshape=(-1,)))
+        logger.debug("seq: %s" % str(seq))
         preds = list()
-        x = np.zeros(shape=(1, self.n_lag, 1), dtype=np.float32)
-        for i in range(self.n_lag):
-            x[0, i, 0] = start_ts[i]
         init_state = np.zeros(shape=(1, self.state_size))
         for i in range(n):
-            yhat = self.predict_op.eval(feed_dict={self.X: x,
-                                                    self.init_state: init_state})
+            ts = seq[-self.n_lag:]
+            X_batch = np.array(ts).reshape(1, self.n_lag, self.n_inputs)
+            yhat = self.predict_op.eval(feed_dict={self.X: X_batch,
+                                                   self.init_state: init_state})
             logger.debug("pred: %d %s" % (i, str(yhat)))
             preds.append(yhat[0, 0])
-            for lag in range(self.n_lag-1):
-                x[0, lag, 0] = x[0, lag+1, 0]
-            x[0, self.n_lag-1, 0] = yhat[0, 0]
+            seq.append(yhat)
         return np.array(preds)

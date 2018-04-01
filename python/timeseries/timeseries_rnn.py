@@ -22,16 +22,6 @@ pythonw -m timeseries.timeseries_rnn
 """
 
 
-def merge_lags(arr):
-    n = arr[0].shape[0]
-    d = arr[0].shape[1]
-    m = d * len(arr)
-    merged = np.ndarray(shape=(n, m), dtype=np.float32)
-    for i in range(len(arr)):
-        merged[:, (i*d):((i+1)*d)] = arr[i][:, :]
-    return merged
-
-
 class TsRNN(object):
     """
     Uses Tensorflow's Basic RNN cell
@@ -58,24 +48,14 @@ class TsRNN(object):
         """
         n_data = ts.series_len
         self.n_inputs = ts.dim
-        self.n_outputs = ts.tseries[ts.n_lag].shape[1]
+        self.n_outputs = ts.y.shape[1]
         batch_size = n_data if self.batch_size < 0 else self.batch_size
         logger.debug("n_inputs: %d, n_outputs: %d, state_size: %d, n_lag: %d; batch_size: %d" %
                      (self.n_inputs, self.n_outputs, self.n_neurons, self.n_lag, batch_size))
 
-        if False:
-            logger.debug("tseries[0]:\n%s" % str(ts.tseries[0].reshape(-1)))
-            logger.debug("tseries[1]:\n%s" % str(ts.tseries[1].reshape(-1)))
-            logger.debug("tseries[2]:\n%s" % str(ts.tseries[2].reshape(-1)))
-
-        ts_xlags = [ts.tseries[i] for i in range(self.n_lag)]
-        ts_ylags = [ts.tseries[i] for i in range(1, self.n_lag + 1)]
-        X_batch_ts = merge_lags(ts_xlags).reshape(-1, self.n_lag, self.n_inputs)
-        Y_batch_ts = merge_lags(ts_ylags).reshape(-1, self.n_lag, self.n_outputs)
-
-        if False:
-            logger.debug("X_batch_ts:\n%s" % str(X_batch_ts))
-            logger.debug("Y_batch_ts:\n%s" % str(Y_batch_ts))
+        X_batch_ts = Y_batch_ts = None
+        for X_batch_ts, Y_batch_ts in ts.get_batches(self.n_lag, batch_size):
+            pass
 
         tf.set_random_seed(42)
 
@@ -110,29 +90,26 @@ class TsRNN(object):
         with tf.Session() as sess:
             init.run()
             for epoch in range(self.n_epochs):
-                for i in range(n_data // batch_size + 1):
-                    batch, start, end = ts.iter_series_batch(i, batch_size)
-                    if batch is None:
-                        continue
-                    xlags = [batch[i] for i in range(self.n_lag)]
-                    ylags = [batch[i] for i in range(1, self.n_lag+1)]
-                    X_batch = merge_lags(xlags).reshape(-1, self.n_lag, self.n_inputs)
-                    Y_batch = merge_lags(ylags).reshape(-1, self.n_lag, self.n_outputs)
+                for i, batch in enumerate(ts.get_batches(self.n_lag, batch_size, single_output_only=False)):
+                    X_batch, Y_batch = batch
+                    # logger.debug("X_batch.shape: %s" % str(X_batch.shape))
                     sess.run([training_op], feed_dict={self.X: X_batch, self.Y: Y_batch})
-                mse = loss.eval(feed_dict={self.X: X_batch_ts, self.Y: X_batch_ts})
+                mse = loss.eval(feed_dict={self.X: X_batch_ts, self.Y: Y_batch_ts})
                 logger.debug("epoch: %d, mse: %f" % (epoch, mse))
 
             if n_predict > 0:
                 # predict while keeping the model fixed
-                preds = self.predict([ts.tseries[0][n_data-1, 0], ts.tseries[1][n_data-1, 0]], n=n_predict)
+                preds = self.predict(ts.samples[-n_lag:, :], n=n_predict)
 
         return preds
 
     def predict(self, start_ts, n=1):
-        seq = [0.] * self.n_lag
+        seq = list(np.reshape(start_ts, newshape=(-1,)))
+        logger.debug("seq: %s" % str(seq))
         preds = list()
         for i in range(n):
-            X_batch = np.array(seq[-self.n_lag:]).reshape(1, self.n_lag, 1)
+            ts = seq[-self.n_lag:]
+            X_batch = np.array(ts).reshape(1, self.n_lag, self.n_inputs)
             y_preds = self.predict_op.eval(feed_dict={self.X: X_batch})
             yhat = y_preds[0, -1, 0]
             logger.debug("pred: %d %s" % (i, str(yhat)))
@@ -151,6 +128,8 @@ if __name__ == "__main__":
     # print "log file: %s" % args.log_file
     configure_logger(args)
 
+    dir_create("./temp/timeseries")  # for logging and plots
+
     random.seed(42)
     rnd.seed(42)
 
@@ -162,31 +141,43 @@ if __name__ == "__main__":
 
     n = all_series.shape[0]
     n_training = int(2. * n / 3.)
-    tr_series = all_series[0:n_training]
-    ts_series = all_series[n_training:n]
-    logger.debug("Dataset: %s, n_training: %d, n_test: %d" %(dataset, n_training, ts_series.shape[0]))
-    # logger.debug("tr_series.shape: %s\n%s" % (str(tr_series.shape), str(tr_series)))
-    # logger.debug("ts_series.shape: %s\n%s" % (str(ts_series.shape), str(ts_series)))
+    train_series = all_series[0:n_training]
+    test_series = all_series[n_training:n]
+    logger.debug("Dataset: %s, n_training: %d, n_test: %d" % (dataset, n_training, test_series.shape[0]))
+    # logger.debug("train_series.shape: %s\n%s" % (str(train_series.shape), str(train_series)))
+    # logger.debug("test_series.shape: %s\n%s" % (str(test_series.shape), str(test_series)))
 
-    diff_series = difference_series(tr_series, interval=1)
+    # remove trend by differencing
+    diff_series = difference_series(train_series, interval=1)
     # logger.debug("diff_series.shape: %s\n%s" % (str(diff_series.shape), str(diff_series)))
 
+    # normalize by mean and variance
     scaler = MinMaxScaler(feature_range=(-1, 1))  # since output is tanh
     scaler = scaler.fit(diff_series)
     scld_series = scaler.transform(diff_series)
     # logger.debug("scld_series.shape: %s\n%s" % (str(scld_series.shape), str(scld_series)))
 
     use_custom = True
-    use_lstm = True
+    use_lstm = False
     batch_size = 10
     n_lag = 4
     n_neurons = 100
-    n_epochs = 1000
+    n_epochs = 100
+
+    train_ts = prepare_tseries(scld_series)
+    n_preds = test_series.shape[0]  # 12
+
+    if False:
+        # check if the series iterates correctly
+        logger.debug("len(scld_series): %d" % len(scld_series))
+        logger.debug("scld_series:\n%s" % str(list(np.round(scld_series[:, 0], 3))))
+        train_ts.log_batches(n_lag, 200, single_output_only=False)
+
+    # if True: exit(0)
 
     if use_custom:
         # if using the custom RNN
         rnn_type = "custom"
-        ts_data = prepare_n_lag_samples(scld_series, n_lag)
         tsrnn = TsRNNCustom(n_lag=n_lag, state_size=n_neurons,
                             n_epochs=n_epochs, batch_size=batch_size,
                             learning_rate=0.001, l2_penalty=0.0)
@@ -197,23 +188,14 @@ if __name__ == "__main__":
             batch_size = 1
         else:
             rnn_type = "basic"
-        ts_data = prepare_n_lag_samples(scld_series, n_lag)
         tsrnn = TsRNN(n_lag=n_lag, n_neurons=n_neurons,
                       n_epochs=n_epochs, batch_size=batch_size,
                       learning_rate=0.001, use_lstm=use_lstm)
-    logger.debug("len(ts_data): %d" % len(ts_data))
-    ts = TSeries(ts_data)
-    n_preds = ts_series.shape[0]  # 12
-    preds = tsrnn.fit(ts, n_predict=n_preds)
+
+    preds = tsrnn.fit(train_ts, n_predict=n_preds)
     # logger.debug(preds)
 
     n_tr = scld_series.shape[0]
-
-    # inv_scld_series = scaler.inverse_transform(scld_series)
-    # logger.debug("inv_scld_series.shape: %s\n%s" % (str(inv_scld_series.shape), str(inv_scld_series)))
-
-    # inv_diff_series = invert_difference_series_old(tr_series, diff_series, interval=1)
-    # logger.debug("inv_diff_series.shape: %s\n%s" % (str(inv_diff_series.shape), str(inv_diff_series)))
 
     final_preds = None
     if preds is not None:
@@ -221,17 +203,17 @@ if __name__ == "__main__":
         pred_series = preds.reshape((len(preds), 1))
         inv_pred_series = scaler.inverse_transform(pred_series)
         final_preds = invert_difference_series(
-            inv_pred_series, initial=tr_series[n_training-1, :], interval=1)
+            inv_pred_series, initial=train_series[n_training - 1, :], interval=1)
         logger.debug("final_preds.shape: %s\n%s" % (str(final_preds.shape), str(final_preds)))
 
     pdfpath = "temp/timeseries/timeseries_rnn_%s_%s.pdf" % (rnn_type, dataset)
     dp = DataPlotter(pdfpath=pdfpath, rows=3, cols=1)
 
     pl = dp.get_next_plot()
-    plt.title("Time tr_series %s" % dataset, fontsize=8)
+    plt.title("Time train_series %s" % dataset, fontsize=8)
     pl.set_xlim([0, n])
-    pl.plot(np.arange(0, n_training), tr_series[:, 0], 'b-')
-    pl.plot(np.arange(n_training, n), ts_series[:, 0], 'r-')
+    pl.plot(np.arange(0, n_training), train_series[:, 0], 'b-')
+    pl.plot(np.arange(n_training, n), test_series[:, 0], 'r-')
 
     if final_preds is not None:
         pl = dp.get_next_plot()
@@ -243,7 +225,7 @@ if __name__ == "__main__":
         pl = dp.get_next_plot()
         plt.title("final predictions %s" % dataset, fontsize=8)
         pl.set_xlim([0, n])
-        pl.plot(np.arange(0, n_training), tr_series[:, 0], 'b-')
-        pl.plot(np.arange(n_training, n), ts_series[:, 0], 'b-')
+        pl.plot(np.arange(0, n_training), train_series[:, 0], 'b-')
+        pl.plot(np.arange(n_training, n), test_series[:, 0], 'b-')
         pl.plot(np.arange(n_training, n_training+final_preds.shape[0]), final_preds[:, 0], 'r-')
     dp.close()
