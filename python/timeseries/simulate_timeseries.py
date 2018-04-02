@@ -5,6 +5,7 @@ from scipy.stats import poisson
 from pandas import Series
 from common.utils import *
 from common.data_plotter import *
+from common.timeseries_datasets import TSeries
 
 """
 pythonw -m timeseries.simulate_timeseries
@@ -144,72 +145,6 @@ def generate_synthetic_activity_data():
     dp.close()
 
 
-class ActivityData(object):
-    def __init__(self, samples, y=None, activities=None, starts=None):
-        self.samples = samples
-        self.activities = activities
-        self.starts = starts
-        self.y = y
-
-        if self.y is None and self.activities is not None and self.starts is not None:
-            # populate the activity labels
-            n = self.samples.shape[0]
-            n_acts = self.activities.shape[0]
-            self.y = np.zeros(shape=(n, 1), dtype=int)
-            for i in range(n_acts):
-                s = self.starts[i, 0]
-                e = n if i == n_acts-1 else self.starts[i+1, 0]
-                self.y[s:e, 0] = self.activities[i, 0]
-
-    def get_batches(self, n_lags, batch_size):
-        n = self.samples.shape[0]
-        d = self.samples.shape[1]
-        for i in xrange(0, n, batch_size):
-            x = np.zeros(shape=(batch_size, n_lags, d), dtype=np.float32)
-            e = min(n, i + batch_size)
-            sz = e - i
-            # logger.debug("i, e, sz: %d, %d, %d" % (i, e, sz))
-            for t in range(n_lags):
-                st = max(0, i - t)  # maximum time we can go back in the past
-                et = e - t
-                # logger.debug("st, et: %d, %d" % (st, et))
-                if et >= st:
-                    x[(sz-(et-st)):sz, t, :] = self.samples[st:et, :]
-                else:
-                    break
-            yield x[0:sz, :, :], None if self.y is None else self.y[i:e, :]
-
-    def get_shingles(self, window_size, skip_size=None, batch_size=100):
-        skip_size = window_size if skip_size is None else skip_size
-        n = self.samples.shape[0]
-        d = self.samples.shape[1]
-        if batch_size < 0:
-            batch_size = 1 + n // skip_size
-        x = np.zeros(shape=(batch_size, window_size, d), dtype=np.float32)
-        w = np.zeros(batch_size, dtype=np.int)  # window id
-        y = None
-        if self.y is not None: y = np.zeros(batch_size, dtype=np.int)
-        l = 0
-        for i in xrange(0, n, skip_size):
-            st = max(0, i - window_size)
-            if i < window_size: st = None  # zero indexing in reverse requires this
-            et = min(i + 1, window_size)
-            # logger.debug("i, l, st, et: %d %d, %d, %d" % (i, l, 0 if st is None else st, et))
-            x[l, 0:et, :] = self.samples[i:st:-1, :]
-            w[l] = i
-            if self.y is not None:
-                y[l] = self.y[i]
-            l += 1
-            if l == batch_size or i + skip_size >= n:
-                # logger.debug("l: %d" % l)
-                yield x[0:l, :, :], None if self.y[0:l] is None else self.y[0:l], w[0:l]
-                if i + skip_size < n:
-                    l = 0
-                    x = np.zeros(shape=(batch_size, window_size, d), dtype=np.float32)
-                    w = np.zeros(batch_size, dtype=np.int)
-                    if self.y is not None: y = np.zeros(batch_size, dtype=np.int)
-
-
 def read_activity_data():
     activities = pd.read_csv("../datasets/simulated_timeseries/activities_2000.csv",
                              header=None, sep=",", usecols=[1]
@@ -223,7 +158,7 @@ def read_activity_data():
                          header=None, sep=",", usecols=[1]
                          )
     starts = np.asarray(starts, dtype=np.int)
-    return ActivityData(samples, y=None, activities=activities, starts=starts)
+    return TSeries(samples, y=None, activities=activities, starts=starts)
 
 
 if __name__ == '__main__':

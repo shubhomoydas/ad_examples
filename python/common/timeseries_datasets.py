@@ -67,12 +67,24 @@ def invert_difference_series(series, initial, interval=1):
 
 
 class TSeries(object):
-    """ Provides simple APIs for iterating over a timeseries """
-    def __init__(self, samples, y=None):
+    """ Provides simple APIs for iterating over a timeseries and activities """
+    def __init__(self, samples, y=None, activities=None, starts=None):
         self.samples = samples
         self.y = y
         self.series_len = self.samples.shape[0]
         self.dim = self.samples.shape[1]
+        self.activities = activities
+        self.starts = starts
+
+        if self.y is None and self.activities is not None and self.starts is not None:
+            # populate the activity labels
+            n = self.samples.shape[0]
+            n_acts = self.activities.shape[0]
+            self.y = np.zeros(shape=(n, 1), dtype=int)
+            for i in range(n_acts):
+                s = self.starts[i, 0]
+                e = n if i == n_acts-1 else self.starts[i+1, 0]
+                self.y[s:e, 0] = self.activities[i, 0]
 
     def get_batches(self, n_lags, batch_size, single_output_only=False):
         """ Iterate over timeseries where current values are functions of previous values
@@ -82,6 +94,7 @@ class TSeries(object):
 
         returns: np.ndarray(shape=(batch_size, n_lags, d))
             where d = samples.shape[1]
+            The data is ordered in increasing time
         """
         n = self.samples.shape[0]
         d_in = self.samples.shape[1]
@@ -114,7 +127,7 @@ class TSeries(object):
         """ Creates feature vectors out of windows of data and iterates over these
 
         The instances are of the form:
-            (x_t, ..., x_{t-window_size+1})
+            (x_{t-window_size+1}, ..., x_t)
 
         returns: np.ndarray(shape=(batch_size, n_lags, d))
             where d = samples.shape[1]
@@ -125,23 +138,22 @@ class TSeries(object):
         if batch_size < 0:
             batch_size = 1 + n // skip_size
         x = np.zeros(shape=(batch_size, window_size, d), dtype=np.float32)
-        w = np.zeros(batch_size, dtype=np.int)  # window id
+        w = np.zeros(batch_size, dtype=np.int)  # window start time
         y = None
         if self.y is not None: y = np.zeros(batch_size, dtype=np.int)
         l = 0
         for i in xrange(0, n, skip_size):
-            st = max(0, i - window_size)
-            if i < window_size: st = None  # zero indexing in reverse requires this
-            et = min(i + 1, window_size)
-            # logger.debug("i, l, st, et: %d %d, %d, %d" % (i, l, 0 if st is None else st, et))
-            x[l, 0:et, :] = self.samples[i:st:-1, :]
+            et = min(n - i, window_size)
+            x[l, 0:et, :] = self.samples[i:(i+et), :]
             w[l] = i
             if self.y is not None:
                 y[l] = self.y[i]
             l += 1
             if l == batch_size or i + skip_size >= n:
-                # logger.debug("l: %d" % l)
-                yield x[0:l, :, :], None if self.y[0:l] is None else self.y[0:l], w[0:l]
+                x_, y_, w_ = x, y, w
+                if l < batch_size:
+                    x_, y_, w_ = x[0:l, :, :], None if y is None else y[0:l], w[0:l]
+                yield x_, y_, w_
                 if i + skip_size < n:
                     l = 0
                     x = np.zeros(shape=(batch_size, window_size, d), dtype=np.float32)
