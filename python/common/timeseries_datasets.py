@@ -68,13 +68,14 @@ def invert_difference_series(series, initial, interval=1):
 
 class TSeries(object):
     """ Provides simple APIs for iterating over a timeseries and activities """
-    def __init__(self, samples, y=None, activities=None, starts=None):
+    def __init__(self, samples, y=None, activities=None, starts=None, name=None):
         self.samples = samples
         self.y = y
         self.series_len = self.samples.shape[0]
         self.dim = self.samples.shape[1]
         self.activities = activities
         self.starts = starts
+        self.name = name
 
         if self.y is None and self.activities is not None and self.starts is not None:
             # populate the activity labels
@@ -90,7 +91,17 @@ class TSeries(object):
         """ Iterate over timeseries where current values are functions of previous values
 
         The assumption is that the model is:
-            (y_{t+1}, y_{t}, ..., y_{t-n_lag+1}) = f(x_t, x_{t-1}, ..., x_{t-n_lag+1})
+            (y_{t-n_lag+1}, y_{t}, y_{t+1},...) = f(x_{t-n_lag+1}, x_{t-1}, x_t,...)
+
+        Args:
+            n_lags: int
+            batch_size: int
+            single_output_only: boolean
+                True:
+                    Return only the current y-value for each time point.
+                    This is useful when predicting only the last y-value
+                False:
+                    Return n_lags y-values for each time point
 
         returns: np.ndarray(shape=(batch_size, n_lags, d))
             where d = samples.shape[1]
@@ -99,6 +110,7 @@ class TSeries(object):
         n = self.samples.shape[0]
         d_in = self.samples.shape[1]
         d_out = 0 if self.y is None else self.y.shape[1]
+        batch_size = n if batch_size < 0 else batch_size
         for i in xrange(0, n, batch_size):
             x = np.zeros(shape=(batch_size, n_lags, d_in), dtype=np.float32)
             y = None
@@ -161,6 +173,7 @@ class TSeries(object):
                     if self.y is not None: y = np.zeros(batch_size, dtype=np.int)
 
     def log_batches(self, n_lags, batch_size, single_output_only=False):
+        """ Debug API """
         logger.debug("Logging timeseries (nlags: %d, batch_size: %d)" % (n_lags, batch_size))
         i = 0
         for x, y in self.get_batches(n_lags, batch_size, single_output_only=single_output_only):
@@ -177,7 +190,7 @@ class TSeries(object):
             i += 1
 
 
-def prepare_tseries(series):
+def prepare_tseries(series, name=""):
     x = series[:-1]
     y = series[1:]
-    return TSeries(x, y)
+    return TSeries(x, y=y, name=name)

@@ -16,7 +16,7 @@ pythonw -m timeseries.timeseries_shingles
 """
 
 
-def find_anomalies_with_shingles(ts, n_lags=5, skip_size=None, ad_type="ifor", n_top=10, outliers_fraction=0.1):
+def find_anomalies_with_shingles(ts, window_size=5, skip_size=None, ad_type="ifor", n_top=10, outliers_fraction=0.1):
     """ Finds anomalous regions in time series using standard unsupervised detectors
 
     First the time series is chopped up into windows ('shingles').
@@ -24,7 +24,7 @@ def find_anomalies_with_shingles(ts, n_lags=5, skip_size=None, ad_type="ifor", n
     """
     x = w = None
     n = 0
-    for x_, _, w in ts.get_shingles(n_lags, skip_size=skip_size, batch_size=-1):
+    for x_, _, w in ts.get_shingles(window_size, skip_size=skip_size, batch_size=-1):
         x = np.reshape(x_, newshape=(x_.shape[0], -1))
         n = x.shape[0]
         logger.debug("Total instances: %d" % n)
@@ -51,15 +51,15 @@ def find_anomalies_with_shingles(ts, n_lags=5, skip_size=None, ad_type="ifor", n
     top_anoms = np.argsort(-scores)[0:n_top]
     logger.debug("top scores (%s):\n%s\n%s" % (ad_type, str(top_anoms), str(scores[top_anoms])))
 
-    pdfpath = "temp/timeseries/timeseries_shingles_%s.pdf" % ad_type
+    pdfpath = "temp/timeseries/timeseries_shingles_w%d_%s.pdf" % (window_size, ad_type)
     dp = DataPlotter(pdfpath=pdfpath, rows=3, cols=1)
     pl = dp.get_next_plot()
     pl.set_xlim([0, ts.samples.shape[0]])
     pl.plot(np.arange(0, ts.samples.shape[0]), ts.samples, 'b-', linewidth=0.5)
 
     for i in top_anoms:
-        if w[i] + n_lags <= len(ts.samples):
-            pl.plot(np.arange(w[i], w[i]+n_lags), ts.samples[w[i]:(w[i]+n_lags)], 'r-')
+        if w[i] + window_size <= len(ts.samples):
+            pl.plot(np.arange(w[i], w[i] + window_size), ts.samples[w[i]:(w[i] + window_size)], 'r-')
     dp.close()
 
 
@@ -86,7 +86,8 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
-    n_lags = 5
+    ad_type = "ifor"
+    window_size = 20
     skip_size = None
     n_anoms = 10
     i = 0
@@ -94,8 +95,8 @@ if __name__ == "__main__":
 
     if False:
         logger.debug("samples:\n%s" % str(ts.samples[:, 0]))
-        for x, _, w in ts.get_shingles(n_lags, skip_size=skip_size, batch_size=200):
-            logger.debug("batch:\n%s" % str(np.reshape(x, newshape=(-1, n_lags))))
+        for x, _, w in ts.get_shingles(window_size, skip_size=skip_size, batch_size=200):
+            logger.debug("batch:\n%s" % str(np.reshape(x, newshape=(-1, window_size))))
 
-    find_anomalies_with_shingles(ts, n_lags=n_lags, skip_size=None,
-                                 ad_type="ifor", n_top=n_anoms, outliers_fraction=0.1)
+    find_anomalies_with_shingles(ts, window_size=window_size, skip_size=None,
+                                 ad_type=ad_type, n_top=n_anoms, outliers_fraction=0.1)
