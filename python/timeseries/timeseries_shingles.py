@@ -12,6 +12,9 @@ from common.timeseries_datasets import *
 
 
 """
+Anomaly detection in time series by breaking the series into windows ('shingles')
+and then treating each window as i.i.d feature vector.
+
 pythonw -m timeseries.timeseries_shingles
 """
 

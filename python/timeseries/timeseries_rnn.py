@@ -15,7 +15,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 """
-Simple time-series modeling with Tensorflow RNN and LSTM cells
+Anomaly detection by simple time-series modeling with Tensorflow RNN and LSTM cells.
+
+After modeling the timeseries, we predict values for new time points
+and flag the time points with the most deviating values as anomalies.
 
 To execute:
 pythonw -m timeseries.timeseries_rnn
