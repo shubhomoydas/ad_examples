@@ -160,9 +160,10 @@ if __name__ == "__main__":
     use_custom = True
     use_lstm = False
     batch_size = 10
-    n_lag = 4
+    n_lag = 12
     n_neurons = 100
     n_epochs = 100
+    n_anoms = 10
 
     train_ts = prepare_tseries(scld_series)
     n_preds = test_series.shape[0]  # 12
@@ -185,7 +186,7 @@ if __name__ == "__main__":
         # if using the RNN/LSTM cells
         if use_lstm:
             rnn_type = "lstm"
-            batch_size = 1
+            # batch_size = 1
         else:
             rnn_type = "basic"
         tsrnn = TsRNN(n_lag=n_lag, n_neurons=n_neurons,
@@ -216,6 +217,12 @@ if __name__ == "__main__":
     pl.plot(np.arange(n_training, n), test_series[:, 0], 'r-')
 
     if final_preds is not None:
+
+        scores = np.abs(test_series[:, 0] - final_preds[:, 0])
+        n_anoms = min(n_anoms, final_preds.shape[0])
+        top_anoms = np.argsort(-scores)[0:n_anoms]
+        logger.debug("top scores:\n%s\n%s" % (str(top_anoms), str(scores[top_anoms])))
+
         pl = dp.get_next_plot()
         plt.title("unscaled predictions %s" % dataset, fontsize=8)
         pl.set_xlim([0, n])
@@ -228,4 +235,6 @@ if __name__ == "__main__":
         pl.plot(np.arange(0, n_training), train_series[:, 0], 'b-')
         pl.plot(np.arange(n_training, n), test_series[:, 0], 'b-')
         pl.plot(np.arange(n_training, n_training+final_preds.shape[0]), final_preds[:, 0], 'r-')
+        for i in top_anoms:
+            plt.axvline(n_training+i, color='g', linewidth=0.5)
     dp.close()
