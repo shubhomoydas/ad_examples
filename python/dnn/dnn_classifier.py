@@ -10,62 +10,7 @@ import numpy as np
 import numpy.random as rnd
 import tensorflow as tf
 from common.utils import *
-
-
-def leaky_relu(z, name=None):
-    return tf.maximum(0.01 * z, z, name=name)
-
-
-def dnn_layer(X, n_neurons, name, activation=None):
-    with tf.name_scope(name):
-        n_inputs = int(X.get_shape()[1])
-        stddev = 2. / np.sqrt(n_inputs)
-        init = tf.truncated_normal((n_inputs, n_neurons), stddev=stddev)
-        W = tf.Variable(init, name="W")
-        b = tf.Variable(tf.zeros([n_neurons]), name="b")
-        Z = tf.matmul(X, W) + b
-        if activation is not None:
-            return activation(Z)
-        else:
-            return Z
-
-
-class DenseDNN(object):
-    def __init__(self, layers):
-        self.layers = layers  # list of all layers
-
-    def output(self):
-        return self.layers[len(self.layers)-1]
-
-    def logit_loss(self, labels):
-        logits = self.output()
-        with tf.name_scope("loss"):
-            xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
-            loss = tf.reduce_mean(xentropy, name="loss")
-        return loss
-
-    def eval(self, logits, labels):
-        with tf.name_scope("eval"):
-            correct = tf.nn.in_top_k(logits, labels, 1)
-            accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
-        return accuracy
-
-    def training_op(self, loss, learning_rate=0.01):
-        with tf.name_scope("train"):
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
-            training_op = optimizer.minimize(loss)
-        return training_op
-
-
-def dnn_construct(X, n_neurons, names, activations):
-    layer_input = X
-    layers = list()
-    with tf.name_scope("dnn"):
-        for i, name in enumerate(names):
-            hidden = dnn_layer(layer_input, n_neurons=n_neurons[i], name=names[i], activation=activations[i])
-            layers.append(hidden)
-            layer_input = hidden
-    return DenseDNN(layers)
+from common.nn_utils import *
 
 
 if __name__ == "__main__":

@@ -4,11 +4,14 @@ import numpy.random as rnd
 from sklearn.preprocessing import MinMaxScaler
 from common.utils import *
 from common.data_plotter import *
+from common.nn_utils import *
 
 from sklearn import svm
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.neural_network import MLPRegressor as MLPRegressor_SK
 
 from common.timeseries_datasets import *
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 """
@@ -67,6 +70,18 @@ def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_to
                                     max_features="auto", max_leaf_nodes=None, min_impurity_decrease=0.0,
                                     min_impurity_split=None, bootstrap=True, oob_score=False, n_jobs=1,
                                     random_state=None, verbose=0, warm_start=False)
+    elif reg_type == "nntf":
+        # use tensorflow
+        mdl = MLPRegressor_TF(x.shape[1], 100, 1, batch_size=20, shuffle=True,
+                              n_epochs=200, l2_penalty=0.001)
+    elif reg_type == "nnsk":
+        # use scikit-learn
+        mdl = MLPRegressor_SK(hidden_layer_sizes=(100, ), activation='relu', solver='adam',
+                              alpha=0.0001, batch_size='auto', learning_rate='constant',
+                              learning_rate_init=0.001, power_t=0.5, max_iter=200, shuffle=True,
+                              random_state=None, tol=0.0001, verbose=False, warm_start=False,
+                              momentum=0.9, nesterovs_momentum=True, early_stopping=False,
+                              validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
     else:
         raise ValueError("unsupported regression type: %s" % reg_type)
 
@@ -81,16 +96,16 @@ def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_to
         logger.debug("%d yhat: %f" % (i, yhat))
         pred_points.append(yhat)
         prev_points.append(scaled_test[i, 0])  # to predict just one step ahead of known values
-        # prev_points.append(yhat)  # to predict far into future
+        # prev_points.append(yhat)  # to predict far into the future
 
-    logger.debug("pred_points:(%d)\n%s" % (len(pred_points), str(pred_points)))
+    logger.debug("pred_points:(%d)\n%s" % (len(pred_points[scaled_tr.shape[0]:]), str(list(pred_points[scaled_tr.shape[0]:]))))
 
     # now invert all transformations
     pred_points = np.reshape(pred_points, newshape=(-1, ts.y.shape[1]))
     pred_points = scaler.inverse_transform(pred_points)
     pred_points = np.vstack([np.zeros(shape=(1, ts.y.shape[1]), dtype=np.float32), pred_points])
     pred_points = invert_difference_series(pred_points, data[[0], :])
-    logger.debug("inv_diffs:(%s)\n%s" % (str(pred_points.shape), str(pred_points)))
+    # logger.debug("inv_diffs:(%s)\n%s" % (str(pred_points.shape), str(pred_points)))
 
     scores = np.abs(data[n_tr:, 0] - pred_points[n_tr:, 0])
 
@@ -133,7 +148,7 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
-    reg_type = "svr"  # "rfor" # "svr"
+    reg_type = "nntf"  # "nntf" # "nnsk" # "rfor" # "svr"
     n_lags = 12
     skip_size = None
     n_anoms = 10
