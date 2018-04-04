@@ -88,10 +88,9 @@ def invert_difference_series_old(history, series):
 def invert_difference_series(series, initial):
     n, m = series.shape
     inv = np.zeros((n, m), dtype=series.dtype)
-    prev = initial
-    for i in range(n):
-        prev = series[i, :] + prev
-        inv[i, :] = prev
+    inv[0, :] = initial + series[0, :]
+    for i in range(1, n):
+        inv[i, :] = inv[i-1, :] + series[i, :]
     return inv
 
 
