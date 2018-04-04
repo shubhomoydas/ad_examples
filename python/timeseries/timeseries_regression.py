@@ -15,10 +15,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 """
 To execute:
-pythonw -m timeseries.timeseries_regression --dataset=airline --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m timeseries.timeseries_regression --dataset=airline --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend
+pythonw -m timeseries.timeseries_regression --dataset=shampoo --algo=nntf --n_lags=10 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend
 pythonw -m timeseries.timeseries_regression --dataset=lynx --algo=nntf --n_lags=20 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
-pythonw -m timeseries.timeseries_regression --dataset=aus_beer --algo=nntf --n_lags=10 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
-pythonw -m timeseries.timeseries_regression --dataset=shampoo --algo=nntf --n_lags=10 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m timeseries.timeseries_regression --dataset=aus_beer --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
 pythonw -m timeseries.timeseries_regression --dataset=us_accident --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
 pythonw -m timeseries.timeseries_regression --dataset=wolf_sunspot --algo=nnsk --n_lags=50 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
 

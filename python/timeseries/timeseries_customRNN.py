@@ -113,19 +113,18 @@ class TsRNNCustom(object):
         z_train = np.zeros(shape=(x_train.shape[0], self.state_size))
         zero_state = np.zeros(shape=(self.batch_size, self.state_size))
         self.session = tf.Session()
-        with tf.Session() as sess:
-            self.session.run(tf.global_variables_initializer())
-            for epoch in range(self.n_epochs):
-                for i, batch in enumerate(ts.get_batches(self.n_lags, self.batch_size, single_output_only=True)):
-                    x, y = batch
-                    self.session.run([self.training_op],
-                                     feed_dict={self.X: x, self.Y: y,
-                                                self.init_state: zero_state[0:x.shape[0], :]})
+        self.session.run(tf.global_variables_initializer())
+        for epoch in range(self.n_epochs):
+            for i, batch in enumerate(ts.get_batches(self.n_lags, self.batch_size, single_output_only=True)):
+                x, y = batch
+                self.session.run([self.training_op],
+                                 feed_dict={self.X: x, self.Y: y,
+                                            self.init_state: zero_state[0:x.shape[0], :]})
 
-                mse = self.session.run(self.err_loss,
-                                       feed_dict={self.X: x_train, self.Y: y_train,
-                                                  self.init_state: z_train})
-                logger.debug("epoch: %d, mse: %f" % (epoch, mse))
+            mse = self.session.run(self.err_loss,
+                                   feed_dict={self.X: x_train, self.Y: y_train,
+                                              self.init_state: z_train})
+            logger.debug("epoch: %d, mse: %f" % (epoch, mse))
 
     def predict(self, start_ts, n_preds=1, true_preds=None):
         """

@@ -20,9 +20,11 @@ After modeling the timeseries, we predict values for new time points
 and flag the time points with the most deviating values as anomalies.
 
 To execute:
-pythonw -m timeseries.timeseries_rnn --dataset=airline --algo=lstm --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log
+pythonw -m timeseries.timeseries_rnn --dataset=airline --algo=lstm --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend
+pythonw -m timeseries.timeseries_rnn --dataset=shampoo --algo=lstm --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend
 pythonw -m timeseries.timeseries_rnn --dataset=lynx --algo=lstm --n_lags=20 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log
 pythonw -m timeseries.timeseries_rnn --dataset=aus_beer --algo=lstm --n_lags=10 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log
+pythonw -m timeseries.timeseries_rnn --dataset=us_accident --algo=lstm --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log
 pythonw -m timeseries.timeseries_rnn --dataset=wolf_sunspot --algo=lstm --n_lags=50 --n_epochs=20 --debug --log_file=temp/timeseries/timeseries_rnn.log
 
 The below does not work well...need longer dependencies
@@ -95,15 +97,13 @@ class TsRNN(object):
         init = tf.global_variables_initializer()
 
         self.session = tf.Session()
-        with tf.Session() as sess:
-            self.session.run(init)
-            for epoch in range(self.n_epochs):
-                for i, batch in enumerate(ts.get_batches(self.n_lags, batch_size, single_output_only=False)):
-                    X_batch, Y_batch = batch
-                    # logger.debug("X_batch.shape: %s" % str(X_batch.shape))
-                    self.session.run([training_op], feed_dict={self.X: X_batch, self.Y: Y_batch})
-                mse = self.session.run(loss, feed_dict={self.X: X_batch_ts, self.Y: Y_batch_ts})
-                logger.debug("epoch: %d, mse: %f" % (epoch, mse))
+        self.session.run(init)
+        for epoch in range(self.n_epochs):
+            for i, batch in enumerate(ts.get_batches(self.n_lags, batch_size, single_output_only=False)):
+                X_batch, Y_batch = batch
+                self.session.run([training_op], feed_dict={self.X: X_batch, self.Y: Y_batch})
+            mse = self.session.run(loss, feed_dict={self.X: X_batch_ts, self.Y: Y_batch_ts})
+            logger.debug("epoch: %d, mse: %f" % (epoch, mse))
 
     def predict(self, start_ts, n_preds=1, true_preds=None):
         seq = list(np.reshape(start_ts, newshape=(-1,)))
