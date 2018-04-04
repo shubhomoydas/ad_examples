@@ -41,6 +41,12 @@ class DenseDNN(object):
             loss = tf.reduce_mean(xentropy, name="loss")
         return loss
 
+    def mse_loss(self, y):
+        yhat = self.output()
+        with tf.name_scope("loss"):
+            loss = tf.reduce_mean(tf.square(yhat - y), name="loss")
+        return loss
+
     def eval(self, logits, labels):
         with tf.name_scope("eval"):
             correct = tf.nn.in_top_k(logits, labels, 1)
@@ -66,7 +72,7 @@ def dnn_construct(x, n_neurons, names, activations):
     return DenseDNN(layers)
 
 
-def get_train_batches(x, y, batch_size=-1, shuffle=False):
+def get_train_batches(x, y=None, batch_size=-1, shuffle=False):
     n = x.shape[0]
     if batch_size < 0:
         batch_size = n
@@ -75,7 +81,7 @@ def get_train_batches(x, y, batch_size=-1, shuffle=False):
         rnd.shuffle(indxs)
     for i in range(0, n, batch_size):
         et = min(i+batch_size, n)
-        yield x[indxs[i:et], :], y[indxs[i:et]]
+        yield x[indxs[i:et], :], None if y is None else y[indxs[i:et]]
 
 
 class MLPRegressor_TF(object):
@@ -98,7 +104,7 @@ class MLPRegressor_TF(object):
 
         with tf.name_scope("loss"):
             self.output = self.dnn.output()
-            self.mse_loss = tf.reduce_mean(tf.square(self.output - self.y), name="loss")
+            self.mse_loss = self.dnn.mse_loss(self.y)
             if self.l2_penalty > 0:
                 vars = tf.trainable_variables()
                 loss_l2 = tf.add_n([tf.nn.l2_loss(v) for v in vars if 'bias' not in v.name]) * self.l2_penalty
@@ -128,3 +134,81 @@ class MLPRegressor_TF(object):
         pred = self.session.run(self.output, feed_dict={self.x: x})
         # logger.debug("pred: %s" % str(pred))
         return pred[:, 0]
+
+
+class Autoencoder(object):
+    def __init__(self, n_inputs, n_neurons, activations=None,
+                 n_epochs=200, batch_size=20,
+                 denoising=False, noise_level=1.0,
+                 learning_rate=0.01, l2_penalty=0.001, shuffle=False):
+        self.n_inputs = n_inputs
+        self.n_neurons = n_neurons
+        self.activations = activations
+        self.n_epochs = n_epochs
+        self.batch_size = batch_size
+        self.denoising = denoising
+        self.learning_rate = learning_rate
+        self.l2_penalty = l2_penalty
+        self.shuffle = shuffle
+
+        self.noise_level = noise_level
+        self.session = None
+
+        tf.set_random_seed(42)
+
+        self.x = tf.placeholder(tf.float32, shape=(None, n_inputs), name="x")
+        if denoising:
+            self.x_noisy = self.x + self.noise_level * tf.random_normal(tf.shape(self.x))
+        else:
+            self.x_noisy = None
+
+        names = ["hidden"] * len(n_neurons)
+        names.append("output")
+        n_hiddens = n_neurons
+        n_hiddens.append(n_inputs)
+        if activations is None:
+            activations = [None] * len(n_hiddens)
+        self.dnn = dnn_construct(self.x_noisy if denoising else self.x,
+                                 n_hiddens, names=names, activations=activations)
+
+        with tf.name_scope("loss"):
+            self.output = self.dnn.output()
+            self.mse_loss = self.dnn.mse_loss(self.x)
+            if self.l2_penalty > 0:
+                vars = tf.trainable_variables()
+                loss_l2 = tf.add_n([tf.nn.l2_loss(v) for v in vars if 'bias' not in v.name]) * self.l2_penalty
+                self.mse_loss = self.mse_loss + loss_l2
+
+        with tf.name_scope("training"):
+            self.training_op = self.dnn.training_op(self.mse_loss, learning_rate=self.learning_rate)
+
+    def fit(self, x):
+        self.session = tf.Session()
+        init = tf.global_variables_initializer()
+        self.session.run(init)
+        for epoch in range(self.n_epochs):
+            for x_batch, _ in get_train_batches(x, None, self.batch_size, shuffle=self.shuffle):
+                self.session.run(self.training_op, feed_dict={self.x: x_batch})
+            if True:
+                # debug only
+                mse = self.session.run(self.mse_loss, feed_dict={self.x: x})
+                logger.debug("epoch %d: MSE: %f" % (epoch, mse))
+
+    def transform(self, x, layer_id=0):
+        coding_layer = self.dnn.layers[layer_id]
+        codings = self.session.run(coding_layer, feed_dict={self.x: x})
+        return codings
+
+
+class PCA_TF(Autoencoder):
+    def __init__(self, n_inputs, n_dims=2, n_epochs=200, batch_size=20,
+                 learning_rate=0.01, l2_penalty=0.001, shuffle=False):
+        Autoencoder.__init__(self,
+                             n_inputs=n_inputs,
+                             n_neurons=[n_dims],
+                             activations=None,
+                             n_epochs=n_epochs, batch_size=batch_size,
+                             denoising=False, noise_level=1.0,
+                             learning_rate=learning_rate,
+                             l2_penalty=l2_penalty, shuffle=shuffle)
+

@@ -2,11 +2,35 @@ Anomaly Detection Examples
 --------------------------
 This is a collection of anomaly detection examples for detection methods popular in academic literature and in practice. I will include more examples as and when I find time.
 
+Some techniques covered are listed below. These are a mere drop in the ocean of all anomaly detectors and are only meant to highlight some broad categories. Apologies if your favorite one is currently not included -- hopefully in time...
+  - i.i.d setting:
+    - [Standard unsupervised anomaly detectors](python/ad/ad_outlier.py) (isolation forest, one-class SVM, lof)
+    - [Clustering and density-based](python/ad/gmm_outlier.py)
+    - [Density estimation based](python/ad/kde_outlier.py)
+    - [Reconstruction-based](python/ad/pca_reconstruct.py)
+    - [Classifier and pseudo-anomaly based](python/ad/pseudo_anom_outlier.py)
+    - [Ensemble/Projection-based](python/loda/loda.py)
+    - [A demonstration of outlier influence](python/ad/outlier_effect.py)
+    - [Spectral-based](python/ad/spectral_outlier.py)
+  - timeseries
+    - Forecasting-based
+      - [ARIMA](python/timeseries/timeseries_arima.py)
+      - [Regression](python/timeseries/timeseries_regression.py) (SVM, Random Forest, Neural Network)
+      - [Recurrent Neural Networks](python/timeseries/timeseries_rnn.py)
+    - i.i.d
+      - [Windows/Shingle based](python/timeseries/timeseries_shingles.py)
+  - human-in-the-loop (active learning)
+    - [Active Anomaly Discovery](python/aad) -- see section on AAD below for instructions on how to run.
+
+There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'python/temp' folder when executed.
+
 To execute the code:
 
 1. Run code from 'python' folder. The outputs will be generated under 'temp' folder. The 'pythonw' command is used on OSX, but 'python' should be used on Linux.
 
-2. The run commands are at the top of the python source code files.
+2. *The run commands are at the top of the python source code files.*
+
+3. Check the log file in 'python/temp' folder. Usually it will be named <demo_code>.log. Timeseries demos will output logs under the 'python/temp/timeseries' folder.
 
 
 Python libraries required:
@@ -19,6 +43,7 @@ Python libraries required:
     ranking
     statsmodels
     matplotlib (2.1.0)
+    tensorflow (1.6.0)
 
 
 Active Anomaly Discovery (AAD)
