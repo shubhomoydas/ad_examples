@@ -1,7 +1,6 @@
 import random
 import numpy as np
 import numpy.random as rnd
-from sklearn.preprocessing import MinMaxScaler
 from common.utils import *
 from common.data_plotter import *
 from common.nn_utils import *
@@ -15,11 +14,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 """
-pythonw -m timeseries.timeseries_regression
+To execute:
+pythonw -m timeseries.timeseries_regression --dataset=airline --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m timeseries.timeseries_regression --dataset=lynx --algo=nntf --n_lags=20 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m timeseries.timeseries_regression --dataset=aus_beer --algo=nntf --n_lags=10 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m timeseries.timeseries_regression --dataset=shampoo --algo=nntf --n_lags=10 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m timeseries.timeseries_regression --dataset=us_accident --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m timeseries.timeseries_regression --dataset=wolf_sunspot --algo=nnsk --n_lags=50 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+
+pythonw -m timeseries.timeseries_regression --dataset=fisher_temp --algo=nntf --n_lags=20 --n_epochs=100 --debug --log_file=temp/timeseries/timeseries_regression.log
 """
 
 
-def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_top=10, tr_frac=0.8):
+def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_anoms=10,
+                                   normalize_trend=False, batch_size=10, n_epochs=200, tr_frac=0.8):
     """ Finds anomalous time points in time series using standard regression algorithms
 
     SVR might be fine even if trend is not removed, but when using
@@ -30,19 +38,25 @@ def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_to
     n = data.shape[0]
     n_tr = int(n * tr_frac)
 
-    # remove trend from training series
-    diff_data = difference_series(data, interval=1)
+    if normalize_trend:
+        # remove trend from training series
+        diff_data = difference_series(data)
+    else:
+        diff_data = data
+    diff_tr = diff_data[:n_tr]
+    diff_test = diff_data[n_tr:]  # will be used to score predictions
 
-    diff_tr = diff_data[:(n_tr-1)]  # we loose one time point due to differencing
-    diff_test = diff_data[(n_tr-1):]  # will be used to score predictions
-
-    # normalize by mean and variance
-    scaler = MinMaxScaler(feature_range=(-1, 1))
-    scaler = scaler.fit(diff_tr)
-    scaled_tr = scaler.transform(diff_tr)
-    scaled_test = scaler.transform(diff_test)  # will be used to score predictions later
+    # normalize to range (-1, 1)
+    normalizer = DiffScale()
+    scaled_tr = normalizer.fit_transform(diff_tr, normalize_trend=False)
+    scaled_test = normalizer.scale(diff_test)  # will be used to score predictions later
 
     ts = prepare_tseries(scaled_tr, name=dataset)
+
+    if False:
+        logger.debug("diff_data:(%s, %s, %s, %s)\n%s\n%s" %
+                     (str(data.shape), str(diff_data.shape), str(diff_tr.shape), str(diff_test.shape),
+                      str(scaled_tr[:, 0]), str(scaled_test[:, 0])))
 
     if False:
         # debug only
@@ -72,13 +86,13 @@ def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_to
                                     random_state=None, verbose=0, warm_start=False)
     elif reg_type == "nntf":
         # use tensorflow
-        mdl = MLPRegressor_TF(x.shape[1], 100, 1, batch_size=20, shuffle=True,
-                              n_epochs=200, l2_penalty=0.001)
+        mdl = MLPRegressor_TF(x.shape[1], 100, 1, batch_size=batch_size, shuffle=True,
+                              n_epochs=n_epochs, l2_penalty=0.01)
     elif reg_type == "nnsk":
         # use scikit-learn
         mdl = MLPRegressor_SK(hidden_layer_sizes=(100, ), activation='relu', solver='adam',
                               alpha=0.0001, batch_size='auto', learning_rate='constant',
-                              learning_rate_init=0.001, power_t=0.5, max_iter=200, shuffle=True,
+                              learning_rate_init=0.001, power_t=0.5, max_iter=n_epochs, shuffle=True,
                               random_state=None, tol=0.0001, verbose=False, warm_start=False,
                               momentum=0.9, nesterovs_momentum=True, early_stopping=False,
                               validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
@@ -102,14 +116,13 @@ def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_to
 
     # now invert all transformations
     pred_points = np.reshape(pred_points, newshape=(-1, ts.y.shape[1]))
-    pred_points = scaler.inverse_transform(pred_points)
-    pred_points = np.vstack([np.zeros(shape=(1, ts.y.shape[1]), dtype=np.float32), pred_points])
-    pred_points = invert_difference_series(pred_points, data[[0], :])
-    # logger.debug("inv_diffs:(%s)\n%s" % (str(pred_points.shape), str(pred_points)))
+    pred_points = normalizer.inverse_transform(pred_points)
+    if normalize_trend:
+        pred_points = invert_difference_series(pred_points, data[[0], :])
 
     scores = np.abs(data[n_tr:, 0] - pred_points[n_tr:, 0])
 
-    top_anoms = np.argsort(-scores)[0:n_top]
+    top_anoms = np.argsort(-scores)[0:n_anoms]
     logger.debug("top scores (%s):\n%s\n%s" % (reg_type, str(top_anoms), str(scores[top_anoms])))
 
     pdfpath = "temp/timeseries/timeseries_regression_%s_%d_%s.pdf" % (ts.name, n_lags, reg_type)
@@ -136,9 +149,9 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
-    args = get_command_args(debug=True,
-                            debug_args=["--debug",
-                                        "--plot",
+    args = get_command_args(debug=False,
+                            debug_args=["--dataset=airline", "--algo=nntf", "--n_lags=12",
+                                        "--n_anoms=10", "--debug", "--plot",
                                         "--log_file=temp/timeseries/timeseries_regression.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
@@ -148,14 +161,20 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
-    reg_type = "nntf"  # "nntf" # "nnsk" # "rfor" # "svr"
-    n_lags = 12
-    skip_size = None
-    n_anoms = 10
+    reg_type = args.algo  # "nntf" # "nnsk" # "rfor" # "svr"
+    n_anoms = args.n_anoms
+    n_lags = args.n_lags
+    n_epochs = args.n_epochs
+    normalize_trend = args.normalize_trend
+    batch_size = 20
 
     # datasets = univariate_timeseries_datasets.keys()
-    dataset = "airline"
+    dataset = args.dataset
+    # dataset = "airline"
     logger.debug("dataset: %s, reg_type: %s" % (dataset, reg_type))
     data = get_univariate_timeseries_data(dataset)
 
-    find_anomalies_with_regression(np.array(data, dtype=float), dataset, n_lags=n_lags, reg_type=reg_type, n_top=n_anoms)
+    find_anomalies_with_regression(np.array(data, dtype=float), dataset, n_lags=n_lags,
+                                   reg_type=reg_type, normalize_trend=normalize_trend,
+                                   batch_size=batch_size,
+                                   n_epochs=n_epochs, n_anoms=n_anoms)

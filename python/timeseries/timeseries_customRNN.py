@@ -28,13 +28,13 @@ class TsRNNCustom(object):
         (1) Should consider this for only lag-1 time series although the API suports more than 1 lags.
     """
 
-    def __init__(self, n_lag, state_size, n_epochs=1, batch_size=-1, learning_rate=0.01, l2_penalty=0.001):
+    def __init__(self, n_lags, state_size, n_epochs=1, batch_size=-1, learning_rate=0.01, l2_penalty=0.001):
         self.state_size = state_size
         self.n_epochs = n_epochs
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.l2_penalty = l2_penalty
-        self.n_lag = n_lag
+        self.n_lags = n_lags
         self.n_inputs = None
 
         self.init_state = None
@@ -44,6 +44,7 @@ class TsRNNCustom(object):
         self.err_loss = None
         self.training_op = None
         self.predict_op = None
+        self.session = None
 
     def rnn_cell(self, rnn_input, hidden_state):
         with tf.variable_scope('rnn_cell', reuse=True):
@@ -58,19 +59,19 @@ class TsRNNCustom(object):
         # output = tf.matmul(new_state, V) + c
         return new_state  # , output
 
-    def fit(self, ts, n_predict=0):
+    def fit(self, ts):
 
         n_data = ts.series_len
         self.n_inputs = ts.dim
         batch_size = n_data if self.batch_size < 0 else self.batch_size
         logger.debug("n_inputs: %d, state_size: %d, n_lag: %d; batch_size: %d" %
-                     (self.n_inputs, self.state_size, self.n_lag, batch_size))
+                     (self.n_inputs, self.state_size, self.n_lags, batch_size))
 
         tf.set_random_seed(42)
 
         self.init_state = tf.placeholder(tf.float32, shape=(None, self.state_size))
 
-        self.X = tf.placeholder(tf.float32, shape=(None, self.n_lag, self.n_inputs))
+        self.X = tf.placeholder(tf.float32, shape=(None, self.n_lags, self.n_inputs))
         self.Y = tf.placeholder(tf.float32, shape=(None, self.n_inputs))
 
         # rnn_inputs is a list of n_lag tensors with shape [batch_size, n_inputs]
@@ -103,35 +104,30 @@ class TsRNNCustom(object):
             optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
             self.training_op = optimizer.minimize(reg_loss)
 
-        return self.train(ts, n_predict=n_predict)
+        return self.train(ts)
 
-    def train(self, ts, n_predict=0):
-        n_data = ts.series_len
-        preds = None
+    def train(self, ts):
         x_train = y_train = None
-        for x_train, y_train in ts.get_batches(self.n_lag, self.batch_size, single_output_only=True):
+        for x_train, y_train in ts.get_batches(self.n_lags, self.batch_size, single_output_only=True):
             pass
         z_train = np.zeros(shape=(x_train.shape[0], self.state_size))
         zero_state = np.zeros(shape=(self.batch_size, self.state_size))
+        self.session = tf.Session()
         with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
+            self.session.run(tf.global_variables_initializer())
             for epoch in range(self.n_epochs):
-                for i, batch in enumerate(ts.get_batches(self.n_lag, self.batch_size, single_output_only=True)):
+                for i, batch in enumerate(ts.get_batches(self.n_lags, self.batch_size, single_output_only=True)):
                     x, y = batch
-                    sess.run([self.training_op],
-                             feed_dict={self.X: x, self.Y: y,
-                                        self.init_state: zero_state[0:x.shape[0], :]})
+                    self.session.run([self.training_op],
+                                     feed_dict={self.X: x, self.Y: y,
+                                                self.init_state: zero_state[0:x.shape[0], :]})
 
-                mse = self.err_loss.eval(feed_dict={self.X: x_train, self.Y: y_train,
-                                                    self.init_state: z_train})
+                mse = self.session.run(self.err_loss,
+                                       feed_dict={self.X: x_train, self.Y: y_train,
+                                                  self.init_state: z_train})
                 logger.debug("epoch: %d, mse: %f" % (epoch, mse))
 
-            if n_predict > 0:
-                preds = self.predict(ts.samples[-self.n_lag:, :], n=n_predict)
-
-        return preds
-
-    def predict(self, start_ts, n=1):
+    def predict(self, start_ts, n_preds=1, true_preds=None):
         """
         Predict with fixed model.
         NOTE: Assumes that each time input is one-dimensional.
@@ -142,12 +138,16 @@ class TsRNNCustom(object):
         logger.debug("seq: %s" % str(seq))
         preds = list()
         init_state = np.zeros(shape=(1, self.state_size))
-        for i in range(n):
-            ts = seq[-self.n_lag:]
-            X_batch = np.array(ts).reshape(1, self.n_lag, self.n_inputs)
-            yhat = self.predict_op.eval(feed_dict={self.X: X_batch,
-                                                   self.init_state: init_state})
+        for i in range(n_preds):
+            ts = seq[-self.n_lags:]
+            X_batch = np.array(ts).reshape(1, self.n_lags, self.n_inputs)
+            yhat = self.session.run(self.predict_op,
+                                    feed_dict={self.X: X_batch,
+                                               self.init_state: init_state})
             logger.debug("pred: %d %s" % (i, str(yhat)))
             preds.append(yhat[0, 0])
-            seq.append(yhat)
+            if true_preds is not None:
+                seq.append(true_preds[i])
+            else:
+                seq.append(yhat[0, 0])
         return np.array(preds)

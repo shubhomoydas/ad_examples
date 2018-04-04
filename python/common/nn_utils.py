@@ -94,7 +94,7 @@ class MLPRegressor_TF(object):
         self.x = tf.placeholder(tf.float32, shape=(None, n_inputs), name="x")
         self.y = tf.placeholder(tf.float32, shape=(None, n_outputs), name="y")
         self.dnn = dnn_construct(self.x, [n_neurons, n_outputs], names=["hidden", "output"],
-                                 activations=[tf.nn.relu, None])
+                                 activations=[leaky_relu, None])
 
         with tf.name_scope("loss"):
             self.output = self.dnn.output()

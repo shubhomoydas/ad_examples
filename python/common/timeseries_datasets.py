@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 # from pandas import datetime
+from sklearn.preprocessing import MinMaxScaler
 from common.utils import *
 
 
@@ -16,6 +17,34 @@ class TsFileDef(object):
 # def date_parser(x):
 #     # date parser for shampoo dataset
 #     return datetime.strptime('190'+x, '%Y-%m')
+
+
+class DiffScale(object):
+    def __init__(self):
+        self.scaler = None
+
+    def fit_transform(self, series, normalize_trend=False):
+        if normalize_trend:
+            # remove trend by differencing
+            series = difference_series(series)
+        # normalize to range (-1, 1); helps when output is tanh
+        scaler = MinMaxScaler(feature_range=(-1, 1))
+        self.scaler = scaler.fit(series)
+        # logger.debug("scaler: (%f, %f), %f, %f" % (scaler.data_min_, scaler.data_max_, scaler.data_range_, scaler.scale_))
+        scld_series = self.scaler.transform(series)
+        # logger.debug("scld_series.shape: %s\n%s" % (str(scld_series.shape), str(scld_series)))
+        return scld_series
+
+    def scale(self, series):
+        return self.scaler.transform(series)
+
+    def inverse_transform(self, series, initial=None):
+        final_preds = self.scaler.inverse_transform(series)
+        # logger.debug("final_preds after inverse scale(%s):\n%s" % (str(final_preds.shape), str(final_preds[:, 0])))
+        if initial is not None:
+            final_preds = invert_difference_series(final_preds, initial=initial)
+        # logger.debug("final_preds.shape: %s\n%s" % (str(final_preds.shape), str(final_preds)))
+        return final_preds
 
 
 univariate_timeseries_datasets = {
@@ -40,15 +69,15 @@ def get_univariate_timeseries_data(dataset):
     return data
 
 
-def difference_series(series, interval=1):
+def difference_series(series):
     n, m = series.shape
-    diffs = np.zeros((n-interval, m), dtype=series.dtype)
-    for i in range(interval, n):
-        diffs[i-interval, :] = series[i, :] - series[i-interval, :]
+    diffs = np.zeros((n, m), dtype=series.dtype)
+    for i in range(1, n):
+        diffs[i, :] = series[i, :] - series[i-1, :]
     return diffs
 
 
-def invert_difference_series_old(history, series, interval=1):
+def invert_difference_series_old(history, series):
     n, m = series.shape
     inv = np.zeros((n, m), dtype=series.dtype)
     for i in range(n):
@@ -56,7 +85,7 @@ def invert_difference_series_old(history, series, interval=1):
     return inv
 
 
-def invert_difference_series(series, initial, interval=1):
+def invert_difference_series(series, initial):
     n, m = series.shape
     inv = np.zeros((n, m), dtype=series.dtype)
     prev = initial

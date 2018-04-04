@@ -34,6 +34,18 @@ logger = logging.getLogger(__name__)
 
 def get_option_list():
     parser = ArgumentParser()
+    parser.add_argument("--dataset", type=str, default="airline", required=False,
+                        help="Dataset name")
+    parser.add_argument("--algo", type=str, default="", required=False,
+                        help="Algorithm to apply")
+    parser.add_argument("--n_epochs", type=int, default=200, required=False,
+                        help="Max training epochs")
+    parser.add_argument("--n_lags", type=int, default=12, required=False,
+                        help="Number of time lags for timeseries models")
+    parser.add_argument("--normalize_trend", action="store_true", default=False,
+                        help="Whether to remove trend in timeseries by successive difference")
+    parser.add_argument("--n_anoms", type=int, default=10, required=False,
+                        help="Number of top anomalies to report")
     parser.add_argument("--debug", action="store_true", default=False,
                         help="Whether to enable output of debug statements")
     parser.add_argument("--plot", action="store_true", default=False,
