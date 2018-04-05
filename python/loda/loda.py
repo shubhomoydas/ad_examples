@@ -2,6 +2,13 @@ import numpy as np
 from common.utils import *
 
 
+"""
+A non-streaming implementation of LODA. Please refer to:
+    Tomas Pevny, Loda: Lightweight on-line detector of anomalies, Machine Learning 2015.
+    http://webdav.agents.fel.cvut.cz/data/projects/stegodata/pdfs/Pev15-Loda.pdf
+"""
+
+
 class HistogramR(object):
     def __init__(self, counts, density, breaks):
         self.counts = counts
@@ -324,6 +331,34 @@ def loda(a, sparsity=np.nan, mink=1, maxk=0, keep=None, exclude=None, original_d
     anomranks = anomranks[order(-nll)]
 
     return LodaResult(anomranks=anomranks, nll=nll, pvh=pvh)
+
+
+class Loda(object):
+    def __init__(self, sparsity=np.nan, mink=1, maxk=0, random_state=None):
+        self.sparsity = sparsity
+        self.mink = mink
+        self.maxk = maxk
+        self.random_state = random_state
+        self.loda_model = None
+        self.m = None  # number of projections
+
+    def get_projections(self):
+        if self.loda_model is None:
+            raise RuntimeError("Loda model not initialized")
+        return self.loda_model.pvh.pvh.w
+
+    def fit(self, x):
+        self.loda_model = loda(x, self.sparsity, mink=self.mink, maxk=self.maxk)
+        self.m = self.loda_model.pvh.pvh.w.shape[1]
+
+    def decision_function(self, x):
+        """ Smaller values mean more anomalous """
+        if self.loda_model is None:
+            raise RuntimeError("Loda model not initialized")
+        hpdfs = get_all_hist_pdfs(x, self.loda_model.pvh.pvh.w, self.loda_model.pvh.pvh.hists)
+        nlls = np.log(hpdfs)
+        scores = np.sum(nlls, axis=1)
+        return scores
 
 
 def get_zero_var_features(x):

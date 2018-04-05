@@ -4,7 +4,7 @@ This is a collection of anomaly detection examples for detection methods popular
 
 Some techniques covered are listed below. These are a mere drop in the ocean of all anomaly detectors and are only meant to highlight some broad categories. Apologies if your favorite one is currently not included -- hopefully in time...
   - i.i.d setting:
-    - [Standard unsupervised anomaly detectors](python/ad/ad_outlier.py) (isolation forest, one-class SVM, lof)
+    - [Standard unsupervised anomaly detectors](python/ad/ad_outlier.py) (Isolation Forest, LODA, One-class SVM, LOF)
     - [Clustering and density-based](python/ad/gmm_outlier.py)
     - [Density estimation based](python/ad/kde_outlier.py)
     - [PCA Reconstruction-based](python/ad/pca_reconstruct.py)

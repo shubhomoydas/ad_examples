@@ -3,9 +3,20 @@ from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 
 from common.gen_samples import *
+from loda.loda import Loda
 
 """
-pythonw -m ad.ad_outlier
+pythonw -m ad.ad_outlier --plot --debug --log_file=temp/ad_outlier.log --dataset=face --algo=ifor
+
+Supported algorithms: ifor, loda, lof, ocsvm
+
+Supported synthetic datasets:
+    face
+    face_diff
+    donut
+    donut_diff
+    1
+    4
 """
 
 
@@ -13,20 +24,23 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
-    args = get_command_args(debug=True, debug_args=["--debug",
-                                                    "--plot",
-                                                    "--log_file=temp/ad_outlier.log"])
+    args = get_command_args(debug=False, debug_args=["--algo=ifor",
+                                                     "--dataset=face",
+                                                     "--debug",
+                                                     "--plot",
+                                                     "--log_file=temp/ad_outlier.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
 
-    ad_type = "ocsvm"
+    ad_type = args.algo  # ocsvm, ifor, lof, loda
     # ad_type = "ifor"
     # ad_type = "lof"
 
+    sample_type = args.dataset + "_"
     # sample_type = "4_"
     # sample_type = "donut_"
     # sample_type = "donut_diff_"
-    sample_type = "face_"
+    # sample_type = "face_"
     # sample_type = "face_diff_"
 
     rnd.seed(42)
@@ -61,6 +75,11 @@ if __name__ == "__main__":
         ad.fit(x)
         scores = -ad._decision_function(x)
         Z = -ad._decision_function(x_grid)
+    elif ad_type == "loda":
+        ad = Loda(mink=100, maxk=200)
+        ad.fit(x)
+        scores = -ad.decision_function(x)
+        Z = -ad.decision_function(x_grid)
 
     logger.debug("scores:\n%s" % str(list(scores)))
     top_anoms = np.argsort(-scores)[np.arange(10)]
