@@ -53,7 +53,8 @@ def find_anomalies_with_shingles(ts, window_size=5, skip_size=None, ad_type="ifo
         ad.fit(x)
         scores = -ad._decision_function(x)
     elif ad_type == "autoenc":
-        ad = AutoencoderAnomalyDetector(n_inputs=x.shape[1], n_neurons=[300, 10, 300],
+        n_hiddens = max(1, window_size//2)
+        ad = AutoencoderAnomalyDetector(n_inputs=x.shape[1], n_neurons=[300, n_hiddens, 300],
                                         normalize_scale=True,
                                         activations=[tf.nn.tanh, tf.nn.tanh, tf.nn.tanh, None])
         ad.fit(x)
