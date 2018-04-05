@@ -45,9 +45,8 @@ if __name__ == "__main__":
     pca.fit(x)
     pca_codings = pca.transform(x)
 
-    autoenc = Autoencoder(n_inputs=x.shape[1], n_neurons=[100, 2, 100],
-                          # activations=[leaky_relu, leaky_relu, leaky_relu, None],
-                          activations=[tf.nn.tanh, tf.nn.tanh, tf.nn.tanh, None],
+    autoenc = Autoencoder(n_inputs=x.shape[1], n_neurons=[300, 2, 300],
+                          activations=[tf.nn.tanh, tf.nn.tanh, tf.nn.tanh, tf.nn.tanh, tf.nn.tanh, None],
                           n_epochs=args.n_epochs, batch_size=20, l2_penalty=0.001)
     autoenc.fit(x)
     autoenc_codings = autoenc.transform(x, layer_id=1)

@@ -4,11 +4,13 @@ import numpy.random as rnd
 from sklearn.preprocessing import MinMaxScaler
 from common.utils import *
 from common.data_plotter import *
+from common.nn_utils import *
 
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 
 from common.timeseries_datasets import *
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 """
@@ -50,6 +52,12 @@ def find_anomalies_with_shingles(ts, window_size=5, skip_size=None, ad_type="ifo
         ad = LocalOutlierFactor(n_neighbors=35, contamination=outliers_fraction)
         ad.fit(x)
         scores = -ad._decision_function(x)
+    elif ad_type == "autoenc":
+        ad = AutoencoderAnomalyDetector(n_inputs=x.shape[1], n_neurons=[300, 10, 300],
+                                        normalize_scale=True,
+                                        activations=[tf.nn.tanh, tf.nn.tanh, tf.nn.tanh, None])
+        ad.fit(x)
+        scores = -ad.decision_function(x)
 
     top_anoms = np.argsort(-scores)[0:n_top]
     logger.debug("top scores (%s):\n%s\n%s" % (ad_type, str(top_anoms), str(scores[top_anoms])))
@@ -89,7 +97,7 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
-    ad_type = "ifor"
+    ad_type = "autoenc"
     window_size = 20
     skip_size = None
     n_anoms = 10

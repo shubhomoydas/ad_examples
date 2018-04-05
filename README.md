@@ -7,7 +7,8 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - [Standard unsupervised anomaly detectors](python/ad/ad_outlier.py) (isolation forest, one-class SVM, lof)
     - [Clustering and density-based](python/ad/gmm_outlier.py)
     - [Density estimation based](python/ad/kde_outlier.py)
-    - [Reconstruction-based](python/ad/pca_reconstruct.py)
+    - [PCA Reconstruction-based](python/ad/pca_reconstruct.py)
+    - [Autoencoder Reconstruction-based](python/dnn/ad_autoencoder.py)
     - [Classifier and pseudo-anomaly based](python/ad/pseudo_anom_outlier.py)
     - [Ensemble/Projection-based](python/loda/loda.py)
     - [A demonstration of outlier influence](python/ad/outlier_effect.py)
@@ -18,7 +19,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Regression](python/timeseries/timeseries_regression.py) (SVM, Random Forest, Neural Network)
       - [Recurrent Neural Networks](python/timeseries/timeseries_rnn.py)
     - i.i.d
-      - [Windows/Shingle based](python/timeseries/timeseries_shingles.py)
+      - [Windows/Shingle based](python/timeseries/timeseries_shingles.py) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - human-in-the-loop (active learning)
     - [Active Anomaly Discovery](python/aad) -- see section on AAD below for instructions on how to run.
 

@@ -7,6 +7,7 @@ import numpy as np
 import numpy.random as rnd
 import tensorflow as tf
 from common.utils import *
+from common.timeseries_datasets import *
 
 
 def leaky_relu(z, name=None):
@@ -137,6 +138,10 @@ class MLPRegressor_TF(object):
 
 
 class Autoencoder(object):
+    """ A very simple autoencoder framework
+
+    TODO: Step-by-step pre-training
+    """
     def __init__(self, n_inputs, n_neurons, activations=None,
                  n_epochs=200, batch_size=20,
                  denoising=False, noise_level=1.0,
@@ -212,3 +217,29 @@ class PCA_TF(Autoencoder):
                              learning_rate=learning_rate,
                              l2_penalty=l2_penalty, shuffle=shuffle)
 
+
+class AutoencoderAnomalyDetector(object):
+    def __init__(self, n_inputs, n_neurons, activations=None,
+                 normalize_scale=False, n_epochs=200, batch_size=20,
+                 denoising=False, noise_level=1.0,
+                 learning_rate=0.01, l2_penalty=0.001, shuffle=False):
+        self.autoencoder = Autoencoder(n_inputs, n_neurons, activations=activations,
+                 n_epochs=n_epochs, batch_size=batch_size,
+                 denoising=denoising, noise_level=noise_level,
+                 learning_rate=learning_rate, l2_penalty=l2_penalty, shuffle=shuffle)
+        self.normalizer = None
+        if normalize_scale:
+            self.normalizer = DiffScale()
+
+    def fit(self, x):
+        x_ = x if self.normalizer is None else self.normalizer.fit_transform(x)
+        self.autoencoder.fit(x_)
+
+    def decision_function(self, x):
+        """ Returns smaller for more anomalous so that API is similar to other detectors """
+        x_ = x if self.normalizer is None else self.normalizer.scale(x)
+        decoded = self.autoencoder.transform(x_, layer_id=-1)  # output layer
+        # logger.debug("x: %s, decoded: %s" % (str(x.shape), str(decoded.shape)))
+        recons_errs = np.sum(np.square(decoded - x_), axis=1)
+        # logger.debug("recons_errs: %s\n%s" % (str(decoded.shape), str(recons_errs)))
+        return -recons_errs
