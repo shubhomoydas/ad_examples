@@ -219,6 +219,25 @@ class AnomalyDataOpts(object):
 
 
 def read_anomaly_dataset(dataset):
+    """ Returns a standard dataset included with the codebase
+
+    Supported datasets:
+        abalone
+        ann_thyroid_1v3
+        cardiotocography_1
+        covtype
+        covtype_sub
+        kddcup
+        kddcup_sub
+        mammography
+        mammography_sub
+        shuttle_1v23567
+        shuttle_sub
+        yeast
+
+    :param dataset: string
+    :return: numpy.ndarray, numpy.array
+    """
     opts = AnomalyDataOpts(dataset)
     x, y = read_data_as_matrix(opts)
     # logger.debug("x: %s" % str(x.shape))
