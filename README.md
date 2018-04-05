@@ -8,7 +8,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - [Clustering and density-based](python/ad/gmm_outlier.py)
     - [Density estimation based](python/ad/kde_outlier.py)
     - [PCA Reconstruction-based](python/ad/pca_reconstruct.py)
-    - [Autoencoder Reconstruction-based](python/dnn/ad_autoencoder.py)
+    - [Autoencoder Reconstruction-based](python/dnn/autoencoder.py)
     - [Classifier and pseudo-anomaly based](python/ad/pseudo_anom_outlier.py)
     - [Ensemble/Projection-based](python/loda/loda.py)
     - [A demonstration of outlier influence](python/ad/outlier_effect.py)
@@ -24,6 +24,8 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - [Active Anomaly Discovery](python/aad) -- see section on AAD below for instructions on how to run.
 
 There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'python/temp' folder when executed.
+
+**AUC** is the most common metric used to report anomaly detection performance. See [here](python/dnn/autoencoder.py) for a complete example with standard datasets.
 
 To execute the code:
 
