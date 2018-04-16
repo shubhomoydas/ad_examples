@@ -140,6 +140,9 @@ class MLPRegressor_TF(object):
 class Autoencoder(object):
     """ A very simple autoencoder framework
 
+    Consider denoising=True for over-complete representations i.e.,
+    having higher dimension than input data. In such case will avoid trivial identity function.
+
     TODO: Step-by-step pre-training
     """
     def __init__(self, n_inputs, n_neurons, activations=None,
