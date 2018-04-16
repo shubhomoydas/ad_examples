@@ -1,3 +1,16 @@
+Python libraries required:
+--------------------------
+    numpy (1.13.3)
+    scipy (0.19.1)
+    scikit-learn (0.19.1)
+    cvxopt
+    pandas (0.21.0)
+    ranking
+    statsmodels
+    matplotlib (2.1.0)
+    tensorflow (1.6.0)
+
+
 Anomaly Detection Examples
 --------------------------
 This is a collection of anomaly detection examples for detection methods popular in academic literature and in practice. I will include more examples as and when I find time.
@@ -34,19 +47,6 @@ To execute the code:
 2. *The run commands are at the top of the python source code files.*
 
 3. Check the log file in 'python/temp' folder. Usually it will be named <demo_code>.log. Timeseries demos will output logs under the 'python/temp/timeseries' folder.
-
-
-Python libraries required:
---------------------------
-    numpy (1.13.3)
-    scipy (0.19.1)
-    scikit-learn (0.19.1)
-    cvxopt
-    pandas (0.21.0)
-    ranking
-    statsmodels
-    matplotlib (2.1.0)
-    tensorflow (1.6.0)
 
 
 Active Anomaly Discovery (AAD)
@@ -126,6 +126,19 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
     pythonw -m aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=../datasets/toy.csv --scoresfile=../datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
 
 **Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (**--init=1**) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
+
+
+Activity Modeling
+-----------------
+A simple application of word2vec for activity modeling can be found [here](python/timeseries/activity_word2vec.py). We try to infer relative sensor locations from sequence of sensor triggerings. The true [floor plan](http://ailab.wsu.edu/casas/hh/hh101/profile/page-6.html) and the inferred sensor locations (**for sensor ids starting with 'M' and 'MA'**) are shown below.
+
+![Floor Plan](datasets/CASAS/floor_plans/HH101-sensormap.png)
+
+![Relative Sensor Locations with Word2Vec](datasets/CASAS/floor_plans/activity_sensors_d2_custom.png)
+
+Please refer to the following paper and the [CASAS website](http://ailab.wsu.edu/casas/hh) for the setup:
+    D. Cook, A. Crandall, B. Thomas, and N. Krishnan.
+    CASAS: A smart home in a box. IEEE Computer, 46(7):62-69, 2013.
 
 
 Note on Spectral Clustering by label diffusion
