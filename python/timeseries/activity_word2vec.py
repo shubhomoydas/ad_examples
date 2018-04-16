@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
     mode = 1
 
-    dims = 2
+    dims = 15
     window_size = 3
     n_epochs = args.n_epochs
     neg_samples = 3
@@ -129,7 +129,10 @@ if __name__ == "__main__":
             x_tr = embeddings
         else:
             logger.debug("computing t-SNE for embedded space...")
-            tsne_embed = manifold.TSNE(n_components=2, init='pca',
+            # perplexity=30, as used in original word2vec, does not result
+            # in good visualization...
+            tsne_embed = manifold.TSNE(perplexity=3,
+                                       n_components=2, init='pca',
                                        random_state=0, method='exact', n_iter=5000)
             x_tr = tsne_embed.fit_transform(embeddings)
 
