@@ -40,6 +40,8 @@ There are multiple datasets (synthetic/real) supported. Change the code to work 
 
 **AUC** is the most common metric used to report anomaly detection performance. See [here](python/dnn/autoencoder.py) for a complete example with standard datasets.
 
+The codebase also includes some [activity modeling stuff](#activity-modeling).
+
 To execute the code:
 
 1. Run code from 'python' folder. The outputs will be generated under 'temp' folder. The 'pythonw' command is used on OSX, but 'python' should be used on Linux.
@@ -134,7 +136,7 @@ A simple application of word2vec for activity modeling can be found [here](pytho
 
 ![Floor Plan](datasets/CASAS/floor_plans/HH101-sensormap.png)
 
-![Relative Sensor Locations with Word2Vec](datasets/CASAS/floor_plans/activity_sensors_d2_custom.png)
+![Relative Sensor Locations with Word2Vec](datasets/CASAS/floor_plans/activity_sensors_d2_original.png)
 
 Please refer to the following paper and the [CASAS website](http://ailab.wsu.edu/casas/hh) for the setup:
     D. Cook, A. Crandall, B. Thomas, and N. Krishnan.
