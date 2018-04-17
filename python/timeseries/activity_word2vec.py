@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     modes = {0: "", 1: "custom", 2: "original"}
 
-    mode = 1
+    mode = 2
 
     dims = 15
     window_size = 3
