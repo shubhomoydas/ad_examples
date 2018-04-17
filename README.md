@@ -136,7 +136,7 @@ A simple application of word2vec for activity modeling can be found [here](pytho
 
 ![Floor Plan](datasets/CASAS/floor_plans/HH101-sensormap.png)
 
-![Relative Sensor Locations with Word2Vec](datasets/CASAS/floor_plans/activity_sensors_d2_original_tsne.png)
+![Relative Sensor Locations with Word2Vec](datasets/CASAS/floor_plans/activity_sensors_d15_original_tsne.png)
 
 Please refer to the following paper and the [CASAS website](http://ailab.wsu.edu/casas/hh) for the setup:
     D. Cook, A. Crandall, B. Thomas, and N. Krishnan.
