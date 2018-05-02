@@ -34,7 +34,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - i.i.d
       - [Windows/Shingle based](python/timeseries/timeseries_shingles.py) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - human-in-the-loop (active learning)
-    - [Active Anomaly Discovery](python/aad) -- see section on AAD below for instructions on how to run.
+    - [Active Anomaly Discovery](python/aad) -- see [section on AAD below](#active-anomaly-discovery-aad) for instructions on how to run.
 
 There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'python/temp' folder when executed.
 
@@ -75,8 +75,11 @@ Running AAD
 This codebase supports four different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The Isolation Forest based AAD (**streaming support with model update**)
+    - For streaming update, we replace the oldest 20% trees with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length.
   - HS Trees based AAD (**streaming support with model update**)
+    - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
   - RS Forest based AAD (**streaming support with model update**)
+    - See the previous HS Trees streaming update options above.
 
 To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format:
 
