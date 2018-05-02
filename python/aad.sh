@@ -46,6 +46,13 @@ if [[ "$ARGC" -gt "0" ]]; then
     # QUERY_SEQUENTIAL = 5
     # QUERY_GP = 6 (Gaussian Process)
     # QUERY_SCORE_VAR = 7 (Score Variance)
+    # QUERY_CUSTOM_MODULE = 8
+    #     NOTE: QUERY_CUSTOM_MODULE requires --query_module_name and --query_class_name
+    #           to specify the correct query model class. By default:
+    #           --query_module_name=aad.query_model_other
+    #           --query_class_name=QueryTopDiverseSubspace
+    #           The above two options imply that diverse query strategy will be employed
+    #           when query_type=8 (i.e., --querytype=8).
     # ------------------------------
     QUERY_TYPE=$6
     
@@ -124,10 +131,13 @@ fi
 
 REPS=1  # number of independent data samples (input files)
 
-# Specific to QUERY_DETERMINISTIC, QUERY_TOP_RANDOM, QUERY_GP, QUERY_SCORE_VAR
+# =====================================================
+# N_EXPLORE and N_BATCH apply to:
+#   QUERY_DETERMINISTIC, QUERY_TOP_RANDOM, QUERY_GP, 
+#   QUERY_SCORE_VAR, QUERY_CUSTOM_MODULE
 N_EXPLORE=10  # number of unlabeled top ranked instances to explore
 
-N_BATCH=1
+N_BATCH=1  # Number of queries per feedback iteration
 N_BATCH_SIG=""
 if [[ "${N_BATCH}" != "1" ]]; then
     N_BATCH_SIG="b${N_BATCH}"
@@ -196,10 +206,10 @@ fi
 #       biased towards historical [labeled] data.
 #   1 - Use a random subset of labeled instances while
 #       minimizing AAD loss and enforcing constraints.
-#       The size of the random subset is determined by:
-#       <labeled_to_window_ratio> -- Ratio of labeled instances
+#       The size of the random subset is determined by the options:
+#       --labeled_to_window_ratio : Ratio of labeled instances
 #           to stream window size, and
-#       <max_labeled_for_stream> -- The upper bound on the
+#       --max_labeled_for_stream : The upper bound on the
 #           subset size irrespective of labeled_to_window_ratio
 # See also: MAX_LABELED_FOR_STREAM, LABELED_TO_WINDOW_RATIO
 RESTRICT_LABELED_SET=0
