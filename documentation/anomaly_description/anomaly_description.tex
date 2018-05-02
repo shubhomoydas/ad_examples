@@ -147,8 +147,27 @@ There are fundamental differences between Isolation Forest and the other two: HS
 		\includegraphics[width=\textwidth]{leaf_trees/query_candidate_regions_ntop5_50_trees_rsforest}
 		\caption{RS Forest}
 		\label{fig:rsforest_rects}
-	\end{subfigure}
-	\caption{Top subspaces after $35$ feedback iterations ranked by ${\bf w}\circ{\bf d}$ which cover the top ranked $15$ unlabeled instances. We find the top $5$ most anomalous regions for each of the $15$ instances and the union of all these regions is shown in \textcolor{red}{red} (in all the figures here). The Isolation Forest subspaces tend to be larger and each subspace usually contains more instances. This lets the feedback in Isolation Forest be shared across more instances than in HS Trees or RS Forest.} \label{fig:tree_diffs}
+	\end{subfigure} \\
+    \begin{subfigure}[b]{0.3\textwidth}
+    	\includegraphics[width=\textwidth]{leaf_trees/query_compact_ntop5_100_trees_aad_iforest}
+    	\caption{IForest Compact}
+    	\label{fig:iforest_compact_rects}
+    \end{subfigure}
+    ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+    %(or a blank line to force the subfigure onto a new line)
+    \begin{subfigure}[b]{0.3\textwidth}
+    	\includegraphics[width=\textwidth]{leaf_trees/query_compact_ntop5_50_trees_aad_hstrees}
+    	\caption{HST Compact}
+    	\label{fig:hstrees_compact_rects}
+    \end{subfigure}
+    ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+    %(or a blank line to force the subfigure onto a new line)
+    \begin{subfigure}[b]{0.3\textwidth}
+    	\includegraphics[width=\textwidth]{leaf_trees/query_compact_ntop5_50_trees_aad_rsforest}
+    	\caption{RSF Compact}
+    	\label{fig:rsforest_compact_rects}
+    \end{subfigure}
+	\caption{Top subspaces after $35$ feedback iterations ranked by ${\bf w}\circ{\bf d}$ which cover the top ranked $15$ unlabeled instances. We find the top $5$ most anomalous regions for each of the $15$ instances and the union of all these regions is shown in \textcolor{red}{red} (\textbf{top row}). The corresponding compact subspaces which describe the $15$ instances are shown in the \textbf{bottom row}. The points circled in \textcolor{green}{green} (in the bottom row) are the $5$ instances (out of the $15$) selected for query using a diverse querying strategy. The Isolation Forest subspaces tend to be larger and each subspace usually contains more instances. This lets the feedback in Isolation Forest to be shared across more instances than in HS Trees or RS Forest.} \label{fig:tree_diffs}
 \end{figure}
 
 \begin{thebibliography}{1}
