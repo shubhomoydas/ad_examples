@@ -136,6 +136,13 @@ To generate the below, use the command:
 ![Query Diversity](figures/aad/query_diversity.png)
 
 
+Differences between Isolation Forest, HS Trees, RS Forest
+-------------------------------------------
+This [document](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf) explains why Isolation Forest is more effective in incorporating feedback at the leaf level. This is illustrated in the figure below.
+
+![Tree Differences](figures/aad/tree_differences.png)
+
+
 Running AAD with precomputed anomaly scores
 -------------------------------------------
 In case scores from anomaly detector ensembles are available in a CSV file, then AAD can be run with the following command.
