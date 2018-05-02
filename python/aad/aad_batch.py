@@ -9,7 +9,8 @@ from aad.aad_globals import *
 from aad.aad_support import *
 from aad.aad_test_support import aad_unit_tests_battery, \
     get_queried_indexes, write_baseline_query_indexes, \
-    evaluate_forest_original, debug_qvals, check_random_vector_angle
+    evaluate_forest_original, debug_qvals, check_random_vector_angle, \
+    plot_tsne_queries
 from aad.forest_description import *
 
 
@@ -28,7 +29,7 @@ def aad_batch():
     logger.debug(opts.str_opts())
 
     if opts.streaming:
-        raise ValueError("Streaming not supported")
+        raise ValueError("Streaming not supported. Use aad_stream.py for streaming algorithm.")
 
     run_aad = True
     run_tests = opts.plot2D and opts.reruns == 1 and \
@@ -82,6 +83,7 @@ def aad_batch():
                 tmp[0, 0:2] = [opts.fid, runidx]
                 tmp[0, 2:tmp.shape[1]] = orig_num_seen[0, :]
                 all_orig_num_seen = rbind(all_orig_num_seen, tmp)
+                logger.debug(tm_run.message("Original detector runidx: %d" % runidx))
                 continue
 
             if is_forest_detector(opts.detector_type):
@@ -96,7 +98,7 @@ def aad_batch():
             baseline_w = model.get_uniform_weights()
 
             agg_scores = model.get_score(X_train_new, baseline_w)
-            if True and is_forest_detector(opts.detector_type):
+            if False and is_forest_detector(opts.detector_type):
                 original_scores = 0.5 - model.decision_function(X_train)
                 queried = np.argsort(-original_scores)
                 n_found = np.cumsum(labels[queried[np.arange(opts.budget)]])
@@ -141,6 +143,9 @@ def aad_batch():
                 all_orig_iforest = all_orig_iforest + ",".join([str(v) for v in n_found]) + os.linesep
 
             logger.debug(tm_run.message("Completed runidx: %d" % runidx))
+
+            if runidx == 1 and False:
+                plot_tsne_queries(X_train, labels, ensemble, metrics, opts)
 
             if not run_tests:
                 metrics = None  # release memory

@@ -74,9 +74,9 @@ Running AAD
 -----------
 This codebase supports four different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
-  - The Isolation Forest based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
-  - HS Trees based AAD (streaming support with model update)
-  - RS Forest based AAD (streaming support with model update)
+  - The Isolation Forest based AAD (**streaming support with model update**)
+  - HS Trees based AAD (**streaming support with model update**)
+  - RS Forest based AAD (**streaming support with model update**)
 
 To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format:
 
@@ -108,6 +108,10 @@ Streaming currently supports two strategies for data retention:
   - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded. **This is highly recommended.**
 
 
+**Note on Query Diversity**
+See further below for diversity based querying strategy. The query_type=8 option selects this. **To actually see benefits of this option, set batch size to greater than 1 (e.g., 3)**.
+
+
 Generating compact descriptions with AAD
 -------------------------------------------
 ADD, when used with a forest-based detector such as Isolation Forest, can output a compact set of subspaces that contain all labeled anomalies. The idea is explained in https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf. Following illustrations show the results of this approach.
@@ -119,6 +123,17 @@ To generate the below, use the command:
 ![Contours](figures/aad/contours.png)
 
 ![Descriptions](figures/aad/description.png)
+
+
+Query diversity with compact descriptions
+-------------------------------------------
+Again, the idea for querying a diverse set of instances without significantly affecting the anomaly detection efficiency is explained in https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf.
+
+To generate the below, use the command:
+    
+    bash ./aad.sh toy2 10 1 0.03 7 1 0 0 512 0 1 1
+
+![Query Diversity](figures/aad/query_diversity.png)
 
 
 Running AAD with precomputed anomaly scores

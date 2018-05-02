@@ -313,18 +313,18 @@ class InstanceList(object):
         elif x_transformed is not None:
             self.x_transformed = rbind(self.x_transformed, x_transformed)
 
-    def get_instance_at(self, index):
-        inst_x = matrix(self.x[index], nrow=1)
-        inst_y = None
-        inst_id = None
-        inst_transformed = None
+    def get_instances_at(self, indexes):
+        insts_x = self.x[indexes, :]
+        insts_y = None
+        insts_id = None
+        insts_transformed = None
         if self.y is not None:
-            inst_y = self.y[index]
+            insts_y = self.y[indexes]
         if self.ids is not None:
-            inst_id = self.ids[index]
+            insts_id = self.ids[indexes]
         if self.x_transformed is not None:
-            inst_transformed = matrix(self.x_transformed[index], nrow=1)
-        return inst_x, inst_y, inst_id, inst_transformed
+            insts_transformed = self.x_transformed[indexes, :]
+        return insts_x, insts_y, insts_id, insts_transformed
 
     def add_instance(self, x, y=None, id=None, x_transformed=None):
         if self.x is not None:

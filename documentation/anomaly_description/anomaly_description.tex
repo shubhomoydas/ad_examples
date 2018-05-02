@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{xcolor}
 
 \DeclareMathOperator*{\argmin}{arg\,min}
 \DeclareMathOperator*{\argmax}{arg\,max}
@@ -89,6 +90,38 @@ A different approach to generate descriptions might train a cost-based decision 
 		\label{fig:compact_rects}
 	\end{subfigure}
 	\caption{Top $30$ subspaces ranked by ${\bf w}\circ{\bf d}$. Figure~\ref{fig:baseline_rects} shows the top $30$ subspaces with no feedback. We can see that most of these are just the exterior regions of the dataset. Figure~\ref{fig:aad_rects} shows that after feedback, the most anomalous subspaces are those around the labeled anomalies. Figure~\ref{fig:compact_rects} shows the most compact set of subspaces (for AAD) which cover all labeled anomalies. These are computed with Equation~\ref{eqn:opt}. Note that the compact subspaces only cover anomalies that were discovered in the $35$ feedback iterations. Anomalies which were not detected are likely to fall outside these compact subspaces.} \label{fig:rects}
+\end{figure}
+
+\section{Querying Diversity}
+We can use the anomaly description to diversify our queries when we have the option to query labels for more than one instance per round of feedback. Following is how we go about it:
+\begin{enumerate}
+	\item Select the top ranked $m$ (say, $m=15$) instances. Denote this set by $\mathcal{C}$.
+	\item Next, select the top (say) $5$ most anomalous regions for each instance in $\mathcal{C}$. Let $\mathcal{F}$ be the union of all these regions.
+	\item Now, \emph{compactly} describe all instances in $\mathcal{C}$ using the regions in $\mathcal{F}$.
+	\item Now, start with the most anomalous instance, and select one-by-one $k$ (say, $k=5$) instances which have the fewest overlapping regions for querying.
+\end{enumerate}
+
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.48\textwidth}
+		\includegraphics[width=\textwidth]{query_candidate_regions_ntop5_100_trees}
+		\caption{Candidate regions and instances}
+		\label{fig:candidate_regions}
+	\end{subfigure}
+	%~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+	%(or a blank line to force the subfigure onto a new line)
+	\begin{subfigure}[b]{0.48\textwidth}
+		\includegraphics[width=\textwidth]{query_compact_ntop5_100_trees_baseline}
+		\caption{Simple select-top query}
+		\label{fig:baseline_queries}
+	\end{subfigure} \\
+    %~
+	\begin{subfigure}[b]{0.48\textwidth}
+		\includegraphics[width=\textwidth]{query_compact_ntop5_100_trees_aad}
+		\caption{Select diverse query}
+		\label{fig:diverse_queries}
+	\end{subfigure}
+	\caption{Diverse querying strategy using sub-space descriptions. These figures show the $15$ most anomalous instances (ranked by score) in \textcolor{blue}{blue}. We assume that the true labels are not known for these instances. We find the top $5$ most anomalous regions for each of the $15$ instances and the union of all these rectangles is shown in \textcolor{red}{red} in Figure~\ref{fig:candidate_regions}. Figure~\ref{fig:baseline_queries} and Figure~\ref{fig:diverse_queries} show the regions which compactly contain (describe) the top-ranked instances. The instances circled in \textcolor{green}{green} are the ones selected for querying. The instances (in green) in Figure~\ref{fig:baseline_queries} are merely the top-ranked $5$ instances without taking into account any diversity. Figure~\ref{fig:diverse_queries} shows that when we select instances which have different descriptions (minimum region overlap), they are more diverse.} \label{fig:diverse}
 \end{figure}
 
 \begin{thebibliography}{1}

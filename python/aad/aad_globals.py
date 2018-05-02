@@ -51,10 +51,11 @@ IFOR_SCORE_TYPE_INV_PATH_LEN_EXP = 1
 IFOR_SCORE_TYPE_NORM = 2
 IFOR_SCORE_TYPE_CONST = 3
 IFOR_SCORE_TYPE_NEG_PATH_LEN = 4
-HST_SCORE_TYPE = 5
-RSF_SCORE_TYPE = 6
+HST_LOG_SCORE_TYPE = 5
+HST_SCORE_TYPE = 6
 RSF_LOG_SCORE_TYPE = 7
-ORIG_TREE_SCORE_TYPE = 8
+RSF_SCORE_TYPE = 8
+ORIG_TREE_SCORE_TYPE = 9
 
 ENSEMBLE_SCORE_LINEAR = 0  # linear combination of scores
 ENSEMBLE_SCORE_EXPONENTIAL = 1  # exp(linear combination)
@@ -107,9 +108,10 @@ QUERY_RANDOM = 4
 QUERY_SEQUENTIAL = 5  # Some MDP/reinforcement learning based stuff for later
 QUERY_GP = 6  # Gaussian Process support for later
 QUERY_SCORE_VAR = 7  # Based on variance of scores assigned at the leaves
+QUERY_CUSTOM_MODULE = 8  # Custom modules which will be dynamically instantiated
 
 # first blank string makes the other names 1-indexed
-query_type_names = ["", "top", "toprandom", "quantile", "random", "sequential", "gp", "scvar"]
+query_type_names = ["", "top", "toprandom", "quantile", "random", "sequential", "gp", "scvar", "custom"]
 # ------------------------------
 
 
@@ -259,15 +261,20 @@ def get_aad_option_list():
                         help="Type of anomaly score computation for a node in Isolation Forest")
     parser.add_argument("--ifor_add_leaf_nodes_only", action="store_true", default=True,
                         help="Whether to include only leaf node regions only or intermediate node regions as well.")
+    parser.add_argument("--tree_update_type", action="store", type=int, default=0,  # 0 - TREE_UPD_OVERWRITE
+                        help="Type of update to Tree node counts (applies to HS Trees and RS Forest only). " +
+                             "0 - overwrite with new counts, 1 - average of previous and current counts.")
     parser.add_argument("--modelfile", action="store", default="",
-                        help="Model file path in case the model needs to be saved or loaded. Supported only for Isolation Forest.")
+                        help="Model file path in case the model needs to be saved or loaded. " +
+                             "Supported only for Isolation Forest.")
     parser.add_argument("--save_model", action="store_true", default=False,
                         help="Whether to save the trained model")
     parser.add_argument("--load_model", action="store_true", default=False,
                         help="Whether to load a pre-trained model")
 
     parser.add_argument("--plot2D", action="store_true", default=False,
-                        help="Whether to plot the data, trees, and countours. Only supported for 2D data")
+                        help="Whether to plot the data, trees, and countours. " +
+                             "Only supported for 2D data")
 
     parser.add_argument("--n_jobs", action="store", type=int, default=1,
                         help="Number of parallel threads (if supported)")
@@ -285,10 +292,9 @@ def get_aad_option_list():
     parser.add_argument("--forest_max_depth", action="store", type=int, default=15,
                         help="Number of samples to build each tree in Forest")
 
-    parser.add_argument("--num_query_choices", action="store", type=int, default=1,
-                        help="Applies only to querytype %d. " % QUERY_TOP_RANDOM +
-                             "Specifies how many top ranked items to use when " +
-                             "choosing the instance to query")
+    parser.add_argument("--num_query_batch", action="store", type=int, default=5,
+                        help="Applies only to querytype %d. " % QUERY_DETERMINISIC +
+                             "Specifies how many top ranked items to query ")
     parser.add_argument("--n_explore", action="store", type=int, default=2,
                         help="Number of top ranked instances to evaluate during exploration. " +
                              "Applies to querytype(s) [toprandom(%d) | gp(%d) | scvar(%d))" %
@@ -304,20 +310,42 @@ def get_aad_option_list():
                         help="Min. number of instances to query per streaming window")
     parser.add_argument("--max_feedback_per_window", action="store", type=int, default=20,
                         help="Max. number of instances to query per streaming window")
+    parser.add_argument("--labeled_to_window_ratio", action="store", type=float, default=None,
+                        help="The ratio of number of labeled instances to window size. " +
+                             "If number of labeled instances is large, " +
+                             "a subset will be selected in each feedback iteration to " +
+                             "minimize AAD loss and enforce constraints (applies to streaming mode).")
+    parser.add_argument("--max_labeled_for_stream", action="store", type=int, default=None,
+                        help="Max. number of labeled instances selected for minimizing " +
+                             "AAD loss and enforcing constraints (applies to streaming mode).")
     parser.add_argument("--till_budget", action="store_true", default=False,
                         help="Whether to run the streaming algorithm till at least budget")
     parser.add_argument("--allow_stream_update", action="store_true", default=False,
                         help="Update the model when the window buffer is full in the streaming setting")
+    parser.add_argument("--do_not_update_weights", action="store_true", default=False,
+                        help="Whether to allow weights to be updated in the streaming setting. " +
+                             "Set to False to test performance of vanilla streaming algorithm with uniform weights.")
     parser.add_argument("--retention_type", action="store", type=int, default=STREAM_RETENTION_OVERWRITE,
                         help="Determines which instances to retain im memory when a new window of data streams in.")
     parser.add_argument("--query_confident", action="store_true", default=False,
-                        help="Whether to query only those top ranked instances for which we are confident the score is at least 1 std-dev higher than tau-th ranked instance' score")
+                        help="Whether to query only those top ranked instances for which we " +
+                             "are confident the score is at least 1 std-dev higher than tau-th " +
+                             "ranked instance' score")
     parser.add_argument("--describe_anomalies", action="store_true", default=False,
-                        help="Whether to report compact descriptions for discovered anomalies (supported only for forest-based detectors)")
-    parser.add_argument("--describe_n_top", action="store", type=int, default=30,
+                        help="Whether to report compact descriptions for discovered anomalies " +
+                             "(supported only for forest-based detectors)")
+    parser.add_argument("--describe_n_top", action="store", type=int, default=5,
                         help="Number of top ranked subspaces to use for anomaly descriptions")
     parser.add_argument("--describe_volume_p", action="store", type=int, default=1,
-                        help="Exponent for region volume while computing descriptions. Higher power encourages selection of smaller volumes")
+                        help="Exponent for region volume while computing descriptions. " +
+                             "Higher power encourages selection of smaller volumes")
+
+    parser.add_argument("--query_module_name", action="store", type=str, default="aad.query_model_other",
+                        help="Module/package name of the custom query model to use. " +
+                             "Only applies when querytype=" + str(QUERY_CUSTOM_MODULE))
+    parser.add_argument("--query_class_name", action="store", type=str, default="QueryTopDiverseSubspace",
+                        help="Class name of the custom query model to use. " +
+                             "Only applies when querytype=" + str(QUERY_CUSTOM_MODULE))
     return parser
 
 
@@ -387,6 +415,7 @@ class AadOpts(object):
         self.plot_hist = False
         self.relativeto = args.relativeto
         self.tau_nominal = args.tau_nominal
+        self.num_query_batch = args.num_query_batch
         self.query_search_candidates = args.query_search_candidates
         self.query_search_depth = args.query_search_depth
         self.optimlib = args.optimlib
@@ -440,14 +469,21 @@ class AadOpts(object):
         self.max_windows = args.max_windows
         self.min_feedback_per_window = args.min_feedback_per_window
         self.max_feedback_per_window = args.max_feedback_per_window
+        self.labeled_to_window_ratio = args.labeled_to_window_ratio
+        self.max_labeled_for_stream = args.max_labeled_for_stream
         self.till_budget = args.till_budget
         self.allow_stream_update = args.allow_stream_update
         self.retention_type = args.retention_type
         self.query_confident = args.query_confident
+        self.tree_update_type = args.tree_update_type
+        self.do_not_update_weights = args.do_not_update_weights
 
         self.describe_anomalies = args.describe_anomalies
         self.describe_n_top = args.describe_n_top
         self.describe_volume_p = args.describe_volume_p
+
+        self.query_module_name = args.query_module_name
+        self.query_class_name = args.query_class_name
 
         self.modelfile = args.modelfile
         self.load_model = args.load_model
@@ -474,18 +510,27 @@ class AadOpts(object):
 
     def query_name_str(self):
         s = "%s%s" % (query_type_names[self.qtype], "" if not self.query_confident else "_conf")
+        if self.num_query_batch > 1 and self.qtype in [QUERY_DETERMINISIC, QUERY_TOP_RANDOM, QUERY_SCORE_VAR]:
+            s = "%sb%d" % (s, self.num_query_batch)
         if self.qtype == QUERY_SEQUENTIAL:
             s = "%s_nc%d_d%d" % (s, self.query_search_candidates, self.query_search_depth)
         return s
 
     def streaming_str(self):
-        return "sw%d_asu%s_mw%df%d_%d_%s" % (self.stream_window, str(self.allow_stream_update),
-                                             self.max_windows, self.min_feedback_per_window,
-                                             self.max_feedback_per_window,
-                                             stream_retention_types[self.retention_type])
+        return "sw%d_asu%s%s_mw%df%d_%d_%s" % (self.stream_window, str(self.allow_stream_update),
+                                               "" if not self.do_not_update_weights else "_no_upd",
+                                               self.max_windows, self.min_feedback_per_window,
+                                               self.max_feedback_per_window,
+                                               stream_retention_types[self.retention_type])
 
     def detector_type_str(self):
         s = detector_types[self.detector_type]
+        if self.detector_type == LODA:
+            s = "%s_k%dt%d" % (s, self.mink, self.maxk)
+        if self.detector_type == AAD_HSTREES or self.detector_type == AAD_RSFOREST:
+            s = "%s%s%s%s" % (s, "_incr" if self.tree_update_type == 1 else "",
+                              "_n%d" % self.max_labeled_for_stream if self.max_labeled_for_stream is not None else "",
+                              "_r%0.1f" % self.labeled_to_window_ratio if self.labeled_to_window_ratio is not None else "")
         if self.detector_type == AAD_UPD_TYPE:
             return "%s_%s" % (s, constraint_types[self.constrainttype])
         elif (self.detector_type == AAD_IFOREST or self.detector_type == ATGP_IFOREST or
@@ -496,6 +541,12 @@ class AadOpts(object):
                     "_leaf" if self.forest_add_leaf_nodes_only else "")
         else:
             return s
+
+    def do_not_upd_weights_str(self):
+        if self.do_not_update_weights:
+            return "_no_upd"
+        else:
+            return ""
 
     def till_budget_str(self):
         if self.streaming and self.till_budget:
@@ -524,7 +575,7 @@ class AadOpts(object):
             filesig = ("-fid%d" % (self.fid,)) + ("-runidx%d" % (self.runidx,))
         else:
             filesig = ""
-        optimsig = "-optim_%s" % (self.optimlib,)
+        # optimsig = "-optim_%s" % (self.optimlib,)
         orderbyviolatedsig = "-by_violated" if self.orderbyviolated else ""
         ignoreAATPlosssig = "-noAATP" if self.ignoreAATPloss else ""
         randomInstanceAtStartSig = "-randFirst" if self.random_instance_at_start else ""
@@ -535,7 +586,7 @@ class AadOpts(object):
                       ("-" + self.detector_type_str()) +
                       ("_" + RELATIVE_TO_NAMES[self.relativeto] if self.detector_type == SIMPLE_UPD_TYPE else "") +
                       randomInstanceAtStartSig +
-                      ("-single" if self.single_inst_feedback else "") +
+                      # ("-single" if self.single_inst_feedback else "") +
                       ("-" + self.query_name_str()) +
                       ("-orig" if self.original_dims else "") +
                       self.prior_str() +
@@ -551,10 +602,11 @@ class AadOpts(object):
                                          and self.relativeto == RELATIVE_QUANTILE
                                          and self.tau_nominal != 0.5 else "") +
                       ("-topK%d" % (self.topK,)) +
-                      ("-pseudoanom_always_%s" % (self.pseudoanomrank_always,)) +
-                      optimsig +
+                      # ("-pseudoanom_always_%s" % (self.pseudoanomrank_always,)) +
+                      # optimsig +
                       orderbyviolatedsig +
                       ignoreAATPlosssig +
+                      self.do_not_upd_weights_str() +
                       norm_sig +
                       tau_score_sig +
                       streaming_sig + self.till_budget_str()
@@ -595,12 +647,13 @@ class AadOpts(object):
                                   and self.relativeto == RELATIVE_QUANTILE
                                   and self.tau_nominal != 0.5 else "") +
                ("-topK" + str(self.topK)) +
-               ("-pseudoanom_always_" + str(self.pseudoanomrank_always)) +
+               # ("-pseudoanom_always_" + str(self.pseudoanomrank_always)) +
                ("-orgdim" if self.original_dims else "") +
-               ("sngl_fbk" if self.single_inst_feedback else "") +
-               ("-optimlib_%s" % (self.optimlib,)) +
+               # ("sngl_fbk" if self.single_inst_feedback else "") +
+               # ("-optimlib_%s" % (self.optimlib,)) +
                orderbyviolatedsig +
                ignoreAATPlosssig +
+               self.do_not_upd_weights_str() +
                norm_sig +
                tau_score_sig +
                streaming_sig + self.till_budget_str()

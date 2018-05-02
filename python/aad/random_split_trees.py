@@ -33,7 +33,8 @@ from aad.data_stream import *
 
 __all__ = ["ArrTree", "HSSplitter", "HSTree", "HSTrees",
            "RSForestSplitter", "RSTree", "RSForest",
-           "IForest", "StreamingSupport"]
+           "IForest", "StreamingSupport",
+           "TREE_UPD_OVERWRITE", "TREE_UPD_INCREMENTAL", "tree_update_types"]
 
 INTEGER_TYPES = (numbers.Integral, np.int)
 
@@ -46,6 +47,10 @@ TREE_LEAF = -1
 TREE_UNDEFINED = -2
 INFINITY = np.inf
 EPSILON = np.finfo('double').eps
+
+TREE_UPD_OVERWRITE = 0
+TREE_UPD_INCREMENTAL = 1
+tree_update_types = ["ovr", "incr"]
 
 
 class SplitContext(object):
@@ -121,6 +126,13 @@ class ArrTree(object):
     
         max_depth : int
             The maximal depth of the tree.
+
+        update_type: int
+            Specifies how to update the tree node counts.
+
+        incremental_update_weight: float
+            For incremental weight update, specifies the weight given to current counts.
+            Should be in range [0.0, 1.0]
     
         children_left : array of int, shape [node_count]
             children_left[i] holds the node id of the left child of node i.
@@ -154,9 +166,12 @@ class ArrTree(object):
             weighted_n_node_samples[i] holds the weighted number of training samples
             reaching node i.
     """
-    def __init__(self, n_features, max_depth=0):
+    def __init__(self, n_features, max_depth=0, update_type=TREE_UPD_OVERWRITE,
+                 incremental_update_weight=0.5):
         self.n_features = n_features
         self.max_depth = max_depth
+        self.update_type = update_type
+        self.incremental_update_weight = incremental_update_weight
 
         self.node_count = 0
         self.capacity = 0
@@ -329,7 +344,15 @@ class ArrTree(object):
             logger.debug("buffer:\n%s" % str(list(self.n_node_samples_buffer[leaves])))
             n_prev_buffer = np.sum(self.n_node_samples_buffer[leaves])
             n_prev_curr = np.sum(self.n_node_samples[leaves])
-        np.copyto(self.n_node_samples, self.n_node_samples_buffer)
+        if self.update_type == TREE_UPD_OVERWRITE:
+            # logger.debug("update overwrite")
+            np.copyto(self.n_node_samples, self.n_node_samples_buffer)
+        elif self.update_type == TREE_UPD_INCREMENTAL:
+            # logger.debug("update incremental (%f)" % self.incremental_update_weight)
+            self.n_node_samples *= (1. - self.incremental_update_weight)
+            self.n_node_samples += (self.incremental_update_weight * self.n_node_samples_buffer)
+        else:
+            raise ValueError("Invalid tree update type: %d" % self.update_type)
         self.n_node_samples_buffer[:] = 0
         if False:
             # debug
@@ -525,12 +548,16 @@ class RandomSplitTree(object):
                  splitter=None,
                  max_depth=10,
                  max_features=1,
-                 random_state=None):
+                 random_state=None,
+                 update_type=TREE_UPD_OVERWRITE,
+                 incremental_update_weight=0.5):
         self.criterion = criterion
         self.splitter = splitter
         self.max_depth = max_depth
         self.max_features = max_features
         self.random_state = random_state
+        self.update_type = update_type
+        self.incremental_update_weight = incremental_update_weight
 
         self.n_features_ = None
         self.n_outputs_ = None
@@ -557,7 +584,8 @@ class RandomSplitTree(object):
         self.n_outputs_ = 1
         self.n_classes_ = [1] * self.n_outputs_
         self.n_classes_ = np.array(self.n_classes_, dtype=np.intp)
-        self.tree_ = ArrTree(self.n_features_)
+        self.tree_ = ArrTree(self.n_features_, update_type=self.update_type,
+                             incremental_update_weight=self.incremental_update_weight)
 
         splitter = self.get_splitter(self.splitter)
         builder = self.get_builder(splitter, max_depth)
@@ -625,6 +653,13 @@ class RandomSplitForest(StreamingSupport):
         If None, the random number generator is the RandomState instance used
         by `np.random`.
 
+    update_type : int
+        Specifies how to update the tree node counts.
+
+    incremental_update_weight : float
+        For incremental weight update, specifies the weight given to current counts.
+        Should be in range [0.0, 1.0]
+
     verbose : int, optional (default=0)
         Controls the verbosity of the tree building process.
 
@@ -657,15 +692,21 @@ class RandomSplitForest(StreamingSupport):
                  bootstrap=False,
                  n_jobs=1,
                  random_state=None,
+                 update_type=TREE_UPD_OVERWRITE,
+                 incremental_update_weight=0.5,
                  verbose=0):
         self.max_samples=max_samples
         self.max_features=max_features
         self.n_estimators = n_estimators
+        self.bootstrap = bootstrap
+        self.verbose = verbose
         self.n_jobs = n_jobs
         self.min_vals = min_vals
         self.max_vals = max_vals
         self.max_depth = max_depth
         self.random_state = random_state
+        self.update_type = update_type
+        self.incremental_update_weight = incremental_update_weight
         self.estimators_ = None
 
     def _set_oob_score(self, X, y):
@@ -687,7 +728,7 @@ class RandomSplitForest(StreamingSupport):
             max_samples = min(256, X.shape[0])
         logger.debug("max_samples: %d" % max_samples)
         trees = p.map(self.get_fitting_function(),
-                      [(max_depth, X, max_samples, rnd_int + i) for i in range(n_trees)])
+                      [(max_depth, X, max_samples, rnd_int + i, self.update_type, self.incremental_update_weight) for i in range(n_trees)])
         return trees
 
     def fit(self, X, y=None, sample_weight=None):
@@ -764,9 +805,14 @@ class RandomSplitForest(StreamingSupport):
         for tree in self.estimators_:
             tree.tree_.add_samples(X, current)
 
+    def update_trees_by_replacement(self, X=None):
+        raise NotImplementedError("update_trees_by_replacement() is not implemented")
+
     def update_model_from_stream_buffer(self):
         for tree in self.estimators_:
             tree.tree_.update_model_from_stream_buffer()
+
+        return None
 
 
 class HSSplitter(object):
@@ -830,12 +876,16 @@ class HSTree(RandomSplitTree):
                  splitter=None,
                  max_depth=10,
                  max_features=1,
-                 random_state=None):
+                 random_state=None,
+                 update_type=TREE_UPD_OVERWRITE,
+                 incremental_update_weight=0.5):
         RandomSplitTree.__init__(self,
                                  splitter=splitter,
                                  max_depth=max_depth,
                                  max_features=max_features,
-                                 random_state=random_state)
+                                 random_state=random_state,
+                                 update_type=update_type,
+                                 incremental_update_weight=incremental_update_weight)
 
     def get_splitter(self, splitter=None):
         return splitter if splitter is not None else HSSplitter(random_state=self.random_state)
@@ -846,9 +896,23 @@ class HSTree(RandomSplitTree):
         This score ordering has been maintained such that it is compatible
         with the scikit-learn Isolation Forest API.
         """
-        leaves, nodeinds = self.tree_.apply(X, getleaves=True, getnodeinds=True)
-        depths = np.array(np.transpose(nodeinds.sum(axis=1)))
-        scores = self.tree_.n_node_samples[leaves] * (2. ** depths)
+        if False:
+            # Process all instances at once.
+            leaves, nodeinds = self.tree_.apply(X, getleaves=True, getnodeinds=True)
+            depths = np.array(np.transpose(nodeinds.sum(axis=1)))
+            scores = self.tree_.n_node_samples[leaves] * (2. ** depths)
+        else:
+            # Process instances in batches. This saves some memory when the number of
+            # nodes is very high and so is the number of instances.
+            batch_size = 1000
+            n = X.shape[0]
+            scores = np.zeros(n, dtype=np.float32)
+            for start in range(0, n, batch_size):
+                end = min(start + batch_size, n)
+                x = X[start:end, :]
+                leaves, nodeinds = self.tree_.apply(x, getleaves=True, getnodeinds=True)
+                depths = np.array(np.transpose(nodeinds.sum(axis=1)))
+                scores[start:end] = self.tree_.n_node_samples[leaves] * (2. ** depths)
         return scores
 
 
@@ -860,14 +924,18 @@ class HSTrees(RandomSplitForest):
                  max_vals=None,
                  max_depth=10,
                  n_jobs=1,
-                 random_state=None):
+                 random_state=None,
+                 update_type=TREE_UPD_OVERWRITE,
+                 incremental_update_weight=0.5):
         RandomSplitForest.__init__(self, n_estimators=n_estimators,
                                    max_features=max_features,
                                    min_vals=min_vals,
                                    max_vals=max_vals,
                                    max_depth=max_depth,
                                    n_jobs=n_jobs,
-                                   random_state=random_state)
+                                   random_state=random_state,
+                                   update_type=update_type,
+                                   incremental_update_weight=incremental_update_weight)
 
     def get_fitting_function(self):
         return hstree_fit
@@ -881,6 +949,8 @@ def hstree_fit(args):
     X = args[1]
     max_samples = args[2]
     rnd = args[3]
+    update_type = args[4]
+    incremental_update_weight = args[5]
     random_state = check_random_state(rnd)
     n = X.shape[0]
     max_samples = min(max_samples, n)
@@ -888,8 +958,9 @@ def hstree_fit(args):
     random_state.shuffle(sample_idxs)
     X_sub = X[sample_idxs[0:max_samples]]
     hst = HSTree(splitter=HSSplitter(random_state=random_state),
-                          max_depth=max_depth, max_features=X_sub.shape[1],
-                          random_state=random_state)
+                 max_depth=max_depth, max_features=X_sub.shape[1],
+                 random_state=random_state, update_type=update_type,
+                 incremental_update_weight=incremental_update_weight)
     hst.fit(X_sub, None)
     return hst
 
@@ -952,12 +1023,16 @@ class RSTree(RandomSplitTree):
                  splitter=None,
                  max_depth=10,
                  max_features=100,
-                 random_state=None):
+                 random_state=None,
+                 update_type=TREE_UPD_OVERWRITE,
+                 incremental_update_weight=0.5):
         RandomSplitTree.__init__(self, criterion=criterion,
                                  splitter=splitter,
                                  max_depth=max_depth,
                                  max_features=max_features,
-                                 random_state=random_state)
+                                 random_state=random_state,
+                                 update_type=update_type,
+                                 incremental_update_weight=incremental_update_weight)
 
     def get_splitter(self, splitter=None):
         return splitter if splitter is not None else RSForestSplitter(random_state=self.random_state)
@@ -969,7 +1044,7 @@ class RSTree(RandomSplitTree):
         with the scikit-learn Isolation Forest API.
         """
         leaves, nodeinds = self.tree_.apply(X, getleaves=True, getnodeinds=True)
-        scores = self.tree_.n_node_samples[leaves] * np.exp(self.tree_.acc_log_v[leaves])
+        scores = self.tree_.n_node_samples[leaves] * np.exp(-self.tree_.acc_log_v[leaves])
         return scores
 
 
@@ -981,14 +1056,18 @@ class RSForest(RandomSplitForest):
                  max_vals=None,
                  max_depth=10,
                  n_jobs=1,
-                 random_state=None):
+                 random_state=None,
+                 update_type=TREE_UPD_OVERWRITE,
+                 incremental_update_weight=0.5):
         RandomSplitForest.__init__(self, n_estimators=n_estimators,
                                    max_features=max_features,
                                    min_vals=min_vals,
                                    max_vals=max_vals,
                                    max_depth=max_depth,
                                    n_jobs=n_jobs,
-                                   random_state=random_state)
+                                   random_state=random_state,
+                                   update_type=update_type,
+                                   incremental_update_weight=incremental_update_weight)
 
     def get_fitting_function(self):
         return rsforest_fit
@@ -1002,6 +1081,8 @@ def rsforest_fit(args):
     X = args[1]
     max_samples = args[2]
     rnd = args[3]
+    update_type = args[4]
+    incremental_update_weight = args[5]
     random_state = check_random_state(rnd)
     n = X.shape[0]
     max_samples = min(max_samples, n)
@@ -1010,7 +1091,8 @@ def rsforest_fit(args):
     X_sub = X[sample_idxs[0:max_samples]]
     rsf = RSTree(splitter=RSForestSplitter(random_state=random_state),
                  max_depth=max_depth, max_features=X_sub.shape[1],
-                 random_state=random_state)
+                 random_state=random_state, update_type=update_type,
+                 incremental_update_weight=incremental_update_weight)
     rsf.fit(X_sub, None)
     return rsf
 
@@ -1025,7 +1107,7 @@ def rsforest_decision(args):
     return scores
 
 
-class IForest(IsolationForest, StreamingSupport):
+class IForest(RandomSplitForest):
     def __init__(self,
                  n_estimators=100,
                  max_samples="auto",
@@ -1033,25 +1115,100 @@ class IForest(IsolationForest, StreamingSupport):
                  max_features=1.,
                  bootstrap=False,
                  n_jobs=1,
+                 replace_frac=0.2,
                  random_state=None,
                  verbose=0):
-        IsolationForest.__init__(self,
-                                 n_estimators=n_estimators,
-                                 max_samples=max_samples,
-                                 contamination=contamination,
-                                 max_features=max_features,
-                                 bootstrap=bootstrap,
-                                 n_jobs=n_jobs,
-                                 random_state=random_state,
-                                 verbose=verbose)
+        RandomSplitForest.__init__(self, n_estimators=n_estimators,
+                                   max_samples=max_samples,
+                                   max_features=max_features,
+                                   bootstrap=bootstrap,
+                                   n_jobs=n_jobs,
+                                   random_state=random_state,
+                                   verbose=verbose)
+        self.contamination = contamination
+        # The fraction of trees replaced when new window of data arrives
+        self.replace_frac = replace_frac
+        self.ifor = None
+        self.estimators_features_ = None
+        self.buffer = None
+        self.updated = False
+
+    def fit(self, X, y=None, sample_weight=None):
+        self.ifor = IsolationForest(n_estimators=self.n_estimators,
+                                    max_samples=self.max_samples,
+                                    contamination=self.contamination,
+                                    max_features=self.max_features,
+                                    bootstrap=self.bootstrap,
+                                    n_jobs=self.n_jobs,
+                                    random_state=self.random_state,
+                                    verbose=self.verbose)
+        self.ifor.fit(X, y, sample_weight)
+        self.estimators_ = self.ifor.estimators_
+        self.estimators_features_ = self.ifor.estimators_features_
+        self.updated = False
+
+    def _fit(self, X, y, max_samples, max_depth, sample_weight=None):
+        raise NotImplementedError("method _fit() not supported")
+
+    def decision_function(self, X):
+        if self.updated:
+            logger.debug("WARN: The underlying isolation forest was updated and " +
+                         "using calling decision_function() on it will likely return inconsistent results.")
+        return self.ifor.decision_function(X)
 
     def supports_streaming(self):
-        return False
+        return True
 
     def add_samples(self, X, current=True):
-        # Isolation forest does not support this
-        pass
+        if current:
+            raise ValueError("IForest does not support adding to current instance set.")
+        if self.buffer is None:
+            self.buffer = X
+        else:
+            self.buffer = np.vstack([self.buffer, X])
+
+    def update_trees_by_replacement(self, X=None):
+        if X is None:
+            X = self.buffer
+        if X is None:
+            logger.warning("No new data for update")
+            return None
+
+        n_new_trees = int(self.replace_frac * len(self.estimators_))
+        new_ifor = IsolationForest(n_estimators=n_new_trees,
+                                   max_samples=self.max_samples,
+                                   contamination=self.contamination,
+                                   max_features=self.max_features,
+                                   bootstrap=self.bootstrap,
+                                   n_jobs=self.n_jobs,
+                                   random_state=self.random_state,
+                                   verbose=self.verbose)
+        new_ifor.fit(X, y=None, sample_weight=None)
+
+        old_tree_indexes_replaced = np.arange(0, n_new_trees, dtype=int)
+        old_tree_indexes_retained = np.arange(n_new_trees, len(self.estimators_))
+
+        # retain estimators and features
+        self.estimators_ = [self.estimators_[i] for i in old_tree_indexes_retained]
+        self.estimators_features_ = [self.estimators_features_[i] for i in old_tree_indexes_retained]
+        # append the new trees at the end of the list of older trees
+        for estimator, features in zip(new_ifor.estimators_, new_ifor.estimators_features_):
+            self.estimators_.append(estimator)
+            self.estimators_features_.append(features)
+
+        # Now, update the underlying isolation forest
+        # NOTE: This might make the model inconsistent
+        self.ifor.estimators_ = self.estimators_
+        self.ifor.estimators_features_ = self.estimators_features_
+
+        self.updated = True
+        self.buffer = None
+
+        if False:
+            logger.debug("IForest update_trees_by_replacement(): n_new_trees: %d, samples: %s" %
+                         (n_new_trees, str(X.shape)))
+
+        return old_tree_indexes_replaced, old_tree_indexes_retained, new_ifor.estimators_
 
     def update_model_from_stream_buffer(self):
-        # Isolation forest does not support this
-        pass
+        return self.update_trees_by_replacement(self.buffer)

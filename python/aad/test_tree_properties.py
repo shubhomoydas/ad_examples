@@ -41,7 +41,7 @@ def get_debug_args(dataset, detector_type):
             "--detector_type=%d" % detector_type,
             "--forest_score_type=%d" %
             (IFOR_SCORE_TYPE_NEG_PATH_LEN if detector_type == AAD_IFOREST
-             else HST_SCORE_TYPE if detector_type == AAD_HSTREES
+             else HST_LOG_SCORE_TYPE if detector_type == AAD_HSTREES
              else RSF_SCORE_TYPE if detector_type == AAD_RSFOREST else 0),
             "--init=%d" % INIT_UNIF,
             # "--norm_unit",

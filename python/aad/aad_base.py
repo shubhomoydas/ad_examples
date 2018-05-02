@@ -10,7 +10,7 @@ from aad.aad_loss import *
 class Ensemble(object):
     """Stores all ensemble scores"""
 
-    def __init__(self, samples, labels, scores, weights,
+    def __init__(self, samples, labels=None, scores=None, weights=None,
                  agg_scores=None, ordered_anom_idxs=None, original_indexes=None,
                  auc=0.0, model=None):
         self.samples = samples
@@ -376,7 +376,12 @@ class Aad(object):
         qstate = Query.get_initial_query_state(opts.qtype, opts=opts, qrank=bt.topK,
                                                a=1., b=1., budget=bt.budget)
 
-        metrics.all_weights = np.zeros(shape=(opts.budget, m))
+        save_weights = (ensemble.samples is not None and ensemble.samples.shape[1] == 2) and bt.budget < 100
+
+        if save_weights:
+            metrics.all_weights = np.zeros(shape=(opts.budget, m))
+        else:
+            metrics.all_weights = None
 
         if self.w is None:
             self.init_weights(init_type=opts.init, samples=None)
@@ -386,37 +391,27 @@ class Aad(object):
             est_tau_val, _, _ = estimate_qtau(x, self, opts, lo=0.0, hi=1.0)
             logger.debug("Using fixed estimated tau val: %f" % est_tau_val)
 
-        for i in range(bt.budget):
+        i = 0
+        while len(xis) < bt.budget:
 
             starttime_iter = timer()
 
-            # save the weights in each iteration for later analysis
-            metrics.all_weights[i, :] = self.w
             metrics.queried = xis  # xis keeps growing with each feedback iteration
 
             order_anom_idxs, anom_score = self.order_by_score(x, self.w)
-
-            if False and y is not None and metrics is not None:
-                # gather AUC metrics
-                metrics.train_aucs[0, i] = fn_auc(cbind(y, -anom_score))
-
-                # gather Precision metrics
-                prec = fn_precision(cbind(y, -anom_score), opts.precision_k)
-                metrics.train_aprs[0, i] = prec[len(opts.precision_k) + 1]
-                train_n_at_top = get_anomalies_at_top(-anom_score, y, opts.precision_k)
-                for k in range(len(opts.precision_k)):
-                    metrics.train_precs[k][0, i] = prec[k]
-                    metrics.train_n_at_top[k][0, i] = train_n_at_top[k]
 
             xi_ = qstate.get_next_query(maxpos=n, ordered_indexes=order_anom_idxs,
                                         queried_items=xis,
                                         x=x, lbls=y, y=anom_score,
                                         w=self.w, hf=append(ha, hn),
-                                        remaining_budget=opts.budget - i)
-            # logger.debug("xi: %d" % (xi,))
-            xi = xi_[0]
-            xis.append(xi)
-            metrics.test_indexes.append(qstate.test_indexes)
+                                        ensemble=ensemble,
+                                        model=self,  # some custom query models might need this access
+                                        remaining_budget=bt.budget - len(xis))
+
+            if False and len(xi_) > 1:
+                logger.debug("#feedback: %d" % len(xi_))
+
+            xis.extend(xi_)
 
             if opts.single_inst_feedback:
                 # Forget the previous feedback instances and
@@ -424,14 +419,20 @@ class Aad(object):
                 ha = []
                 hn = []
 
-            if y[xi] == 1:
-                ha.append(xi)
-            else:
-                hn.append(xi)
+            for xi in xi_:
+                if y[xi] == 1:
+                    ha.append(xi)
+                else:
+                    hn.append(xi)
+                if save_weights:
+                    # save the weights in each iteration for later analysis
+                    metrics.all_weights[i, :] = self.w
+                i += 1
 
-            qstate.update_query_state(rewarded=(y[xi] == 1))
+            qstate.update_query_state()
 
-            self.update_weights(x, y, ha=ha, hn=hn, opts=opts, tau_score=est_tau_val)
+            if not opts.do_not_update_weights:
+                self.update_weights(x, y, ha=ha, hn=hn, opts=opts, tau_score=est_tau_val)
 
             if np.mod(i, 1) == 0:
                 endtime_iter = timer()

@@ -124,11 +124,20 @@ fi
 
 REPS=1  # number of independent data samples (input files)
 
-# Specific to QUERY_TOP_RANDOM, QUERY_GP, QUERY_SCORE_VAR
-N_EXPLORE=2  # number of unlabeled top ranked instances to explore (if explore/exploit)
-QUERY_SIG="q${QUERY_TYPE}"
+# Specific to QUERY_DETERMINISTIC, QUERY_TOP_RANDOM, QUERY_GP, QUERY_SCORE_VAR
+N_EXPLORE=10  # number of unlabeled top ranked instances to explore
+
+N_BATCH=1
+N_BATCH_SIG=""
+if [[ "${N_BATCH}" != "1" ]]; then
+    N_BATCH_SIG="b${N_BATCH}"
+fi
+
+QUERY_SIG="q${QUERY_TYPE}${N_BATCH_SIG}"
 if [[ "${QUERY_TYPE}" == "2" ]]; then
     QUERY_SIG="q${QUERY_TYPE}n${N_EXPLORE}"
+elif [[ "${QUERY_TYPE}" == "8" ]]; then
+    QUERY_SIG="q${QUERY_TYPE}n${N_EXPLORE}b${N_BATCH}"
 fi
 
 # IMPORTANT: If the detector type is LODA, the data will not be normalized
@@ -149,18 +158,75 @@ else
     TAU_SIG=""
 fi
 
+# =====================================================
+# DO_NOT_UPDATE_WEIGHTS_IND
+#   0 - Weights will be updated after each feedback
+#   1 - Do not update weights. This mode is used to evaluate
+#       performance of algorithms in default mode.
+DO_NOT_UPDATE_WEIGHTS_IND=0
+if [[ "$DO_NOT_UPDATE_WEIGHTS_IND" == "1" ]]; then
+    DO_NOT_UPDATE_WEIGHTS_SIG="_no_upd"
+    DO_NOT_UPDATE_WEIGHTS="--do_not_update_weights"
+else
+    DO_NOT_UPDATE_WEIGHTS_SIG=""
+    DO_NOT_UPDATE_WEIGHTS=""
+fi
+
+# =====================================================
+# TREE_UPDATE_TYPE_VAL - applies only to HS Trees and RD Forest
+#   0 - Replace the old sample node counts with new
+#   1 - Replace old sample counts with the average of the old
+#       sample counts and new sample counts.
+TREE_UPDATE_TYPE_VAL=0
+TREE_UPDATE_TYPE_SIG=""
+TREE_UPDATE_TYPE="--tree_update_type=${TREE_UPDATE_TYPE_VAL}"
+if [[ "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" ]]; then
+    if [[ "$TREE_UPDATE_TYPE_VAL" == "1" ]]; then
+        TREE_UPDATE_TYPE_SIG="_incr"
+    fi
+fi
+
+# =====================================================
+# RESTRICT_LABELED_SET - Applies only to stream setting
+#   0 - Use all labeled instances for minimizing AAD loss
+#       and enforcing constraints. The problem with this
+#       setting is that the proportion of labeled instances
+#       will grow relative to the fixed-sized stream window
+#       and eventually, optimization will become extremely
+#       biased towards historical [labeled] data.
+#   1 - Use a random subset of labeled instances while
+#       minimizing AAD loss and enforcing constraints.
+#       The size of the random subset is determined by:
+#       <labeled_to_window_ratio> -- Ratio of labeled instances
+#           to stream window size, and
+#       <max_labeled_for_stream> -- The upper bound on the
+#           subset size irrespective of labeled_to_window_ratio
+# See also: MAX_LABELED_FOR_STREAM, LABELED_TO_WINDOW_RATIO
+RESTRICT_LABELED_SET=0
+
+LABELED_TO_WINDOW_RATIO=""
+MAX_LABELED_FOR_STREAM=""
+if [[ "$RESTRICT_LABELED_SET" == "1" ]]; then
+    LABELED_TO_WINDOW_RATIO="--labeled_to_window_ratio=0.2"
+    MAX_LABELED_FOR_STREAM="--max_labeled_for_stream=100"
+fi
+
 CA=1  #100
 CX=1
 #CX=0.001
 MAX_BUDGET=10000
 TOPK=0
 
+# The below two limits will be changed later.
+# See further below for detector-specific settings.
 MAX_ANOMALIES_CONSTRAINT=1000  # 50
 MAX_NOMINALS_CONSTRAINT=1000  # 50
 
-# LODA specific
-MIN_K=100
-MAX_K=200
+# LODA specific min/max number of projections
+# Since we will be labeling many instances, we will need to increase
+# the capacity of the model. Therefore, we make MIN_K high for LODA.
+MIN_K=300
+MAX_K=500
 
 N_SAMPLES=256
 
@@ -172,15 +238,16 @@ N_JOBS=4  # Number of parallel threads
 # 1 - IFOR_SCORE_TYPE_INV_PATH_LEN_EXP
 # 3 - IFOR_SCORE_TYPE_CONST
 # 4 - IFOR_SCORE_TYPE_NEG_PATH_LEN
-# 5 - HST_SCORE_TYPE
-# 6 - RSF_SCORE_TYPE
+# 5 - HST_LOG_SCORE_TYPE
+# 6 - HST_SCORE_TYPE
 # 7 - RSF_LOG_SCORE_TYPE
-# 8 - ORIG_TREE_SCORE_TYPE
+# 8 - RSF_SCORE_TYPE
+# 9 - ORIG_TREE_SCORE_TYPE
 # ------------------------------
 INFERENCE_NAME="undefined"
 FOREST_SCORE_TYPE=3
 N_TREES=100
-MAX_DEPTH=7  #15  # 10
+MAX_DEPTH=100  # 9  #15  # 10
 FOREST_LEAF_ONLY=1
 if [[ "$DETECTOR_TYPE" == "7" ]]; then
     INFERENCE_NAME="if_aad"
@@ -188,20 +255,57 @@ if [[ "$DETECTOR_TYPE" == "7" ]]; then
 elif [[ "$DETECTOR_TYPE" == "11" ]]; then
     INFERENCE_NAME="hstrees"
     NORM_UNIT_IND=0  # DO NOT normalize for HSTrees
-    FOREST_SCORE_TYPE=5
-    N_TREES=100
+    FOREST_SCORE_TYPE=5  # 5-HSTrees Log Score # 6-HSTrees Score # 9-Original
+    N_TREES=50  # 25  # 50  # 30  # 100
+    MAX_DEPTH=8  # 15  # 9
     FOREST_LEAF_ONLY=1  # Allow only leaf nodes for HS Trees at this time...
     CA=1
+    
+    # HS Trees are usually deep. Therefore the computation is more expensive.
+    # We set the max labeled nominal/anomalies to a reasonable number.
+    MAX_ANOMALIES_CONSTRAINT=50
+    MAX_NOMINALS_CONSTRAINT=50
+    
+    if [[ "$FOREST_SCORE_TYPE" == "9" ]]; then
+        # These are settings in original published literature
+        N_TREES=25
+        MAX_DEPTH=15
+    fi
 elif [[ "$DETECTOR_TYPE" == "12" ]]; then
     INFERENCE_NAME="rsforest"
     NORM_UNIT_IND=0  # DO NOT normalize for RSForest
-    FOREST_SCORE_TYPE=7
-    N_TREES=100
+    FOREST_SCORE_TYPE=7  # 7-RSForest Log Score # 8-RSForest Score # 9-Original
+    N_TREES=50
+    MAX_DEPTH=8
     FOREST_LEAF_ONLY=1  # Allow only leaf nodes for RS Forest at this time...
     CA=1
+    
+    # RS Forest are usually deep. Therefore the computation is more expensive.
+    # We set the max labeled nominal/anomalies to a reasonable number.
+    MAX_ANOMALIES_CONSTRAINT=50
+    MAX_NOMINALS_CONSTRAINT=50
+    
+    if [[ "$FOREST_SCORE_TYPE" == "9" ]]; then
+        # These are settings in original published literature
+        N_TREES=30
+        MAX_DEPTH=15
+    fi
+    
 elif [[ "$DETECTOR_TYPE" == "13" ]]; then
-    INFERENCE_NAME="loda"
+    INFERENCE_NAME="loda_k${MIN_K}t${MAX_K}"
     NORM_UNIT_IND=0  # DO NOT normalize for LODA
+    PRIOR_INFLUENCE=0  # fixed prior for compatibility with earlier results
+    
+    # For compatibility with earlier published results
+    CA=100
+    CX=0.001
+    
+    # Keep the below limits at reasonable values so that
+    # execution can be speeded up with minimal difference
+    # in accuracy from published results. Note: Published
+    # results took max 100 feedback.
+    MAX_ANOMALIES_CONSTRAINT=100
+    MAX_NOMINALS_CONSTRAINT=100
 fi
 
 if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" ]]; then
@@ -213,9 +317,10 @@ if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" ==
             FOREST_SCORE_TYPE=4
         elif [[ "$DETECTOR_TYPE" == "12" ]]; then
             # NOTE: scoretype 7 is geometric mean. scoretype 6 is arithmetic mean.
-            # Since this is not properly debugged yet, we will use the original
-            # RS Forest score calculation (arithmetic mean).
-            FOREST_SCORE_TYPE=6  #7
+            # When used with AAD where gradients are required for optimization with 
+            # SGD, then using geometric means might help because we can work with
+            # logarithmic leaf scores.
+            FOREST_SCORE_TYPE=7  #7 #8
         fi
     else
         FOREST_LEAF_ONLY=""
@@ -358,11 +463,11 @@ RUN_TYPE=multi
 
 NAME_PREFIX="undefined"
 if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" ]]; then
-    NAME_PREFIX="${INFERENCE_NAME}_trees${N_TREES}_samples${N_SAMPLES}_i${DETECTOR_TYPE}_${QUERY_SIG}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_nscore${FOREST_SCORE_TYPE}${FOREST_LEAF_ONLY_SIG}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}_d${MAX_DEPTH}${STREAMING_SIG}${STREAMING_FLAGS}${NORM_UNIT_SIG}${FIXED_TAU_SCORE_SIG}"
+    NAME_PREFIX="${INFERENCE_NAME}${TREE_UPDATE_TYPE_SIG}_trees${N_TREES}_samples${N_SAMPLES}_i${DETECTOR_TYPE}_${QUERY_SIG}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_nscore${FOREST_SCORE_TYPE}${FOREST_LEAF_ONLY_SIG}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}_d${MAX_DEPTH}${STREAMING_SIG}${STREAMING_FLAGS}${DO_NOT_UPDATE_WEIGHTS_SIG}${NORM_UNIT_SIG}${FIXED_TAU_SCORE_SIG}"
 elif [[ "$DETECTOR_TYPE" == "9" ]]; then
     NAME_PREFIX="${INFERENCE_NAME}_trees${N_TREES}_samples${N_SAMPLES}"
 elif [[ "$DETECTOR_TYPE" == "13" ]]; then
-    NAME_PREFIX="${INFERENCE_NAME}_i${DETECTOR_TYPE}_${QUERY_SIG}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}${STREAMING_SIG}${STREAMING_FLAGS}${NORM_UNIT_SIG}"
+    NAME_PREFIX="${INFERENCE_NAME}_i${DETECTOR_TYPE}_${QUERY_SIG}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}${STREAMING_SIG}${STREAMING_FLAGS}${DO_NOT_UPDATE_WEIGHTS_SIG}${NORM_UNIT_SIG}"
 fi
 
 SCRIPT_PATH=./aad/${PYSCRIPT}
@@ -423,9 +528,11 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     --mink=${MIN_K} --maxk=${MAX_K} --prior_influence=${PRIOR_INFLUENCE} \
     --max_anomalies_in_constraint_set=$MAX_ANOMALIES_CONSTRAINT \
     --max_nominals_in_constraint_set=$MAX_NOMINALS_CONSTRAINT \
-    --n_explore=${N_EXPLORE} \
+    --n_explore=${N_EXPLORE} --num_query_batch=${N_BATCH} \
     --log_file=$LOG_FILE --cachedir=$MODEL_PATH \
     --modelfile=${MODEL_FILE} ${LOAD_MODEL} ${SAVE_MODEL} \
+    ${DO_NOT_UPDATE_WEIGHTS} ${TREE_UPDATE_TYPE} \
+    ${MAX_LABELED_FOR_STREAM} ${LABELED_TO_WINDOW_RATIO} \
     ${QUERY_CONFIDENT} --max_windows=${MAX_WINDOWS} \
     --min_feedback_per_window=${MIN_FEEDBACK_PER_WINDOW} \
     --max_feedback_per_window=${MAX_FEEDBACK_PER_WINDOW} \

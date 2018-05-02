@@ -64,7 +64,6 @@ def histogram_r(x, g1=1., g2=1., g3=-1., verbose=False):
     Note: the number of breaks is being computed as in:
     L. Birge, Y. Rozenholc, How many bins should be put in a regular histogram? 2006
     """
-
     # compute the number of bins based on the formula used by R package
     n = len(x)
     nbinsmax = int(g1 * (n ** g2) * (np.log(n) ** g3))
@@ -73,9 +72,10 @@ def histogram_r(x, g1=1., g2=1., g3=-1., verbose=False):
     # density, breaks = np.histogram(x, bins=nbinsmax, density=True)
 
     # the below implements Birge technique that recomputes the bin sizes...
-    y = np.sort(x)
+    # y = np.sort(x)
     likelihood = np.zeros(nbinsmax, dtype=float)
     pen = np.arange(1, nbinsmax + 1, dtype=float) + ((np.log(np.arange(1, nbinsmax + 1, dtype=float))) ** 2.5)
+
     for d in range(1, nbinsmax + 1):
         #counts, breaks = np.histogram(x, bins=(y[0] + (np.arange(0, d+1, dtype=float)/d) * (y[n-1]-y[0])),
         #                              density=False)
@@ -86,7 +86,8 @@ def histogram_r(x, g1=1., g2=1., g3=-1., verbose=False):
         tmp = np.where(counts > 0)[0]
         if len(tmp) > 0:
             like2[tmp] = np.log(density[tmp])
-        like[np.isfinite(like2)] = like2[np.isfinite(like2)]
+        finite_map = np.isfinite(like2)
+        like[finite_map] = like2[finite_map]
         likelihood[d-1] = np.sum(counts * like)
         if np.min(counts) < 0:
             likelihood[d-1] = -np.Inf
@@ -100,7 +101,77 @@ def histogram_r(x, g1=1., g2=1., g3=-1., verbose=False):
 
     hist = HistogramR(counts=np.array(counts, float), density=np.array(density, float),
                       breaks=np.array(breaks, dtype=float))
+    return hist
 
+
+def histogram_r_mod(x, g1=1., g2=1., g3=-1., max_tries=500, verbose=False):
+    """Construct histograms that mimic behavior of R histogram package
+
+    The type of histogram is 'regular', and right-open
+    Note: the number of breaks is being computed as in:
+    L. Birge, Y. Rozenholc, How many bins should be put in a regular histogram? 2006
+    """
+    tm = Timer()
+    # compute the number of bins based on the formula used by R package
+    n = len(x)
+    nbinsmax = int(g1 * (n ** g2) * (np.log(n) ** g3))
+    if verbose:
+        logger.debug("max bins: %d" % (nbinsmax,))
+    # density, breaks = np.histogram(x, bins=nbinsmax, density=True)
+
+    # the below implements Birge technique that recomputes the bin sizes...
+    # y = np.sort(x)
+    # likelihood = np.zeros(nbinsmax, dtype=float)
+    # pen = np.arange(1, nbinsmax + 1, dtype=float) + ((np.log(np.arange(1, nbinsmax + 1, dtype=float))) ** 2.5)
+
+    # instead of trying each bin size 1...nbinsmax, we will only try a few
+    # as determined by the parameter max_tries.
+    step_size = 1
+    if nbinsmax > max_tries:
+        # we will try maximum <max_tries> different values and take the best.
+        step_size = int(nbinsmax * 1. / max_tries)
+    if verbose:
+        logger.debug("nbinsmax: %d, max_tries: %d, step_size: %d" % (nbinsmax, max_tries, step_size))
+    d_list = list()
+    likelihood = list()
+    pen = list()
+    for d in range(1, nbinsmax + 1, step_size):
+        #counts, breaks = np.histogram(x, bins=(y[0] + (np.arange(0, d+1, dtype=float)/d) * (y[n-1]-y[0])),
+        #                              density=False)
+        counts, breaks = np.histogram(x, bins=d, density=False)
+        density = counts / (n * (breaks[1] - breaks[0]))
+        like = np.zeros(d, dtype=float)
+        like2 = np.zeros(d, dtype=float)
+        tmp = np.where(counts > 0)[0]
+        if len(tmp) > 0:
+            like2[tmp] = np.log(density[tmp])
+        finite_map = np.isfinite(like2)
+        like[finite_map] = like2[finite_map]
+        # The below commented code is original. It is expensive.
+        # likelihood[d-1] = np.sum(counts * like)
+        # if np.min(counts) < 0:
+        #     likelihood[d-1] = -np.Inf
+        if np.min(counts) < 0:
+            likelihood.append(-np.Inf)
+        else:
+            likelihood.append(np.sum(counts * like))
+        pen.append(d + np.log(d)**2.5)
+        d_list.append(d)
+    likelihood = np.array(likelihood, dtype=np.float64)
+    pen = np.array(pen, dtype=np.float64)
+    penlike = likelihood - pen
+    d_list = np.array(d_list, dtype=int)
+    optd = d_list[np.argmax(penlike)]
+    if verbose:
+        logger.debug("optimal num bins: %d" % (int(optd)+1,))
+
+    counts, breaks = np.histogram(x, bins=optd+1, density=False)
+    density = counts / (n * (breaks[1] - breaks[0]))
+
+    hist = HistogramR(counts=np.array(counts, float), density=np.array(density, float),
+                      breaks=np.array(breaks, dtype=float))
+    if verbose:
+        logger.debug(tm.message("histogram_r():"))
     return hist
 
 
@@ -178,12 +249,12 @@ def get_random_proj(nproj, d, sp, keep=None, exclude=None):
 
 
 # Build histogram for each projection
-def build_proj_hist(a, w):
+def build_proj_hist(a, w, verbose=False):
     d = ncol(w)  # number of columns
     x = a.dot(w)
     hists = []
     for j in range(d):
-        hists_j = histogram_r(x[:, j])
+        hists_j = histogram_r_mod(x[:, j], verbose=verbose)
         hists.append(hists_j)
     return hists
 
@@ -222,7 +293,7 @@ def get_neg_ll_all_hist(a, w, hists, inf_replace=np.nan):
 
 # Determine k - no. of dimensions
 # sp=1 - 1 / np.sqrt(ncol(a)),
-def get_best_proj(a, mink=1, maxk=10, sp=0.0, keep=None, exclude=None):
+def get_best_proj(a, mink=1, maxk=10, sp=0.0, keep=None, exclude=None, verbose=False):
     """ Computes random projections and histogram pdfs along each projection
 
     Args:
@@ -237,6 +308,8 @@ def get_best_proj(a, mink=1, maxk=10, sp=0.0, keep=None, exclude=None):
             columns of original feature space which must be included
         exclude:
             columns of original feature space which must be excluded
+        verbose:
+            whether to output detail execution logs when building projections
 
     """
     t = 0.01
@@ -250,16 +323,16 @@ def get_best_proj(a, mink=1, maxk=10, sp=0.0, keep=None, exclude=None):
 
     w_ = get_random_proj(nproj=1, d=d, sp=sp, keep=keep, exclude=exclude)
     w[:, 0] = w_[:, 0]
-    hists.append(build_proj_hist(a, w_)[0])
+    hists.append(build_proj_hist(a, w_, verbose=verbose)[0])
     fx_k[:, 0] = get_neg_ll(a, w_, hists[0])[:, 0]
 
     sigs = np.ones(maxk) * np.Inf
     k = 0
     # logger.debug("mink: %d, maxk: %d" % (mink, maxk))
-    while k <= mink or k < maxk:
+    while k < maxk:
         w_ = get_random_proj(nproj=1, d=d, sp=sp, keep=keep, exclude=exclude)
         w[:, k+1] = w_[:, 0]
-        hists.append(build_proj_hist(a, w_)[0])
+        hists.append(build_proj_hist(a, w_, verbose=verbose)[0])
 
         ll = get_neg_ll(a, w[:, k+1], hists[k+1])
 
@@ -283,9 +356,12 @@ def get_best_proj(a, mink=1, maxk=10, sp=0.0, keep=None, exclude=None):
         k += 1
 
     bestk = np.where(sigs == np.min(sigs))[0][0]  # np.where returns tuple of arrays
-    # print "bestk: %d" % (bestk,)
-    return LodaModel(bestk, ProjectionVectorsHistograms(matrix(w[:, 0:bestk], nrow=nrow(w)),
-                                                        hists[0:bestk]),
+    if bestk < mink:
+        # we retain at least the minimum
+        bestk = mink
+    # logger.debug("get_best_proj: bestk: %d, sigs:\n%s" % (bestk, str(list(sigs))))
+    return LodaModel(bestk, ProjectionVectorsHistograms(matrix(w[:, 0:(bestk+1)], nrow=nrow(w)),
+                                                        hists[0:(bestk+1)]),
                      sigs)
 
 
@@ -306,7 +382,7 @@ def get_original_proj(a, maxk=10, sp=0, keep=None, exclude=None):
     return LodaModel(k=k, pvh=ProjectionVectorsHistograms(w=w, hists=hists), sigs=None)
 
 
-def loda(a, sparsity=np.nan, mink=1, maxk=0, keep=None, exclude=None, original_dims=False):
+def loda(a, sparsity=np.nan, mink=1, maxk=0, keep=None, exclude=None, original_dims=False, verbose=False):
     l = nrow(a)
     d = ncol(a)
 
@@ -318,12 +394,14 @@ def loda(a, sparsity=np.nan, mink=1, maxk=0, keep=None, exclude=None, original_d
     else:
         sp = sparsity
 
-    logger.debug("loda: sparsity: %f" % (sp,))
+    tm = Timer()
 
     if original_dims:
         pvh = get_original_proj(a, maxk=maxk, sp=sp, keep=keep, exclude=exclude)
     else:
-        pvh = get_best_proj(a, mink=mink, maxk=maxk, sp=sp, keep=keep, exclude=exclude)
+        pvh = get_best_proj(a, mink=mink, maxk=maxk, sp=sp, keep=keep, exclude=exclude, verbose=verbose)
+
+    logger.debug(tm.message("loda: sparsity: %f:" % (sp,)))
 
     nll = get_neg_ll_all_hist(a, pvh.pvh.w, pvh.pvh.hists, inf_replace=np.nan)
 
@@ -334,13 +412,14 @@ def loda(a, sparsity=np.nan, mink=1, maxk=0, keep=None, exclude=None, original_d
 
 
 class Loda(object):
-    def __init__(self, sparsity=np.nan, mink=1, maxk=0, random_state=None):
+    def __init__(self, sparsity=np.nan, mink=1, maxk=0, random_state=None, verbose=False):
         self.sparsity = sparsity
         self.mink = mink
         self.maxk = maxk
         self.random_state = random_state
         self.loda_model = None
         self.m = None  # number of projections
+        self.verbose = verbose
 
     def get_projections(self):
         if self.loda_model is None:
@@ -348,7 +427,7 @@ class Loda(object):
         return self.loda_model.pvh.pvh.w
 
     def fit(self, x):
-        self.loda_model = loda(x, self.sparsity, mink=self.mink, maxk=self.maxk)
+        self.loda_model = loda(x, self.sparsity, mink=self.mink, maxk=self.maxk, verbose=self.verbose)
         self.m = self.loda_model.pvh.pvh.w.shape[1]
 
     def decision_function(self, x):

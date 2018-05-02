@@ -10,6 +10,45 @@ from common.data_plotter import *
 from aad.aad_globals import *
 from aad.aad_support import *
 from aad.forest_description import *
+from aad.query_model_other import *
+
+
+def plot_queries(x, labels, queried, pdfpath):
+    dp = DataPlotter(pdfpath=pdfpath, rows=1, cols=1)
+    pl = dp.get_next_plot()
+    dp.plot_points(x, pl, labels=labels, lbl_color_map={0: "grey", 1: "red"}, s=25)
+    anom_idxs = np.where(labels == 1)[0]
+    dp.plot_points(x[anom_idxs, :], pl, labels=labels[anom_idxs], lbl_color_map={0: "grey", 1: "red"}, s=25)
+    dp.plot_points(x[queried, :],
+                   pl, labels=labels[queried], defaultcol="red",
+                   lbl_color_map={0: "green", 1: "red"}, edgecolor="black",
+                   marker=matplotlib.markers.MarkerStyle('o', fillstyle=None), s=35)
+    dp.close()
+
+
+def plot_tsne_queries(x, labels, ensemble, metrics, opts):
+    tsne_path = os.path.join(opts.filedir, "%s_1_tsne.csv" % opts.dataset)
+    if x.shape[1] != 2 and not os.path.exists(tsne_path):
+        logger.debug("Looking for %s" % tsne_path)
+        logger.debug("no t-SNE file found...")
+        return
+    if x.shape[1] == 2:
+        tsne_data = x
+    else:
+        tsne_data = read_csv(tsne_path, header=True, sep=' ')
+        tsne_data = np.asarray(tsne_data, dtype=np.float32)
+        # logger.debug("tsne_data:\n%s" % str(tsne_data[0:10, :]))
+    # logger.debug("tsne_data: %s" % str(tsne_data.shape))
+
+    pdfpath_aad = os.path.join(opts.resultsdir, "queried_aad_q%d-p%d.pdf" %
+                               (opts.qtype, opts.describe_volume_p))
+    pdfpath_baseline = os.path.join(opts.resultsdir, "queried_baseline.pdf")
+
+    plot_queries(tsne_data, labels, metrics.queried, pdfpath_aad)
+
+    nqueried = len(metrics.queried)
+    queried_baseline = ensemble.ordered_anom_idxs[0:nqueried]
+    plot_queries(tsne_data, labels, queried_baseline, pdfpath_baseline)
 
 
 def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
@@ -32,10 +71,11 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     output_transformed_to_file = False
     plot_dataset = data_2D and True
     plot_rectangular_regions = plot_dataset and is_forest_detector(model.detector_type) and False
-    plot_forest_contours = data_2D and is_forest_detector(model.detector_type) and True
+    plot_forest_contours = data_2D and is_forest_detector(model.detector_type) and False
     plot_baseline = data_2D and False
     plot_aad = metrics is not None and data_2D and True
     plot_anomalous_regions = plot_dataset and is_forest_detector(model.detector_type) and True
+    illustrate_query_diversity = plot_dataset and True
 
     pdfpath_baseline = "%s/tree_baseline.pdf" % outputdir
     pdfpath_orig_if_contours = "%s/score_contours.pdf" % outputdir
@@ -48,15 +88,15 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     logger.debug(tm.message("transformed input to ensemble features"))
 
     if plot_dataset:
-        tm.start()
         plot_dataset_2D(X_train, labels, model, plot_rectangular_regions, regcols, outputdir)
-        logger.debug(tm.message("plotted dataset"))
 
     if plot_anomalous_regions:
-        tm.start()
         plot_anomalous_2D(X_train, labels, model, metrics, outputdir,
                           n_top=opts.describe_n_top, p=opts.describe_volume_p)
-        logger.debug(tm.message("plotted anomalous regions"))
+
+    if illustrate_query_diversity:
+        plot_query_diversity(X_train, labels, X_train_new, model, metrics, outputdir,
+                             n_top=opts.describe_n_top, p=opts.describe_volume_p)
 
     if output_forest_original:
         n_found = evaluate_forest_original(X_train, labels, opts.budget, model, x_new=X_train_new)
@@ -65,10 +105,8 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
 
     if plot_forest_contours:
         print "plotting contours to file %s" % pdfpath_orig_if_contours
-        tm.start()
         plot_forest_contours_2D(X_train, labels, xx, yy, opts.budget, model,
                                 pdfpath_orig_if_contours, dash_xy, dash_wh)
-        logger.debug(tm.message("plotted contours"))
 
     if output_transformed_to_file:
         write_sparsemat_to_file(os.path.join(outputdir, "forest_features.csv"),
@@ -83,10 +121,8 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
 
     if plot_aad and metrics is not None:
         print "plotting feedback iterations in folder %s" % outputdir
-        tm.start()
         plot_aad_2D(X_train, labels, X_train_new, xx, yy, model,
                     metrics, outputdir, dash_xy, dash_wh, opts)
-        logger.debug(tm.message("plotted feedback iterations"))
 
 
 def check_random_vector_angle(model, vec, samples=None):
@@ -139,6 +175,8 @@ def debug_qvals(samples, model, metrics, outputdir, opts):
 def plot_aad_2D(x, y, x_transformed, xx, yy, model, metrics,
                 outputdir, dash_xy, dash_wh, opts):
     # use this to plot the AAD feedback
+    tm = Timer()
+    tm.start()
 
     x_test = np.c_[xx.ravel(), yy.ravel()]
     x_if = model.transform_to_ensemble_features(x_test, dense=False, norm_unit=opts.norm_unit)
@@ -152,7 +190,6 @@ def plot_aad_2D(x, y, x_transformed, xx, yy, model, metrics,
         w = metrics.all_weights[i, :]
         Z = model.get_score(x_if, w)
         Z = Z.reshape(xx.shape)
-
         pl.contourf(xx, yy, Z, 20, cmap=plt.cm.get_cmap('jet'))
 
         dp.plot_points(x, pl, labels=y, lbl_color_map={0: "grey", 1: "red"}, s=25)
@@ -171,6 +208,8 @@ def plot_aad_2D(x, y, x_transformed, xx, yy, model, metrics,
         plot_sidebar(dash, dash_xy, dash_wh, pl)
 
         dp.close()
+
+    logger.debug(tm.message("plotted feedback iterations"))
 
 
 def evaluate_forest_original(x, y, budget, forest, x_new=None):
@@ -234,6 +273,8 @@ def plot_model_baseline_contours_2D(x, y, x_transformed, xx, yy, budget, model,
 
 def plot_forest_contours_2D(x, y, xx, yy, budget, forest, pdfpath_contours, dash_xy, dash_wh):
     # Original detector contours
+    tm = Timer()
+    tm.start()
     baseline_scores = 0.5 - forest.decision_function(x)
     queried = np.argsort(-baseline_scores)
     # logger.debug("baseline scores:%s\n%s" % (str(baseline_scores.shape), str(list(baseline_scores))))
@@ -262,10 +303,13 @@ def plot_forest_contours_2D(x, y, xx, yy, budget, forest, pdfpath_contours, dash
 
     dp.close()
 
+    logger.debug(tm.message("plotted contours"))
+
 
 def plot_dataset_2D(x, y, model, plot_regions, regcols, pdf_folder):
     # use this to plot the dataset
-
+    tm = Timer()
+    tm.start()
     if is_forest_detector(model.detector_type):
         treesig = "_%d_trees" % model.n_estimators if plot_regions else ""
     else:
@@ -287,8 +331,12 @@ def plot_dataset_2D(x, y, model, plot_regions, regcols, pdf_folder):
                 plot_rect_region(pl, region, regcols[i % len(regcols)], axis_lims)
     dp.close()
 
+    logger.debug(tm.message("plotted dataset"))
 
-def plot_selected_regions(x, y, model, region_indexes, title=None, path=None):
+
+def plot_selected_regions(x, y, model, region_indexes,
+                          candidate_instances=None, query_instances=None,
+                          title=None, path=None):
     dp = DataPlotter(pdfpath=path, rows=1, cols=1)
 
     pl = dp.get_next_plot()
@@ -296,6 +344,12 @@ def plot_selected_regions(x, y, model, region_indexes, title=None, path=None):
     # dp.plot_points(x, pl, labels=y, lbl_color_map={0: "grey", 1: "red"})
     dp.plot_points(x[y == 0, :], pl, labels=y[y == 0], defaultcol="grey")
     dp.plot_points(x[y == 1, :], pl, labels=y[y == 1], defaultcol="red", s=26, linewidths=1.5)
+
+    if candidate_instances is not None:
+        dp.plot_points(x[candidate_instances, :], pl, labels=None, defaultcol="blue", s=50, linewidths=2.0, marker='x')
+
+    if query_instances is not None:
+        dp.plot_points(x[query_instances, :], pl, labels=None, edgecolor="green", s=50, linewidths=2.0, marker='o')
 
     # plot the isolation model tree regions
     axis_lims = (plt.xlim(), plt.ylim())
@@ -307,23 +361,34 @@ def plot_selected_regions(x, y, model, region_indexes, title=None, path=None):
     dp.close()
 
 
-def plot_anomalous_2D(x, y, model, metrics, pdf_folder, n_top=10, p=1):
+def plot_anomalous_2D(x, y, model, metrics, pdf_folder, n_top=-1, p=1):
     # use this to plot the dataset
-
+    tm = Timer()
+    tm.start()
     if is_forest_detector(model.detector_type):
         treesig = "_%d_trees" % model.n_estimators
     else:
         treesig = ""
 
+    # logger.debug("queried:\n%s" % metrics.queried)
+    instance_indexes = get_instances_for_description(x, labels=y, metrics=metrics)
+    # logger.debug("instance_indexes:\n%s" % instance_indexes)
+
+    if instance_indexes is None or len(instance_indexes) == 0:
+        logger.debug("No true anomalies found to describe...")
+        return
+
     feature_ranges = get_sample_feature_ranges(x)  # will be used to compute volumes
     # logger.debug("feature_ranges:\n%s" % feature_ranges)
 
-    wd = np.multiply(model.w, model.d)
-    ordered_wd_idxs = np.argsort(-wd)[0:n_top]  # sort in reverse order
-    # logger.debug("ordered_wd:\n%s" % str(wd[ordered_wd_idxs]))
-
-    volumes = get_region_volumes(model, ordered_wd_idxs, feature_ranges)
-    ordered_compact_idxs1 = get_compact_regions(x, y, model, metrics, ordered_wd_idxs, volumes, p=p)
+    reg_idxs = get_regions_for_description(x, instance_indexes=instance_indexes,
+                                           model=model, n_top=n_top)
+    volumes = get_region_volumes(model, reg_idxs, feature_ranges)
+    ordered_compact_idxs = get_compact_regions(x, model=model,
+                                               instance_indexes=instance_indexes,
+                                               region_indexes=reg_idxs,
+                                               volumes=volumes, p=p)
+    # logger.debug("#ordered_compact_idxs:%d" % len(ordered_compact_idxs))
 
     ordered_d_idxs = np.argsort(-model.d)[0:n_top]  # sort in reverse order
     # logger.debug("ordered_d:\n%s" % str(model.d[ordered_d_idxs]))
@@ -331,13 +396,85 @@ def plot_anomalous_2D(x, y, model, metrics, pdf_folder, n_top=10, p=1):
     plot_selected_regions(x, y, model, ordered_d_idxs,
                           # title="Baseline Top %d Regions" % n_top,
                           path="%s/top_%d_anomalous_regions%s_baseline.pdf" % (pdf_folder, n_top, treesig))
-    plot_selected_regions(x, y, model, ordered_wd_idxs,
+    plot_selected_regions(x, y, model, reg_idxs,
                           # title="AAD Top %d Regions" % n_top,
                           path="%s/top_%d_anomalous_regions%s_aad.pdf" % (pdf_folder, n_top, treesig))
 
-    plot_selected_regions(x, y, model, ordered_compact_idxs1,
+    plot_selected_regions(x, y, model, ordered_compact_idxs,
                           # title="AAD Top %d Regions Compact" % n_top,
                           path="%s/top_%d_anomalous_regions%s_compact.pdf" % (pdf_folder, n_top, treesig))
+
+    logger.debug(tm.message("plotted anomalous regions"))
+
+
+def plot_query_diversity(x, y, x_transformed, model, metrics, pdf_folder, n_top=-1, p=1):
+    tm = Timer()
+    tm.start()
+    if is_forest_detector(model.detector_type):
+        treesig = "_%d_trees" % model.n_estimators
+    else:
+        raise RuntimeError("Operation supported for only tree-based detectors...")
+
+    # logger.debug("queried:\n%s" % metrics.queried)
+    # baseline_scores = model.get_score(x_transformed, model.get_uniform_weights())
+    n_selected_queries = 5
+    n_candidate_instances = 15
+    baseline_scores = model.get_score(x_transformed, model.w)
+    ordered_instance_indexes = np.argsort(-baseline_scores)
+    top_anomalous_instances = ordered_instance_indexes[0:n_candidate_instances]
+    # logger.debug("top_anomalous_instances:\n%s" % top_anomalous_instances)
+
+    if top_anomalous_instances is None or len(top_anomalous_instances) == 0:
+        logger.debug("No true anomalies found to describe...")
+        return
+
+    feature_ranges = get_sample_feature_ranges(x)  # will be used to compute volumes
+    # logger.debug("feature_ranges:\n%s" % feature_ranges)
+
+    # first, select some top-ranked subspaces as candidate regions
+    candidate_region_indexes = get_regions_for_description(x,
+                                                           instance_indexes=top_anomalous_instances,
+                                                           model=model, n_top=n_top)
+    # get volumes of the candidate regions
+    volumes = get_region_volumes(model, candidate_region_indexes, feature_ranges)
+    compact_region_idxs = get_compact_regions(x, model=model,
+                                              instance_indexes=top_anomalous_instances,
+                                              region_indexes=candidate_region_indexes,
+                                              volumes=volumes, p=p)
+    # logger.debug("#compact_region_idxs:%d\n%s" % (len(compact_region_idxs), str(list(compact_region_idxs))))
+
+    # get the region memberships of the top anomalous instances
+    instance_ids, region_memberships = get_region_memberships(x,
+                                                              instance_indexes=top_anomalous_instances,
+                                                              region_indexes=compact_region_idxs,
+                                                              model=model)
+    # logger.debug("instance_ids:%s" % str(list(instance_ids)))
+    # logger.debug("region_memberships:\n%s" % str(region_memberships))
+    query_model = QueryTopDiverseSubspace()
+    # now get a diverse subset of the top anomalous instances
+    filtered_items = query_model.filter_by_diversity(instance_ids, region_memberships,
+                                                     queried=None,
+                                                     n_select=n_selected_queries)
+    # logger.debug("filtered_items: %s" % (str(list(filtered_items))))
+
+    plot_selected_regions(x, y, model, candidate_region_indexes,
+                          candidate_instances=top_anomalous_instances,
+                          # title="AAD Top %d Regions" % n_top,
+                          path="%s/query_candidate_regions_ntop%d%s.pdf" % (pdf_folder, n_top, treesig))
+
+    plot_selected_regions(x, y, model, compact_region_idxs,
+                          candidate_instances=top_anomalous_instances,
+                          query_instances=top_anomalous_instances[0:n_selected_queries],
+                          # title="AAD Top %d Regions Compact" % n_top,
+                          path="%s/query_compact_ntop%d%s_baseline.pdf" % (pdf_folder, n_top, treesig))
+
+    plot_selected_regions(x, y, model, compact_region_idxs,
+                          candidate_instances=top_anomalous_instances,
+                          query_instances=filtered_items,
+                          # title="AAD Top %d Regions Compact" % n_top,
+                          path="%s/query_compact_ntop%d%s_aad.pdf" % (pdf_folder, n_top, treesig))
+
+    logger.debug(tm.message("plotted query diversity"))
 
 
 def test_ilp():

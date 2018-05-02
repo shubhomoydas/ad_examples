@@ -22,7 +22,8 @@ def get_aad_model(x, opts, random_state=None):
                           add_leaf_nodes_only=opts.forest_add_leaf_nodes_only,
                           max_depth=opts.forest_max_depth,
                           ensemble_score=opts.ensemble_score,
-                          detector_type=opts.detector_type, n_jobs=opts.n_jobs)
+                          detector_type=opts.detector_type, n_jobs=opts.n_jobs,
+                          tree_update_type=opts.tree_update_type)
     elif opts.detector_type == PRECOMPUTED_SCORES:
         model = AadPrecomputed(opts, random_state=random_state)
     else:
@@ -277,7 +278,8 @@ def summarize_ensemble_num_seen(ensemble, metrics, fid=0, runidx=0):
     num_seen[0, 0:2] = [fid, runidx]
     num_seen[0, 2:(num_seen.shape[1])] = np.cumsum(ensemble.labels[metrics.queried])
 
-    qlbls = ensemble.labels[ensemble.ordered_anom_idxs[0:nqueried]]
+    queried_baseline = ensemble.ordered_anom_idxs[0:nqueried]
+    qlbls = ensemble.labels[queried_baseline]
     num_seen_baseline[0, 0:2] = [fid, runidx]
     num_seen_baseline[0, 2:(num_seen_baseline.shape[1])] = np.cumsum(qlbls)
 
@@ -288,13 +290,11 @@ def summarize_ensemble_num_seen(ensemble, metrics, fid=0, runidx=0):
     # Note: make the queried indexes relative 1 (NOT zero)
     true_queried_indexes[0, 2:(true_queried_indexes.shape[1])] = ensemble.original_indexes[metrics.queried] + 1
 
-    # the ensembles store samples in sorted order of default anomaly
-    # scores. The corresponding indexes are stored in ensemble.original_indexes
     true_queried_indexes_baseline = np.zeros(shape=(1, nqueried + 2))
     true_queried_indexes_baseline[0, 0:2] = [fid, runidx]
     # Note: make the queried indexes relative 1 (NOT zero)
     true_queried_indexes_baseline[0, 2:(true_queried_indexes_baseline.shape[1])] = \
-        ensemble.original_indexes[np.arange(nqueried)] + 1
+        queried_baseline + 1
 
     return num_seen, num_seen_baseline, true_queried_indexes, true_queried_indexes_baseline
 

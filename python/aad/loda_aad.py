@@ -39,6 +39,7 @@ class AadLoda(Aad, StreamingSupport):
         self.m = self.loda_model.pvh.pvh.w.shape[1]
         w = np.ones(self.m, dtype=float)
         self.w = normalize(w)
+        logger.debug("LODA m: %d" % self.m)
 
     def transform_to_ensemble_features(self, x, dense=False, norm_unit=False):
         hpdfs = get_all_hist_pdfs(x, self.loda_model.pvh.pvh.w, self.loda_model.pvh.pvh.hists)

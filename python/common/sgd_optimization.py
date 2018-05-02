@@ -1,5 +1,5 @@
 import numpy as np
-from common.utils import matrix, logger
+from common.utils import matrix, logger, Timer
 
 
 def get_num_batches(n, batch_size):
@@ -26,14 +26,15 @@ def avg_loss_check(losses, epoch, n=20, eps=1e-6):
     return False
 
 
-def debug_log_sgd_losses(sgd_type, losses, epoch, n=20):
+def debug_log_sgd_losses(sgd_type, losses, epoch, n=20, timer=None):
     if False:
         # disable logging -- should be used in PRODUCTION
         return
     elif True:
         # minimal info
-        logger.debug("[%s] epochs: %d; avg last %d losses:%f" %
-                     (sgd_type, epoch, n, np.mean(losses[(epoch-min(n, epoch)):(epoch)])))
+        logger.debug("[%s] epochs: %d; avg last %d losses:%f%s" %
+                     (sgd_type, epoch, n, np.mean(losses[(epoch-min(n, epoch)):(epoch)]),
+                      "" if timer is None else "; time: %f" % timer.elapsed()))
     else:
         # maximum info
         logger.debug("[%s] epochs: %d; avg last %d losses:%f\n%s\n%s" %
@@ -44,6 +45,7 @@ def debug_log_sgd_losses(sgd_type, losses, epoch, n=20):
 
 def sgd(w0, x, y, f, grad, learning_rate=0.01,
         batch_size=100, max_epochs=1000, eps=1e-6, shuffle=False, rng=None):
+    tm = Timer()
     n = x.shape[0]
     n_batches = get_num_batches(n, batch_size)
     w = np.copy(w0)
@@ -89,7 +91,7 @@ def sgd(w0, x, y, f, grad, learning_rate=0.01,
         epoch += 1
         if loss < eps:
             break
-    debug_log_sgd_losses("sgd", epoch_losses, epoch, n=20)
+    debug_log_sgd_losses("sgd", epoch_losses, epoch, n=20, timer=tm)
     # logger.debug("epochs: %d" % epoch)
     # logger.debug("net losses:")
     # logger.debug("epoch losses:\n%s" % str(epoch_losses[0:epoch]))
@@ -100,6 +102,7 @@ def sgd(w0, x, y, f, grad, learning_rate=0.01,
 def sgdRMSProp(w0, x, y, f, grad, learning_rate=0.01,
                batch_size=100, max_epochs=1000, delta=1e-6, ro=0.9, eps=1e-6,
                shuffle=False, rng=None):
+    tm = Timer()
     n = x.shape[0]
     n_batches = get_num_batches(n, batch_size)
     w = np.copy(w0)
@@ -145,7 +148,7 @@ def sgdRMSProp(w0, x, y, f, grad, learning_rate=0.01,
             avg_loss_check(epoch_losses, epoch, n=20, eps=eps)):
             break
         prev_loss = loss
-    debug_log_sgd_losses("sgdRMSProp", epoch_losses, epoch, n=20)
+    debug_log_sgd_losses("sgdRMSProp", epoch_losses, epoch, n=20, timer=tm)
     # logger.debug("epochs: %d" % epoch)
     # logger.debug("net losses:")
     # logger.debug("epoch losses:\n%s" % str(epoch_losses[0:epoch]))
@@ -157,6 +160,7 @@ def sgdMomentum(w0, x, y, f, grad, learning_rate=0.01,
                 batch_size=100, max_epochs=1000,
                 alpha=0.9, eps=1e-6,
                 shuffle=False, rng=None):
+    tm = Timer()
     n = x.shape[0]
     n_batches = get_num_batches(n, batch_size)
     w = np.copy(w0)
@@ -200,7 +204,7 @@ def sgdMomentum(w0, x, y, f, grad, learning_rate=0.01,
             avg_loss_check(epoch_losses, epoch, n=20, eps=eps)):
             break
         prev_loss = loss
-    debug_log_sgd_losses("sgdMomentum", epoch_losses, epoch, n=20)
+    debug_log_sgd_losses("sgdMomentum", epoch_losses, epoch, n=20, timer=tm)
     # logger.debug("epochs: %d" % epoch)
     # logger.debug("net losses:")
     # logger.debug("epoch losses:\n%s" % str(epoch_losses[0:epoch]))
@@ -212,6 +216,7 @@ def sgdRMSPropNestorov(w0, x, y, f, grad, learning_rate=0.01,
                        batch_size=100, max_epochs=1000,
                        alpha=0.9, delta=1e-6, ro=0.9, eps=1e-6,
                        shuffle=False, rng=None):
+    tm = Timer()
     n = x.shape[0]
     n_batches = get_num_batches(n, batch_size)
     w = np.copy(w0)
@@ -259,7 +264,7 @@ def sgdRMSPropNestorov(w0, x, y, f, grad, learning_rate=0.01,
             avg_loss_check(epoch_losses, epoch, n=20, eps=eps)):
             break
         prev_loss = loss
-    debug_log_sgd_losses("sgdRMSPropNestorov", epoch_losses, epoch, n=20)
+    debug_log_sgd_losses("sgdRMSPropNestorov", epoch_losses, epoch, n=20, timer=tm)
     # logger.debug("epochs: %d" % epoch)
     # logger.debug("net losses:")
     # logger.debug("epoch losses:\n%s" % str(epoch_losses[0:epoch]))
@@ -271,6 +276,7 @@ def sgdAdam(w0, x, y, f, grad, learning_rate=0.01,
             batch_size=100, max_epochs=1000, delta=1e-8,
             ro1=0.9, ro2=0.999, eps=1e-6,
             shuffle=False, rng=None):
+    tm = Timer()
     n = x.shape[0]
     n_batches = get_num_batches(n, batch_size)
     w = np.copy(w0)
@@ -326,7 +332,7 @@ def sgdAdam(w0, x, y, f, grad, learning_rate=0.01,
             avg_loss_check(epoch_losses, epoch, n=20, eps=eps)):
             break
         prev_loss = loss
-    debug_log_sgd_losses("sgdAdam", epoch_losses, epoch, n=20)
+    debug_log_sgd_losses("sgdAdam", epoch_losses, epoch, n=20, timer=tm)
     # logger.debug("epochs: %d" % epoch)
     # logger.debug("net losses:")
     # logger.debug("epoch losses:\n%s" % str(epoch_losses[0:epoch]))

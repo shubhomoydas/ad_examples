@@ -32,18 +32,18 @@ class RegionData(object):
         return self.__str__()
 
 
+def is_forest_detector(detector_type):
+    return (detector_type == AAD_IFOREST or
+            detector_type == AAD_HSTREES or
+            detector_type == AAD_RSFOREST)
+
+
 def is_in_region(x, region):
     d = len(x)
     for i in range(d):
         if not region[i][0] <= x[i] <= region[i][1]:
             return False
     return True
-
-
-def is_forest_detector(detector_type):
-    return (detector_type == AAD_IFOREST or
-            detector_type == AAD_HSTREES or
-            detector_type == AAD_RSFOREST)
 
 
 def transform_features(x, all_regions, d):
@@ -74,18 +74,23 @@ class AadForest(Aad, StreamingSupport):
                  ensemble_score=ENSEMBLE_SCORE_LINEAR,
                  random_state=None,
                  add_leaf_nodes_only=False,
-                 detector_type=AAD_IFOREST, n_jobs=1):
+                 detector_type=AAD_IFOREST, n_jobs=1,
+                 tree_update_type=TREE_UPD_OVERWRITE,
+                 tree_incremental_update_weight=0.5):
 
         Aad.__init__(self, detector_type, ensemble_score, random_state)
 
         self.n_estimators = n_estimators
         self.max_samples = max_samples
+        self.tree_update_type = tree_update_type
+        self.tree_incremental_update_weight = tree_incremental_update_weight
 
         self.score_type = score_type
         if not (self.score_type == IFOR_SCORE_TYPE_INV_PATH_LEN or
                 self.score_type == IFOR_SCORE_TYPE_INV_PATH_LEN_EXP or
                 self.score_type == IFOR_SCORE_TYPE_CONST or
                 self.score_type == IFOR_SCORE_TYPE_NEG_PATH_LEN or
+                self.score_type == HST_LOG_SCORE_TYPE or
                 self.score_type == HST_SCORE_TYPE or
                 self.score_type == RSF_SCORE_TYPE or
                 self.score_type == RSF_LOG_SCORE_TYPE or
@@ -98,11 +103,17 @@ class AadForest(Aad, StreamingSupport):
             self.clf = IForest(n_estimators=n_estimators, max_samples=max_samples,
                                n_jobs=n_jobs, random_state=self.random_state)
         elif detector_type == AAD_HSTREES:
+            if not self.add_leaf_nodes_only:
+                raise ValueError("HS Trees only supports leaf-level nodes")
             self.clf = HSTrees(n_estimators=n_estimators, max_depth=max_depth,
-                               n_jobs=n_jobs, random_state=self.random_state)
+                               n_jobs=n_jobs, random_state=self.random_state,
+                               update_type=self.tree_update_type,
+                               incremental_update_weight=tree_incremental_update_weight)
         elif detector_type == AAD_RSFOREST:
             self.clf = RSForest(n_estimators=n_estimators, max_depth=max_depth,
-                                n_jobs=n_jobs, random_state=self.random_state)
+                                n_jobs=n_jobs, random_state=self.random_state,
+                                update_type=self.tree_update_type,
+                                incremental_update_weight=tree_incremental_update_weight)
         else:
             raise ValueError("Incorrect detector type: %d. Only tree-based detectors (%d|%d|%d) supported." %
                              (detector_type, AAD_IFOREST, AAD_HSTREES, AAD_RSFOREST))
@@ -324,9 +335,9 @@ class AadForest(Aad, StreamingSupport):
 
     def get_region_scores(self, all_regions):
         """Larger values mean more anomalous"""
-        d = np.zeros(len(all_regions))
-        node_samples = np.zeros(len(all_regions))
-        frac_insts = np.zeros(len(all_regions))
+        d = np.zeros(len(all_regions), dtype=np.float64)
+        node_samples = np.zeros(len(all_regions), dtype=np.float64)
+        frac_insts = np.zeros(len(all_regions), dtype=np.float64)
         for i, region in enumerate(all_regions):
             node_samples[i] = region.node_samples
             frac_insts[i] = region.node_samples * 1.0 / self.max_samples
@@ -338,14 +349,25 @@ class AadForest(Aad, StreamingSupport):
                 d[i] = -1
             elif self.score_type == IFOR_SCORE_TYPE_NEG_PATH_LEN:
                 d[i] = -region.path_length
+            elif self.score_type == HST_LOG_SCORE_TYPE:
+                # The original HS Trees scores are very large at the leaf nodes.
+                # This makes the gradient ill-behaved. We therefore use log-transform
+                # and the fraction of samples rather than the number of samples.
+                d[i] = -(np.log(frac_insts[i] + 1e-16) + (region.path_length * np.log(2.)))
             elif self.score_type == HST_SCORE_TYPE:
-                d[i] = -region.node_samples * (2. ** region.path_length)
+                # While the original uses the region.node_samples, we use the
+                # region.node_samples / total samples, hence the fraction of node samples.
+                # This transformation does not change the result.
+                d[i] = -frac_insts[i] * (2. ** region.path_length)
+                # d[i] = -region.node_samples * (2. ** region.path_length)
                 # d[i] = -region.node_samples * region.path_length
                 # d[i] = -np.log(region.node_samples + 1) + region.path_length
-            elif self.score_type == RSF_SCORE_TYPE:
-                d[i] = -region.node_samples * np.exp(region.log_frac_vol)
             elif self.score_type == RSF_LOG_SCORE_TYPE:
-                d[i] = -np.log(region.node_samples + 1) - region.log_frac_vol
+                # d[i] = -np.log(region.node_samples + 1) + region.log_frac_vol
+                d[i] = -np.log(frac_insts[i] + 1e-16) + region.log_frac_vol
+            elif self.score_type == RSF_SCORE_TYPE:
+                # This is the original RS Forest score: samples / frac_vol
+                d[i] = -region.node_samples * np.exp(-region.log_frac_vol)
             else:
                 # if self.score_type == IFOR_SCORE_TYPE_NORM:
                 raise NotImplementedError("score_type %d not implemented!" % self.score_type)
@@ -402,13 +424,87 @@ class AadForest(Aad, StreamingSupport):
         self.d, _, _ = self.get_region_scores(self.all_regions)
 
     def update_model_from_stream_buffer(self):
-        self.clf.update_model_from_stream_buffer()
-        #for i, estimator in enumerate(self.clf.estimators_):
-        #    estimator.tree.tree_.update_model_from_stream_buffer()
-        self.update_region_scores()
+        if self.detector_type == AAD_IFOREST:
+            self.update_trees_by_replacement()
+        else:
+            self.clf.update_model_from_stream_buffer()
+            self.update_region_scores()
+
+    def update_trees_by_replacement(self):
+        """ Replaces older trees with newer ones and updates region bookkeeping data structures """
+        if self.detector_type != AAD_IFOREST:
+            raise ValueError("Replacement of trees is supported for IForest only")
+
+        old_replaced_idxs, old_retained_idxs, new_trees = self.clf.update_trees_by_replacement()
+
+        n_regions_replaced = 0
+        for i in old_replaced_idxs:
+            n_regions_replaced += len(self.regions_in_forest[i])
+
+        new_region_id = 0
+
+        # Store the previous region ids which are the indexes into
+        # self.d and self.w. These will be used to retain previous
+        # weights and region scores.
+        retained_region_ids = list()
+
+        # all regions grouped by tree
+        new_regions_in_forest = list()
+
+        # all regions in a flattened list (ungrouped)
+        new_all_regions = list()
+
+        # list of node index to region index maps for all trees
+        new_all_node_regions = list()
+
+        for i in old_retained_idxs:
+            regions = self.regions_in_forest[i]
+            node_regions = self.all_node_regions[i]
+            new_regions_in_forest.append(regions)
+            new_all_regions.extend(regions)
+            new_node_regions = {}
+            for region in regions:
+                retained_region_ids.append(node_regions[region.node_id])
+                # replace previous region ids with new ids
+                new_node_regions[region.node_id] = new_region_id
+                new_region_id += 1
+            new_all_node_regions.append(new_node_regions)
+        n_retained_regions = len(new_all_regions)
+
+        added_regions = list()
+        for i, tree in enumerate(new_trees):
+            regions = self.extract_leaf_regions_from_tree(tree, self.add_leaf_nodes_only)
+            new_regions_in_forest.append(regions)
+            new_all_regions.extend(regions)
+            added_regions.extend(regions)
+            new_node_regions = {}
+            for region in regions:
+                new_node_regions[region.node_id] = new_region_id
+                new_region_id += 1
+            new_all_node_regions.append(new_node_regions)
+
+        n_regions = len(new_all_regions)
+        retained_region_ids = np.array(retained_region_ids, dtype=int)
+        added_d, _, _ = self.get_region_scores(added_regions)
+        new_d = np.zeros(n_regions, dtype=np.float64)
+        new_w = np.zeros(n_regions, dtype=np.float64)
+        new_d[0:n_retained_regions] = self.d[retained_region_ids]
+        new_d[n_retained_regions:n_regions] = added_d
+        new_w[0:n_retained_regions] = self.w[retained_region_ids]
+        new_w[n_retained_regions:n_regions] = np.sqrt(1./n_regions)
+        new_w = normalize(new_w)
+
+        # Finally, update all bookkeeping structures
+        self.regions_in_forest = new_regions_in_forest
+        self.all_regions = new_all_regions
+        self.all_node_regions = new_all_node_regions
+        self.d = new_d
+        self.w = new_w
+        self.w_unif_prior = np.ones(n_regions, dtype=self.w.dtype) * np.sqrt(1./n_regions)
 
     def get_region_score_for_instance_transform(self, region_id, norm_factor=1.0):
         if (self.score_type == IFOR_SCORE_TYPE_CONST or
+                    self.score_type == HST_LOG_SCORE_TYPE or
                     self.score_type == HST_SCORE_TYPE or
                     self.score_type == RSF_SCORE_TYPE or
                     self.score_type == RSF_LOG_SCORE_TYPE):
@@ -525,3 +621,21 @@ class AadForest(Aad, StreamingSupport):
                         logger.debug("processed %d/%d trees, %d/%d (%f) in %f sec(s)" %
                                      (i, len(self.clf.estimators_), j + 1, n, (j + 1)*1./n, tdiff))
 
+    def get_region_ids(self, x):
+        """ Returns the union of all region ids across all instances in x
+
+        Args:
+            x: np.ndarray
+                instances in original feature space
+        Returns:
+            np.array(int)
+        """
+        n = x.shape[0]
+        all_regions = set()
+        for i, tree in enumerate(self.clf.estimators_):
+            tree_node_regions = self.all_node_regions[i]
+            for j in range(n):
+                tree_paths = self.get_decision_path(x[[j], :], tree)
+                instance_regions = [tree_node_regions[node_idx] for node_idx in tree_paths[0]]
+                all_regions.update(instance_regions)
+        return list(all_regions)

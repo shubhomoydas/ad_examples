@@ -1,3 +1,4 @@
+import importlib
 from aad.aad_globals import *
 
 
@@ -13,6 +14,14 @@ class Query(object):
         pass
 
     @staticmethod
+    def get_custom_query_model(opts, **kwargs):
+        module_name = opts.query_module_name
+        class_name = opts.query_class_name
+        module = importlib.import_module(module_name)
+        class_ = getattr(module, class_name)
+        return class_(opts, **kwargs)
+
+    @staticmethod
     def get_initial_query_state(querytype, opts, **kwargs):
         if querytype == QUERY_DETERMINISIC:
             return QueryTop(opts=opts, **kwargs)
@@ -22,6 +31,8 @@ class Query(object):
             return QueryQuantile(opts=opts, **kwargs)
         elif querytype == QUERY_RANDOM:
             return QueryRandom(opts=opts, **kwargs)
+        elif querytype == QUERY_CUSTOM_MODULE:
+            return Query.get_custom_query_model(opts, **kwargs)
         else:
             raise ValueError("Invalid/unsupported query type %d" % (querytype,))
 
@@ -36,9 +47,8 @@ class QueryTop(Query):
     def get_next_query(self, **kwargs):
         ordered_indexes = kwargs.get("ordered_indexes")
         queried_items = kwargs.get("queried_items")
-        # n = kwargs.get("n", 1)
-        n = 1
-        items = get_first_vals_not_marked(ordered_indexes, queried_items, start=0, n=n)
+        items = get_first_vals_not_marked(ordered_indexes, queried_items, start=0,
+                                          n=self.opts.num_query_batch)
         if len(items) == 0:
             return None
         return items
@@ -55,13 +65,12 @@ class QueryTopRandom(Query):
         """Select n items from top opts.n_explore ranked items"""
         ordered_indexes = kwargs.get("ordered_indexes")
         queried_items = kwargs.get("queried_items")
-        n_explore = self.opts.n_explore
-        n = kwargs.get("n", 1)
-        # logger.debug("n_explore: %d, n: %d" % (n_explore, n))
-        choose_from_items = get_first_vals_not_marked(ordered_indexes, queried_items, start=0, n=n_explore)
+        # logger.debug("n_explore: %d, n: %d" % (self.opts.n_explore, self.opts.num_query_batch))
+        choose_from_items = get_first_vals_not_marked(ordered_indexes, queried_items, start=0,
+                                                      n=self.opts.n_explore)
         if len(choose_from_items) == 0:
             return None
-        q = sample(range(n_explore), n)
+        q = sample(range(self.opts.n_explore), self.opts.num_query_batch)
         return choose_from_items[q]
 
 
