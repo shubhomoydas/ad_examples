@@ -75,7 +75,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     plot_baseline = data_2D and False
     plot_aad = metrics is not None and data_2D and True
     plot_anomalous_regions = plot_dataset and is_forest_detector(model.detector_type) and True
-    illustrate_query_diversity = plot_dataset and True
+    illustrate_query_diversity = plot_dataset and is_forest_detector(model.detector_type) and True
 
     pdfpath_baseline = "%s/tree_baseline.pdf" % outputdir
     pdfpath_orig_if_contours = "%s/score_contours.pdf" % outputdir
