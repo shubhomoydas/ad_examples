@@ -95,10 +95,10 @@ A different approach to generate descriptions might train a cost-based decision 
 \section{Querying Diversity}
 We can use the anomaly description to diversify our queries when we have the option to query labels for more than one instance per round of feedback. Following is how we go about it:
 \begin{enumerate}
-	\item Select the top ranked $m$ (say, $m=15$) instances. Denote this set by $\mathcal{C}$.
-	\item Next, select the top (say) $5$ most anomalous regions for each instance in $\mathcal{C}$. Let $\mathcal{F}$ be the union of all these regions.
-	\item Now, \emph{compactly} describe all instances in $\mathcal{C}$ using the regions in $\mathcal{F}$.
-	\item Now, start with the most anomalous instance, and select one-by-one $k$ (say, $k=5$) instances which have the fewest overlapping regions for querying.
+	\item Select the top ranked $m$ (say, $m=15$) instances. Denote this set by $\mathcal{C}$ (points in \textcolor{blue}{blue} in Figure~\ref{fig:candidate_regions}).
+	\item Next, select the top (say) $5$ most anomalous regions for each instance in $\mathcal{C}$. Let $\mathcal{F}$ be the union of all these regions (rectangles in \textcolor{red}{red} in Figure~\ref{fig:candidate_regions}).
+	\item Now, \emph{compactly} describe all instances in $\mathcal{C}$ using the regions in $\mathcal{F}$ (rectangles in \textcolor{red}{red} in Figure~\ref{fig:baseline_queries}).
+	\item Now, start with the most anomalous instance, and select one-by-one $k$ (say, $k=5$) instances which have the fewest overlapping regions for querying (points circled in \textcolor{green}{green} in Figures \ref{fig:baseline_queries} and \ref{fig:diverse_queries}).
 \end{enumerate}
 
 \begin{figure}
@@ -122,6 +122,33 @@ We can use the anomaly description to diversify our queries when we have the opt
 		\label{fig:diverse_queries}
 	\end{subfigure}
 	\caption{Diverse querying strategy using sub-space descriptions. These figures show the $15$ most anomalous instances (ranked by score) in \textcolor{blue}{blue}. We assume that the true labels are not known for these instances. We find the top $5$ most anomalous regions for each of the $15$ instances and the union of all these rectangles is shown in \textcolor{red}{red} in Figure~\ref{fig:candidate_regions}. Figure~\ref{fig:baseline_queries} and Figure~\ref{fig:diverse_queries} show the regions which compactly contain (describe) the top-ranked instances. The instances circled in \textcolor{green}{green} are the ones selected for querying. The instances (in green) in Figure~\ref{fig:baseline_queries} are merely the top-ranked $5$ instances without taking into account any diversity. Figure~\ref{fig:diverse_queries} shows that when we select instances which have different descriptions (minimum region overlap), they are more diverse.} \label{fig:diverse}
+\end{figure}
+
+\section{Comparison between Isolation Forest, HS Trees, RS Forest}
+There are fundamental differences between Isolation Forest and the other two: HS Trees and RS Forest. These differences directly influence the effectiveness of incorporating feedback. Since the depths in HS Trees and RS Forest are fixed and they repeatedly halve a dimension, the subspaces represented by the leaf nodes of these detectors are very small in volume. We see this property in Figures \ref{fig:hstrees_rects} and \ref{fig:rsforest_rects}. The implication is that more number of subspaces will be required to generate a compact representation for a set of instances. This also means that feedback at instance level is going to be shared by a much fewer set of instances. In contrast, in Isolation forest (Figure~\ref{fig:iforest_rects}), the depths of leaf nodes are not fixed; they are usually \textbf{much} shallower than in HS Trees and  RS Forest. As a result, the subspaces represented by the leaf nodes are larger and cover more number of instances, thereby requiring fewer subspaces to compactly represent a set of instances. Moreover, this results in feedback being shared by more instances in Isolation Forest. One remedy for HS Trees and RS Forest might be to dynamically determine when to stop splitting based on (maybe) the number of samples at a node. This might be a motivation for future research. My personal opinion right now is to stick to Isolation Forest because of its `nicer' properties.
+
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.3\textwidth}
+		\includegraphics[width=\textwidth]{leaf_trees/query_candidate_regions_ntop5_100_trees_iforest}
+		\caption{Isolation Forest}
+		\label{fig:iforest_rects}
+	\end{subfigure}
+	~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+	%(or a blank line to force the subfigure onto a new line)
+	\begin{subfigure}[b]{0.3\textwidth}
+		\includegraphics[width=\textwidth]{leaf_trees/query_candidate_regions_ntop5_50_trees_hstrees}
+		\caption{HS Trees}
+		\label{fig:hstrees_rects}
+	\end{subfigure}
+	~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+	%(or a blank line to force the subfigure onto a new line)
+	\begin{subfigure}[b]{0.3\textwidth}
+		\includegraphics[width=\textwidth]{leaf_trees/query_candidate_regions_ntop5_50_trees_rsforest}
+		\caption{RS Forest}
+		\label{fig:rsforest_rects}
+	\end{subfigure}
+	\caption{Top subspaces after $35$ feedback iterations ranked by ${\bf w}\circ{\bf d}$ which cover the top ranked $15$ unlabeled instances. We find the top $5$ most anomalous regions for each of the $15$ instances and the union of all these regions is shown in \textcolor{red}{red} (in all the figures here). The Isolation Forest subspaces tend to be larger and each subspace usually contains more instances. This lets the feedback in Isolation Forest be shared across more instances than in HS Trees or RS Forest.} \label{fig:tree_diffs}
 \end{figure}
 
 \begin{thebibliography}{1}
