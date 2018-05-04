@@ -44,11 +44,11 @@ The codebase also includes some [activity modeling stuff](#activity-modeling).
 
 To execute the code:
 
-1. Run code from 'python' folder. The outputs will be generated under 'temp' folder. The 'pythonw' command is used on OSX, but 'python' should be used on Linux.
+1. **Run code from 'python' folder**. The outputs will be generated under 'temp' folder. The 'pythonw' command is used on OSX, but 'python' should be used on Linux.
 
 2. *The run commands are at the top of the python source code files.*
 
-3. Check the log file in 'python/temp' folder. Usually it will be named <demo_code>.log. Timeseries demos will output logs under the 'python/temp/timeseries' folder.
+3. Check the log file in **'python/temp'** folder. Usually it will be named <demo_code>.log. Timeseries demos will output logs under the 'python/temp/timeseries' folder.
 
 
 Active Anomaly Discovery (AAD)
@@ -81,7 +81,7 @@ This codebase supports four different anomaly detection algorithms:
   - RS Forest based AAD (**streaming support with model update**)
     - See the previous HS Trees streaming update options above.
 
-To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format:
+To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
 
     bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]> <with_prior[0|1]> <init_type[0|1|2]>
 
@@ -143,9 +143,9 @@ Does Query diversity with compact descriptions help?
 -------------------------------------------
 The below plots show that the above diversity strategy indeed helps.
 
-To generate the below plots, perform the following steps:
+To generate the below plots, perform the following steps (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
 
-    - set N_BATCH=1 in aad.sh. Once set, run the command:
+    - set N_BATCH=1 in aad.sh and then run the command:
     
         bash ./aad.sh toy2 45 10 0.03 7 1 0 0 512 0 1 1
         
