@@ -175,7 +175,7 @@ if __name__ == "__main__":
     args = get_aad_command_args(debug=True,
                                 debug_args=["--dataset=abalone",
                                             "--debug",
-                                            "--log_file=temp/aad_plots/plot_class_discovery.log"])
+                                            "--log_file=temp/plot_class_discovery.log"])
     configure_logger(args)
 
     dir_create("./temp/aad_plots")  # for logging and plots

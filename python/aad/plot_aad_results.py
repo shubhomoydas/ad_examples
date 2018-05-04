@@ -79,7 +79,7 @@ if __name__ == "__main__":
     args = get_aad_command_args(debug=True,
                                 debug_args=["--dataset=abalone",
                                             "--debug",
-                                            "--log_file=temp/aad_plots/plot_aad_results.log"])
+                                            "--log_file=temp/plot_aad_results.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
 

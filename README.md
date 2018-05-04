@@ -144,6 +144,7 @@ Does Query diversity with compact descriptions help?
 The below plots show that the above diversity strategy indeed helps.
 
 To generate the below plots, perform the following steps:
+
     - set N_BATCH=1 in aad.sh. Once set, run the command:
     
         bash ./aad.sh toy2 45 10 0.03 7 1 0 0 512 0 1 1

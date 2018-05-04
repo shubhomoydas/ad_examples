@@ -144,9 +144,7 @@ if [[ "${N_BATCH}" != "1" ]]; then
 fi
 
 QUERY_SIG="q${QUERY_TYPE}${N_BATCH_SIG}"
-if [[ "${QUERY_TYPE}" == "2" ]]; then
-    QUERY_SIG="q${QUERY_TYPE}n${N_EXPLORE}"
-elif [[ "${QUERY_TYPE}" == "8" ]]; then
+if [[ "${QUERY_TYPE}" == "2" || "${QUERY_TYPE}" == "8" ]]; then
     QUERY_SIG="q${QUERY_TYPE}n${N_EXPLORE}b${N_BATCH}"
 fi
 
