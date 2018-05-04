@@ -161,7 +161,7 @@ To generate the below plots, perform the following steps (**remember to run the 
         
     - Finally, generate class diversity plot:
     
-        pythonw -m aad.plot_class_discovery
+        pythonw -m aad.plot_class_diversity
 
 ![Diversity Effect](figures/aad/diversity_effect.png)
 
