@@ -79,6 +79,7 @@ dataset_configs = {
     'covtype': [3000, 2747, 4096, 1000],
     'kddcup': [3000, 2416, 4096, 30],
     'shuttle_1v23567': [1500, 867, 4096, 30],
+    'weather': [1000, 656, 1024, 30],
     'toy2': [45, 35, 512, 30]
 }
 
@@ -95,7 +96,7 @@ def get_result_defs(args):
     hst_no_upd_f = "{dataset}-hstrees_n100_r0_2_tau_instance-trees{trees}_samples256_nscore5_leaf-topb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0_no_upd-{type}.csv"
     hst_no_upd_d = "hstrees_trees{trees}_samples256_i11_q1b3_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d8_no_upd"
 
-    hst_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-pseudoanom_always_False-optim_scipy-{type}.csv"
+    hst_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-{type}.csv"
     hst_d = "hstrees_trees{trees}_samples256_i11_q1_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d8"
 
     hst_q1b3_f = "{dataset}-hstrees_n100_r0_2_tau_instance-trees{trees}_samples256_nscore5_leaf-topb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-{type}.csv"
@@ -107,13 +108,13 @@ def get_result_defs(args):
     hst_stream_no_upd_f = "{dataset}-hstrees_n100_r0_2_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-sw{window_size}_asuTrue_no_upd_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
     hst_stream_no_upd_d = "hstrees_trees{trees}_samples256_i11_q1_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma50_mn50_d8_stream{window_size}asu_no_upd_mw{max_windows}f2_20_ret1_tillbudget"
 
-    hst_stream_incr_f = "{dataset}-hstrees_incr_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-pseudoanom_always_False-optim_scipy-sw{window_size}_asuTrue_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
+    hst_stream_incr_f = "{dataset}-hstrees_incr_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-sw{window_size}_asuTrue_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
     hst_stream_incr_d = "hstrees_incr_trees50_samples256_i11_q1_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma50_mn50_d8_stream{window_size}asu_mw{max_windows}f2_20_ret1_tillbudget"
 
-    hst_stream_incr_no_upd_f = "{dataset}-hstrees_incr_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-pseudoanom_always_False-optim_scipy-sw{window_size}_asuTrue_no_upd_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
+    hst_stream_incr_no_upd_f = "{dataset}-hstrees_incr_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-sw{window_size}_asuTrue_no_upd_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
     hst_stream_incr_no_upd_d = "hstrees_incr_trees50_samples256_i11_q1_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma50_mn50_d8_stream{window_size}asu_no_upd_mw{max_windows}f2_20_ret1_tillbudget"
 
-    hst_q8_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-custom-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-pseudoanom_always_False-optim_scipy-{type}.csv"
+    hst_q8_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-custom-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-{type}.csv"
     hst_q8_d = "hstrees_trees{trees}_samples256_i11_q8n10b3_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d8"
 
     ifor_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"

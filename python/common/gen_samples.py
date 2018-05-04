@@ -234,6 +234,7 @@ def read_anomaly_dataset(dataset):
         shuttle_1v23567
         shuttle_sub
         yeast
+        weather
         toy
         toy2
 
