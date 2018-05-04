@@ -234,6 +234,8 @@ def read_anomaly_dataset(dataset):
         shuttle_1v23567
         shuttle_sub
         yeast
+        toy
+        toy2
 
     :param dataset: string
     :return: numpy.ndarray, numpy.array

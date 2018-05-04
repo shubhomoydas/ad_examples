@@ -78,7 +78,8 @@ dataset_configs = {
     'mammography': [1500, 260, 4096, 30],
     'covtype': [3000, 2747, 4096, 1000],
     'kddcup': [3000, 2416, 4096, 30],
-    'shuttle_1v23567': [1500, 867, 4096, 30]
+    'shuttle_1v23567': [1500, 867, 4096, 30],
+    'toy2': [45, 35, 512, 30]
 }
 
 
@@ -115,11 +116,14 @@ def get_result_defs(args):
     hst_q8_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-custom-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-pseudoanom_always_False-optim_scipy-{type}.csv"
     hst_q8_d = "hstrees_trees{trees}_samples256_i11_q8n10b3_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d8"
 
-    ifor_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-pseudoanom_always_False-optim_scipy-norm-{type}.csv"
+    ifor_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
     ifor_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma1000_mn1000_d100_norm"
 
-    ifor_q8b3_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-custom-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-pseudoanom_always_False-optim_scipy-norm-{type}.csv"
+    ifor_q8b3_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-custom-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
     ifor_q8b3_d = "if_aad_trees{trees}_samples256_i7_q8n10b3_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma1000_mn1000_d100_norm"
+
+    ifor_q2b3_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-toprandomb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
+    ifor_q2b3_d = "if_aad_trees{trees}_samples256_i7_q2n10b3_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma1000_mn1000_d100_norm"
 
     ifor_stream_f = "{dataset}-iforest_tau_instance-trees100_samples256_nscore4_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuTrue_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
     ifor_stream_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}asu_mw{max_windows}f2_20_ret1_tillbudget_norm"
@@ -147,8 +151,8 @@ def get_result_defs(args):
                    filename=hst_orig_f.format(dataset=args.dataset, budget=budget),
                    subdir=hst_orig_d.format(budget=budget)),
         ResultDefs(name="hstrees_baseline", dataset=args.dataset, num_anoms=num_anoms,
-                   filename=hst_no_upd_f.format(dataset=args.dataset, budget=budget, trees=50, type="baseline"),
-                   subdir=hst_no_upd_d.format(dataset=args.dataset, budget=budget, trees=50)),
+                   filename=hst_q1b3_f.format(dataset=args.dataset, budget=budget, trees=50, type="baseline"),
+                   subdir=hst_q1b3_d.format(dataset=args.dataset, budget=budget, trees=50)),
         ResultDefs(name="hstrees", dataset=args.dataset, num_anoms=num_anoms,
                    filename=hst_f.format(dataset=args.dataset, budget=budget, trees=50, type="num_seen"),
                    subdir=hst_d.format(dataset=args.dataset, budget=budget, trees=50)),
@@ -174,6 +178,10 @@ def get_result_defs(args):
                    filename=ifor_f.format(dataset=args.dataset, budget=budget, trees=100, type="baseline"),
                    subdir=ifor_d.format(dataset=args.dataset, budget=budget, trees=100),
                    queried=ifor_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried-baseline")),
+        ResultDefs(name="ifor_top_random", dataset=args.dataset, num_anoms=num_anoms,
+                   filename=ifor_q2b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen"),
+                   subdir=ifor_q2b3_d.format(dataset=args.dataset, budget=budget, trees=100),
+                   queried=ifor_q2b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried")),
         ResultDefs(name="ifor_stream", dataset=args.dataset, num_anoms=num_anoms,
                    filename=ifor_stream_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
                    subdir=ifor_stream_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),

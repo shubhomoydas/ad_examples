@@ -124,6 +124,32 @@ We can use the anomaly description to diversify our queries when we have the opt
 	\caption{Diverse querying strategy using sub-space descriptions. These figures show the $15$ most anomalous instances (ranked by score) in \textcolor{blue}{blue}. We assume that the true labels are not known for these instances. We find the top $5$ most anomalous regions for each of the $15$ instances and the union of all these regions is shown as the \textcolor{red}{red} rectangles in Figure~\ref{fig:candidate_regions}. Figure~\ref{fig:baseline_queries} and Figure~\ref{fig:diverse_queries} show the regions which compactly contain (describe) the top-ranked instances. The instances circled in \textcolor{green}{green} are the ones selected for querying. The instances (in green) in Figure~\ref{fig:baseline_queries} are merely the top-ranked $5$ instances without taking into account any diversity. Figure~\ref{fig:diverse_queries} shows that when we select instances which have different descriptions (minimum region overlap), they are more diverse.} \label{fig:diverse}
 \end{figure}
 
+\subsection{Does the diverse querying strategy help?}
+Whatever querying strategy we use, it should ideally not lower the number of anomalies discovered within a budget. For the diverse query strategy, we need to 
+
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.48\textwidth}
+		\includegraphics[width=\textwidth]{toy2_processes}
+		\caption{Underlying Processes}
+		\label{fig:processes}
+	\end{subfigure}
+	%~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+	%(or a blank line to force the subfigure onto a new line)
+	\begin{subfigure}[b]{0.48\textwidth}
+		\includegraphics[width=\textwidth]{results_anoms_found_toy2}
+		\caption{Anomalies discovered}
+		\label{fig:discovery}
+	\end{subfigure} \\
+	%~
+	\begin{subfigure}[b]{0.48\textwidth}
+		\includegraphics[width=\textwidth]{results_diff_classes_toy2}
+		\caption{Difference in class diversity per batch}
+		\label{fig:class_diff}
+	\end{subfigure}
+	\caption{Diversity in the classes shown to an analyst per batch. Here we assume that the data contains \textbf{three} classes which represent three underlying processes (Figure~\ref{fig:processes}). Class $0$ is \emph{nominal}, while classes $1$ and $2$ are \emph{anomalous}. In Figure~\ref{fig:discovery}, we plot the anomaly discovery curves for five Isolation Forest-based algorithms: (a) \textbf{ifor\_baseline} -- unsupervised Isolation Forest, (b) \textbf{ifor} -- label only the single most anomalous instance (per iteration), (c) \textbf{ifor\_q1b3} -- label the top three most anomalous instances, (d) \textbf{ifor\_q8b3} -- label the top three \textbf{most diverse} instances among the top ten anomalous instances (employing the diversity strategy), and (e) \textbf{ifor\_top\_random} -- label three instances selected uniformly at random from the top ten anomalous instances. We see that all algorithms other than the baseline have similar performance, and all active labeling algorithms perform better than the baseline. In Figure~\ref{fig:class_diff}, the solid line shows the average difference in the number of unique classes shown to the analyst per batch between \textbf{ifor\_q8b3} and \textbf{ifor\_q1b3} (these differences are averaged over $10$ runs). The dashed line in Figure~\ref{fig:class_diff} shows the average difference in the number of unique classes shown to the analyst per batch between \textbf{ifor\_q8b3} and \textbf{ifor\_top\_random}. Since both these differences are mostly positive, we conclude that our diversity strategy indeed presents more diverse instances to the analyst to label. Moreover, as seen in Figure~\ref{fig:discovery}, this diversity does not lower the anomaly detection accuracy over a strictly select-top-anomalous query strategy. \textbf{We also see this pattern in most real-world datasets we experimented with.}} \label{fig:diverse_effect}
+\end{figure}
+
 \section{Comparison between Isolation Forest, HS Trees, RS Forest}
 There are fundamental differences between Isolation Forest and the other two: HS Trees and RS Forest. These differences directly influence the effectiveness of incorporating feedback. Since the depths in HS Trees and RS Forest are fixed and they repeatedly halve a dimension, the subspaces represented by the leaf nodes of these detectors are very small in volume. We see this property in Figures \ref{fig:hstrees_rects} and \ref{fig:rsforest_rects}. The implication is that more number of subspaces will be required to generate a compact representation for a set of instances. This also means that feedback at instance level is going to be shared by a much fewer set of instances. In contrast, in Isolation forest (Figure~\ref{fig:iforest_rects}), the depths of leaf nodes are not fixed; they are usually \textbf{much} shallower than in HS Trees and  RS Forest. As a result, the subspaces represented by the leaf nodes are larger and cover more number of instances, thereby requiring fewer subspaces to compactly represent a set of instances. Moreover, this results in feedback being shared by more instances in Isolation Forest. One remedy for HS Trees and RS Forest might be to dynamically determine when to stop splitting based on (maybe) the number of samples at a node. This might be a motivation for future research. My personal opinion right now is to stick to Isolation Forest because of its `nicer' properties.
 

@@ -139,6 +139,32 @@ To generate the below, use the command:
 ![Query Diversity](figures/aad/query_diversity.png)
 
 
+Does Query diversity with compact descriptions help?
+-------------------------------------------
+The below plots show that the above diversity strategy indeed helps.
+
+To generate the below plots, perform the following steps:
+    - set N_BATCH=1 in aad.sh. Once set, run the command:
+    
+        bash ./aad.sh toy2 45 10 0.03 7 1 0 0 512 0 1 1
+        
+    - set N_BATCH=3 in aad.sh, and run the following commands:
+    
+        bash ./aad.sh toy2 45 10 0.03 7 1 0 0 512 0 1 1
+        bash ./aad.sh toy2 45 10 0.03 7 2 0 0 512 0 1 1
+        bash ./aad.sh toy2 45 10 0.03 7 8 0 0 512 0 1 1
+
+    - Next, generate anomaly discovery curves:
+        
+        pythonw -m aad.plot_aad_results
+        
+    - Finally, generate class diversity plot:
+    
+        pythonw -m aad.plot_class_discovery
+
+![Diversity Effect](figures/aad/diversity_effect.png)
+
+
 Differences between Isolation Forest, HS Trees, RS Forest
 -------------------------------------------
 This [document](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf) explains why Isolation Forest is more effective in incorporating feedback at the leaf level. This is illustrated in the figure below.
