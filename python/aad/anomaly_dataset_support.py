@@ -90,7 +90,7 @@ def get_result_defs(args):
     window_size = dataset_configs[args.dataset][2]
     max_windows = dataset_configs[args.dataset][3]
 
-    hst_orig_f = "{dataset}-hstrees_n100_r0_2_tau_instance-trees25_samples256_nscore9_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-orig_num_seen.csv"
+    hst_orig_f = "{dataset}-hstrees_tau_instance-trees25_samples256_nscore9_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-orig_num_seen.csv"
     hst_orig_d = "hstrees_trees25_samples256_i11_q1_bd{budget}_nscore9_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d15"
 
     hst_no_upd_f = "{dataset}-hstrees_n100_r0_2_tau_instance-trees{trees}_samples256_nscore5_leaf-topb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0_no_upd-{type}.csv"
@@ -99,7 +99,7 @@ def get_result_defs(args):
     hst_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-{type}.csv"
     hst_d = "hstrees_trees{trees}_samples256_i11_q1_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d8"
 
-    hst_q1b3_f = "{dataset}-hstrees_n100_r0_2_tau_instance-trees{trees}_samples256_nscore5_leaf-topb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-{type}.csv"
+    hst_q1b3_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-topb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-{type}.csv"
     hst_q1b3_d = "hstrees_trees{trees}_samples256_i11_q1b3_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d8"
 
     hst_stream_f = "{dataset}-hstrees_incr_n100_r0_2_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-sw{window_size}_asuTrue_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
@@ -147,7 +147,13 @@ def get_result_defs(args):
     loda_orig_f = "{dataset}-loda-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-{type}.csv"
     loda_orig_d = "loda_i13_q1_bd{budget}_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma1000_mn1000_orig"
 
+    rsf_orig_f = "{dataset}-rsfor_tau_instance-trees30_samples256_nscore9_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-orig_num_seen.csv"
+    rsf_orig_d = "rsforest_trees30_samples256_i12_q1_bd{budget}_nscore9_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d15"
+
     result_lists = [
+        ResultDefs(name="rsforest_orig", dataset=args.dataset, num_anoms=num_anoms,
+                   filename=rsf_orig_f.format(dataset=args.dataset, budget=budget),
+                   subdir=rsf_orig_d.format(budget=budget)),
         ResultDefs(name="hstrees_orig", dataset=args.dataset, num_anoms=num_anoms,
                    filename=hst_orig_f.format(dataset=args.dataset, budget=budget),
                    subdir=hst_orig_d.format(budget=budget)),
@@ -155,8 +161,8 @@ def get_result_defs(args):
                    filename=hst_q1b3_f.format(dataset=args.dataset, budget=budget, trees=50, type="baseline"),
                    subdir=hst_q1b3_d.format(dataset=args.dataset, budget=budget, trees=50)),
         ResultDefs(name="hstrees", dataset=args.dataset, num_anoms=num_anoms,
-                   filename=hst_f.format(dataset=args.dataset, budget=budget, trees=50, type="num_seen"),
-                   subdir=hst_d.format(dataset=args.dataset, budget=budget, trees=50)),
+                   filename=hst_q1b3_f.format(dataset=args.dataset, budget=budget, trees=50, type="num_seen"),
+                   subdir=hst_q1b3_d.format(dataset=args.dataset, budget=budget, trees=50)),
         ResultDefs(name="hstrees_q1b3", dataset=args.dataset, num_anoms=num_anoms,
                    filename=hst_q1b3_f.format(dataset=args.dataset, budget=budget, trees=50, type="num_seen"),
                    subdir=hst_q1b3_d.format(dataset=args.dataset, budget=budget, trees=50)),

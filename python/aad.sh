@@ -323,7 +323,7 @@ if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" ==
         if [[ "$DETECTOR_TYPE" == "7" ]]; then
             # IFOR_SCORE_TYPE_NEG_PATH_LEN supported only for isolation forest leaf-only
             FOREST_SCORE_TYPE=4
-        elif [[ "$DETECTOR_TYPE" == "12" ]]; then
+        elif [[ "$DETECTOR_TYPE" == "12" && "$FOREST_SCORE_TYPE" != 9 ]]; then
             # NOTE: scoretype 7 is geometric mean. scoretype 6 is arithmetic mean.
             # When used with AAD where gradients are required for optimization with 
             # SGD, then using geometric means might help because we can work with

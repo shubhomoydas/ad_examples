@@ -45,13 +45,22 @@ def get_result_names(result_type):
             "loda", "loda_baseline",
             'hstrees_orig', 'hstrees_baseline', 'hstrees_q1b3',
         ]
+    elif result_type == "unsupervised_only":
+        return ["ifor_baseline", "loda_baseline", "hstrees_orig", "hstrees_baseline", "rsforest_orig"]
+    elif result_type == "hstrees_only":
+        return ["hstrees_orig", "hstrees_baseline", "hstrees_q1b3"]
+    elif result_type == "hstrees_rsforest":
+        return ["hstrees_orig", "hstrees", "rsforest_orig"]
     else:
         raise ValueError("Invalid result_type: %s" % result_type)
 
 
 def process_results(args):
-    # result_type = "ifor_vs_others"
-    result_type = "ifor_top_vs_random"
+    result_type = "ifor_vs_others"
+    # result_type = "ifor_top_vs_random"
+    result_type = "unsupervised_only"
+    result_type = "hstrees_only"
+    result_type = "hstrees_rsforest"
     result_names = get_result_names(result_type)
 
     cols = ["red", "green", "blue", "orange", "brown", "pink", "magenta", "black"]
@@ -90,10 +99,13 @@ if __name__ == "__main__":
 
     # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1']  # , 'mammography']
     # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3']
-    datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'kddcup', 'shuttle_1v23567', 'mammography', 'covtype']
+    datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'kddcup',
+                'shuttle_1v23567', 'mammography', 'covtype',
+                "weather"
+                ]
     # datasets = ['kddcup', 'shuttle_1v23567', 'covtype', 'mammography']
-    # datasets = ['mammography']
-    datasets = ['toy2']
+    # datasets = ['weather']
+    # datasets = ['toy2']
     for dataset in datasets:
         args.dataset = dataset
         process_results(args)

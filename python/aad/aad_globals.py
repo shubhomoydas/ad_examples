@@ -213,8 +213,6 @@ def get_aad_option_list():
                         help="Ignore the AATP hinge loss in optimization function.")
     parser.add_argument("--random_instance_at_start", action="store_true", default=False,
                         help="[EXPERIMENTAL] Use random instance as tau-th instance in the first feedback.")
-    parser.add_argument("--pseudoanomrank_always", action="store_true", default=False,
-                        help="Whether to always use pseudo anomaly instance")
     parser.add_argument("--max_anomalies_in_constraint_set", type=int, default=1000, required=False,
                         help="Maximum number of labeled anomaly instances to use in building pair-wise constraints")
     parser.add_argument("--max_nominals_in_constraint_set", type=int, default=1000, required=False,
@@ -408,7 +406,6 @@ class AadOpts(object):
         self.init = args.init
         self.single_inst_feedback = False
         self.random_instance_at_start = args.random_instance_at_start
-        self.pseudoanomrank_always = args.pseudoanomrank_always
         self.max_anomalies_in_constraint_set = args.max_anomalies_in_constraint_set
         self.max_nominals_in_constraint_set = args.max_nominals_in_constraint_set
         self.precision_k = [10, 20, 30]
@@ -528,9 +525,10 @@ class AadOpts(object):
         if self.detector_type == LODA:
             s = "%s_k%dt%d" % (s, self.mink, self.maxk)
         if self.detector_type == AAD_HSTREES or self.detector_type == AAD_RSFOREST:
-            s = "%s%s%s%s" % (s, "_incr" if self.tree_update_type == 1 else "",
-                              "_n%d" % self.max_labeled_for_stream if self.max_labeled_for_stream is not None else "",
-                              "_r%0.1f" % self.labeled_to_window_ratio if self.labeled_to_window_ratio is not None else "")
+            s = "%s%s" % (s, "_incr" if self.tree_update_type == 1 else "")
+        if self.streaming:
+            s = "%s%s%s" % (s, "_n%d" % self.max_labeled_for_stream if self.max_labeled_for_stream is not None else "",
+                            "_r%0.1f" % self.labeled_to_window_ratio if self.labeled_to_window_ratio is not None else "")
         if self.detector_type == AAD_UPD_TYPE:
             return "%s_%s" % (s, constraint_types[self.constrainttype])
         elif (self.detector_type == AAD_IFOREST or self.detector_type == ATGP_IFOREST or
@@ -602,7 +600,6 @@ class AadOpts(object):
                                          and self.relativeto == RELATIVE_QUANTILE
                                          and self.tau_nominal != 0.5 else "") +
                       ("-topK%d" % (self.topK,)) +
-                      # ("-pseudoanom_always_%s" % (self.pseudoanomrank_always,)) +
                       # optimsig +
                       orderbyviolatedsig +
                       ignoreAATPlosssig +
@@ -647,7 +644,6 @@ class AadOpts(object):
                                   and self.relativeto == RELATIVE_QUANTILE
                                   and self.tau_nominal != 0.5 else "") +
                ("-topK" + str(self.topK)) +
-               # ("-pseudoanom_always_" + str(self.pseudoanomrank_always)) +
                ("-orgdim" if self.original_dims else "") +
                # ("sngl_fbk" if self.single_inst_feedback else "") +
                # ("-optimlib_%s" % (self.optimlib,)) +
