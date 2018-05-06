@@ -480,7 +480,7 @@ class LogisticRegressionClassifier(SKLClassifier):
         return classifier
 
 
-def read_csv(file, header=None, sep=','):
+def read_csv(file, header=None, sep=',', skiprows=None):
     """Loads data from a CSV
 
     Returns:
@@ -491,7 +491,7 @@ def read_csv(file, header=None, sep=','):
         header = 0 # first row is header
 
     # data_df = DataFrame.from_csv(file, header=header, sep=sep, index_col=None)
-    data_df = pd.read_csv(file, header=header, sep=sep, index_col=None)
+    data_df = pd.read_csv(file, header=header, sep=sep, index_col=None, skiprows=skiprows)
 
     #datamat = np.ndarray(shape=data_df.shape, dtype=float)
     #datamat[:, :] = data_df.iloc[:, 0:data_df.shape[1]]

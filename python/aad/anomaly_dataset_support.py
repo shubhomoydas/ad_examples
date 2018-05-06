@@ -93,7 +93,7 @@ def get_result_defs(args):
     hst_orig_f = "{dataset}-hstrees_tau_instance-trees25_samples256_nscore9_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-orig_num_seen.csv"
     hst_orig_d = "hstrees_trees25_samples256_i11_q1_bd{budget}_nscore9_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d15"
 
-    hst_no_upd_f = "{dataset}-hstrees_n100_r0_2_tau_instance-trees{trees}_samples256_nscore5_leaf-topb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0_no_upd-{type}.csv"
+    hst_no_upd_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-topb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0_no_upd-{type}.csv"
     hst_no_upd_d = "hstrees_trees{trees}_samples256_i11_q1b3_bd{budget}_nscore5_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma50_mn50_d8_no_upd"
 
     hst_f = "{dataset}-hstrees_tau_instance-trees{trees}_samples256_nscore5_leaf-top-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-{type}.csv"

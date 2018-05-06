@@ -51,6 +51,8 @@ def get_result_names(result_type):
         return ["hstrees_orig", "hstrees_baseline", "hstrees_q1b3"]
     elif result_type == "hstrees_rsforest":
         return ["hstrees_orig", "hstrees", "rsforest_orig"]
+    elif result_type == "ifor_loda":
+        return ["ifor", "loda", "loda_baseline"]
     else:
         raise ValueError("Invalid result_type: %s" % result_type)
 
@@ -61,6 +63,7 @@ def process_results(args):
     result_type = "unsupervised_only"
     result_type = "hstrees_only"
     result_type = "hstrees_rsforest"
+    result_type = "ifor_loda"
     result_names = get_result_names(result_type)
 
     cols = ["red", "green", "blue", "orange", "brown", "pink", "magenta", "black"]

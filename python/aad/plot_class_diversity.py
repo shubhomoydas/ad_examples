@@ -101,7 +101,7 @@ def get_num_discovered_classes_per_batch(queried, labels, batch_size, window_ind
 
 
 def get_result_names(result_type, stream_sig=""):
-    if result_type == "diverse - random":
+    if result_type == "diverse - top_random":
         return ['ifor_top_random', 'ifor_q8b3']
     elif result_type == "diverse - top":
         return ['ifor%s_q1b3' % stream_sig, 'ifor%s_q8b3' % stream_sig]
@@ -184,15 +184,17 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
-    # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'covtype', 'mammography', 'kddcup', 'shuttle_1v23567']
+    datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'covtype',
+                'mammography', 'kddcup', 'shuttle_1v23567', 'weather'
+                ]
     # datasets = ['mammography', 'kddcup', 'shuttle_1v23567', 'covtype']
-    datasets = ['toy2']
+    # datasets = ['toy2']
     class_diffs = []
     min_diff = np.Inf
     max_diff = -np.Inf
     x_lim = 1
     for dataset in datasets:
-        for result_type in ["diverse - top", "diverse - random"]:
+        for result_type in ["diverse - top", "diverse - top_random"]:
             args.dataset = dataset
             result_type, stream_sig, class_diff = process_results(args, result_type=result_type, plot=False)
             class_diffs.append((dataset, result_type, stream_sig, class_diff))
@@ -203,7 +205,8 @@ if __name__ == "__main__":
     dataset_colors = {"abalone": "red", "yeast": "green", "ann_thyroid_1v3": "blue",
                       "cardiotocography_1": "orange", "covtype": "magenta",
                       "mammography": "pink", "kddcup": "grey", "shuttle_1v23567": "brown",
-                      "toy2": "black"}
+                      "weather": "black",
+                      "toy2": "lightblue"}
     if len(class_diffs) > 0:
         dp = DataPlotter(pdfpath="./temp/aad_plots/class_diff/results_diff_classes_all.pdf", rows=1, cols=1)
         pl = dp.get_next_plot()
@@ -212,8 +215,14 @@ if __name__ == "__main__":
         plt.xlim([0, min(100, x_lim)])
         plt.ylim([min_diff, max_diff])
         pl.axhline(0., color="black", linewidth=1)
+        legend_handles = list()
         for dataset, result_type, stream_sig, class_diff in class_diffs:
-            pl.plot(np.arange(len(class_diff)), class_diff, '--' if result_type == "diverse - random" else '-',
-                    color=dataset_colors[dataset], linewidth=1, label="%s (%s)" % (dataset, result_type))
-        pl.legend(loc='upper right', prop={'size': 7})
+            ln, = pl.plot(np.arange(len(class_diff)), class_diff, '--' if result_type == "diverse - top_random" else '-',
+                          color=dataset_colors[dataset], linewidth=1,
+                          # label="%s (%s)" % (dataset, result_type)
+                          label="%s" % (dataset,)
+                          )
+            if result_type == "diverse - top":
+                legend_handles.append(ln)
+        pl.legend(handles=legend_handles, loc='upper right', prop={'size': 7})
         dp.close()

@@ -26,6 +26,7 @@ nohup bash ./aad.sh shuttle_1v23567 1500 10 0.03 7 1 0 0 4096 0 1 1 &
 nohup bash ./aad.sh covtype 3000 10 0.03 7 1 0 0 4096 0 1 1 &
 nohup bash ./aad.sh kddcup 3000 10 0.03 7 1 0 0 4096 0 1 1 &
 nohup bash ./aad.sh weather 1000 10 0.03 7 1 0 0 1024 0 1 1 &
+nohup bash ./aad.sh electricity 1500 10 0.03 7 1 0 0 1024 0 1 1 &
 
 
 =====================================
@@ -45,6 +46,7 @@ nohup bash ./aad.sh shuttle_1v23567 1500 10 0.03 7 2 0 0 4096 0 1 1 &
 nohup bash ./aad.sh covtype 3000 10 0.03 7 2 0 0 4096 0 1 1 &
 nohup bash ./aad.sh kddcup 3000 10 0.03 7 2 0 0 4096 0 1 1 &
 nohup bash ./aad.sh weather 1000 10 0.03 7 2 0 0 1024 0 1 1 &
+nohup bash ./aad.sh electricity 1500 10 0.03 7 2 0 0 1024 0 1 1 &
 
 
 =====================================
@@ -68,6 +70,7 @@ nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 1 0 1 4096 0 1 1 &
 nohup bash ./aad.sh covtype 300 10 0.03 7 1 0 1 4096 0 1 1 &
 nohup bash ./aad.sh kddcup 300 10 0.03 7 1 0 1 4096 0 1 1 &
 nohup bash ./aad.sh weather 300 10 0.03 7 1 0 1 1024 0 1 1 &
+nohup bash ./aad.sh electricity 300 10 0.03 7 1 0 1 1024 0 1 1 &
 
 # Query Top - Retain Anomalous
 nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 1 512 1 1 1 &
@@ -79,6 +82,7 @@ nohup bash ./aad.sh shuttle_1v23567 300 10 0.03 7 1 0 1 4096 1 1 1 &
 nohup bash ./aad.sh covtype 300 10 0.03 7 1 0 1 4096 1 1 1 &
 nohup bash ./aad.sh kddcup 300 10 0.03 7 1 0 1 4096 1 1 1 &
 nohup bash ./aad.sh weather 300 10 0.03 7 1 0 1 1024 1 1 1 &
+nohup bash ./aad.sh electricity 300 10 0.03 7 1 0 1 1024 1 1 1 &
 
 # Query Top - Retain Anomalous, Query Confident
 nohup bash ./aad.sh abalone 300 10 0.03 7 1 1 1 512 1 1 1 &
@@ -97,6 +101,10 @@ bash ./aad-job.sh shuttle_1v23567 1500 10 0.03 7 1 0 0 4096 0 1 1
 bash ./aad-job.sh kddcup 3000 10 0.03 7 1 0 0 4096 0 1 1
 bash ./aad-job.sh covtype 3000 10 0.03 7 1 0 0 4096 0 1 1
 bash ./aad-job.sh weather 1000 10 0.03 7 1 0 0 1024 0 1 1
+bash ./aad-job.sh electricity 1500 10 0.03 7 1 0 0 1024 0 1 1
+
+# LODA
+bash ./aad-job.sh electricity 1500 10 0.03 13 1 0 0 1024 0 1 1
 
 
 =====================================
@@ -113,6 +121,7 @@ bash ./aad-job.sh shuttle_1v23567 1500 10 0.03 7 1 0 1 4096 0 1 1
 bash ./aad-job.sh kddcup 3000 10 0.03 7 1 0 1 4096 0 1 1
 bash ./aad-job.sh covtype 3000 10 0.03 7 1 0 1 4096 0 1 1
 bash ./aad-job.sh weather 1000 10 0.03 7 1 0 1 1024 0 1 1
+bash ./aad-job.sh electricity 1500 10 0.03 7 1 0 1 1024 0 1 1
 
 # Query Top - Retain Anomalous
 bash ./aad-job.sh abalone 300 10 0.03 7 1 0 1 512 1 1 1
@@ -123,6 +132,8 @@ bash ./aad-job.sh mammography 1500 10 0.03 7 1 0 1 4096 1 1 1
 bash ./aad-job.sh shuttle_1v23567 1500 10 0.03 7 1 0 1 4096 1 1 1
 bash ./aad-job.sh kddcup 3000 10 0.03 7 1 0 1 4096 1 1 1
 bash ./aad-job.sh covtype 3000 10 0.03 7 1 0 1 4096 1 1 1
+bash ./aad-job.sh weather 1000 10 0.03 7 1 0 1 1024 1 1 1
+bash ./aad-job.sh electricity 1500 10 0.03 7 1 0 1 1024 1 1 1
 
 # results on server at:
 /data/doppa/users/sdas/datasets/results-aad_stream/

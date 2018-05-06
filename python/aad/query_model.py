@@ -96,8 +96,8 @@ class QueryRandom(Query):
         maxpos = kwargs.get("maxpos")
         ordered_indexes = kwargs.get("ordered_indexes")
         queried_items = kwargs.get("queried_items")
-        n = kwargs.get("n", 1)
-        q = sample(range(maxpos), n)
-        items = get_first_vals_not_marked(ordered_indexes, queried_items, start=q, n=n)
+        q = sample(range(maxpos), self.opts.num_query_batch)
+        items = get_first_vals_not_marked(ordered_indexes, queried_items, start=q,
+                                          n=self.opts.num_query_batch)
         return items
 

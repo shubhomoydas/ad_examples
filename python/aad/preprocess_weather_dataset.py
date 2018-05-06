@@ -3,6 +3,12 @@ import numpy.random as rnd
 from common.gen_samples import *
 
 """
+We preprocess the weather dataset to construct a streaming anomaly dataset.
+This type of preprocessing is used in (for example):
+
+RS-Forest: A Rapid Density Estimator for Streaming Anomaly Detection
+by Ke Wu, Kun Zhang, Wei Fan, Andrea Edwards and Philip S. Yu
+
 pythonw -m aad.preprocess_weather_dataset
 """
 
