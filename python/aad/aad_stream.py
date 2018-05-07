@@ -26,7 +26,7 @@ class StreamingAnomalyDetector(object):
     """
     def __init__(self, stream, model, labeled_x=None, labeled_y=None, labeled_ids=None,
                  unlabeled_x=None, unlabeled_y=None, unlabeled_ids=None, opts=None, max_buffer=512,
-                 min_samples_for_update=512):
+                 min_samples_for_update=256):
         self.model = model
         self.stream = stream
         self.max_buffer = max_buffer

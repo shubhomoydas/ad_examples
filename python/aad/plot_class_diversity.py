@@ -188,7 +188,7 @@ if __name__ == "__main__":
                 'mammography', 'kddcup', 'shuttle_1v23567', 'weather'
                 ]
     # datasets = ['mammography', 'kddcup', 'shuttle_1v23567', 'covtype']
-    # datasets = ['toy2']
+    datasets = ['toy2']
     class_diffs = []
     min_diff = np.Inf
     max_diff = -np.Inf

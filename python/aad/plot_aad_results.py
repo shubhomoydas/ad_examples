@@ -59,11 +59,11 @@ def get_result_names(result_type):
 
 def process_results(args):
     result_type = "ifor_vs_others"
-    # result_type = "ifor_top_vs_random"
     result_type = "unsupervised_only"
     result_type = "hstrees_only"
     result_type = "hstrees_rsforest"
     result_type = "ifor_loda"
+    result_type = "ifor_top_vs_random"
     result_names = get_result_names(result_type)
 
     cols = ["red", "green", "blue", "orange", "brown", "pink", "magenta", "black"]
@@ -108,7 +108,7 @@ if __name__ == "__main__":
                 ]
     # datasets = ['kddcup', 'shuttle_1v23567', 'covtype', 'mammography']
     # datasets = ['weather']
-    # datasets = ['toy2']
+    datasets = ['toy2']
     for dataset in datasets:
         args.dataset = dataset
         process_results(args)
