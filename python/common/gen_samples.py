@@ -72,6 +72,17 @@ def generate_dependent_normal_samples(n, mu, mcorr, dvar):
     return s
 
 
+def get_sphere_samples(sampledef):
+    x = np.zeros(shape=(0, 2))
+    y = np.zeros(0, dtype=int)
+    for n, label, start_angle, end_angle in sampledef:
+        thetas = np.random.uniform(start_angle, end_angle, n)
+        samples = np.hstack([np.transpose([np.cos(thetas)]), np.transpose([np.sin(thetas)])])
+        x = np.vstack([x, samples])
+        y = np.append(y, np.ones(n, dtype=int)*label)
+    return x, y
+
+
 def get_sample_defs(stype=1):
     if stype == 1:
         ns = [200, 250, 20, 15,  0,   0,  0,   0,   0]

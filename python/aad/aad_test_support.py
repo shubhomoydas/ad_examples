@@ -76,6 +76,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     plot_aad = metrics is not None and data_2D and opts.num_query_batch == 1 and True
     plot_anomalous_regions = plot_dataset and is_forest_detector(model.detector_type) and True
     illustrate_query_diversity = plot_dataset and is_forest_detector(model.detector_type) and True
+    plot_some_regions = plot_dataset and is_forest_detector(model.detector_type) and True
 
     pdfpath_baseline = "%s/tree_baseline.pdf" % outputdir
     pdfpath_orig_if_contours = "%s/score_contours.pdf" % outputdir
@@ -93,6 +94,9 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     if plot_anomalous_regions:
         plot_anomalous_2D(X_train, labels, model, metrics, outputdir,
                           n_top=opts.describe_n_top, p=opts.describe_volume_p)
+
+    if plot_some_regions:
+        plot_top_regions(X_train, labels, model, pdf_folder=outputdir, n=50)
 
     if illustrate_query_diversity:
         plot_query_diversity(X_train, labels, X_train_new, model, metrics, outputdir,
@@ -336,7 +340,7 @@ def plot_dataset_2D(x, y, model, plot_regions, regcols, pdf_folder):
 
 def plot_selected_regions(x, y, model, region_indexes,
                           candidate_instances=None, query_instances=None,
-                          title=None, path=None):
+                          title=None, path=None, candidate_instance_marker='x'):
     dp = DataPlotter(pdfpath=path, rows=1, cols=1)
 
     pl = dp.get_next_plot()
@@ -346,7 +350,9 @@ def plot_selected_regions(x, y, model, region_indexes,
     dp.plot_points(x[y == 1, :], pl, labels=y[y == 1], defaultcol="red", s=26, linewidths=1.5)
 
     if candidate_instances is not None:
-        dp.plot_points(x[candidate_instances, :], pl, labels=None, defaultcol="blue", s=50, linewidths=2.0, marker='x')
+        dp.plot_points(x[candidate_instances, :], pl, labels=None, defaultcol="blue",
+                       edgecolor="blue" if candidate_instance_marker == 'o' else None,
+                       s=50, linewidths=2.0, marker=candidate_instance_marker)
 
     if query_instances is not None:
         dp.plot_points(x[query_instances, :], pl, labels=None, edgecolor="green", s=50, linewidths=2.0, marker='o')
@@ -359,6 +365,21 @@ def plot_selected_regions(x, y, model, region_indexes,
         plot_rect_region(pl, region, "red", axis_lims)
 
     dp.close()
+
+
+def plot_top_regions(x, y, model, pdf_folder, n=50):
+    tm = Timer()
+    tm.start()
+    if is_forest_detector(model.detector_type):
+        treesig = "_%d_trees" % model.n_estimators
+    else:
+        logger.debug("Plotting random regions only supported for tree-based models")
+        return
+
+    all_regions = np.argsort(-model.d)
+    reg_idxs = all_regions[0:n]
+    plot_selected_regions(x, y, model, reg_idxs,
+                          path="%s/top_%d_regions%s.pdf" % (pdf_folder, n, treesig))
 
 
 def plot_anomalous_2D(x, y, model, metrics, pdf_folder, n_top=-1, p=1):
@@ -431,10 +452,22 @@ def plot_query_diversity(x, y, x_transformed, model, metrics, pdf_folder, n_top=
     feature_ranges = get_sample_feature_ranges(x)  # will be used to compute volumes
     # logger.debug("feature_ranges:\n%s" % feature_ranges)
 
+    # most influential regions
+    influential_region_indexes = get_regions_for_description(x,
+                                                             instance_indexes=top_anomalous_instances,
+                                                             model=model, region_score_only=True,
+                                                             n_top=n_top)
+    logger.debug("#influential_region_indexes: %d" % len(influential_region_indexes))
+    plot_selected_regions(x, y, model, influential_region_indexes,
+                          candidate_instances=top_anomalous_instances,
+                          candidate_instance_marker='o',
+                          # title="AAD Most Influential %d Regions for Gradient-based Learning" % n_top,
+                          path="%s/influential_regions_ntop%d%s.pdf" % (pdf_folder, n_top, treesig))
+
     # first, select some top-ranked subspaces as candidate regions
     candidate_region_indexes = get_regions_for_description(x,
                                                            instance_indexes=top_anomalous_instances,
-                                                           model=model, n_top=n_top)
+                                                           model=model, region_score_only=False, n_top=n_top)
     # get volumes of the candidate regions
     volumes = get_region_volumes(model, candidate_region_indexes, feature_ranges)
     compact_region_idxs = get_compact_regions(x, model=model,
@@ -457,18 +490,20 @@ def plot_query_diversity(x, y, x_transformed, model, metrics, pdf_folder, n_top=
                                                      n_select=n_selected_queries)
     # logger.debug("filtered_items: %s" % (str(list(filtered_items))))
 
-    plot_selected_regions(x, y, model, candidate_region_indexes,
+    logger.debug("#candidate_region_indexes: %d" % len(candidate_region_indexes))
+    dummy_y = np.zeros(len(y), dtype=int)
+    plot_selected_regions(x, dummy_y, model, candidate_region_indexes,
                           candidate_instances=top_anomalous_instances,
                           # title="AAD Top %d Regions" % n_top,
                           path="%s/query_candidate_regions_ntop%d%s.pdf" % (pdf_folder, n_top, treesig))
 
-    plot_selected_regions(x, y, model, compact_region_idxs,
+    plot_selected_regions(x, dummy_y, model, compact_region_idxs,
                           candidate_instances=top_anomalous_instances,
                           query_instances=top_anomalous_instances[0:n_selected_queries],
                           # title="AAD Top %d Regions Compact" % n_top,
                           path="%s/query_compact_ntop%d%s_baseline.pdf" % (pdf_folder, n_top, treesig))
 
-    plot_selected_regions(x, y, model, compact_region_idxs,
+    plot_selected_regions(x, dummy_y, model, compact_region_idxs,
                           candidate_instances=top_anomalous_instances,
                           query_instances=filtered_items,
                           # title="AAD Top %d Regions Compact" % n_top,

@@ -10,6 +10,8 @@ Python libraries required:
     matplotlib (2.1.0)
     tensorflow (1.6.0)
 
+Note: The code has been tested with **python 2.7**.
+
 
 Anomaly Detection Examples
 --------------------------
@@ -46,9 +48,12 @@ To execute the code:
 
 1. **Run code from 'python' folder**. The outputs will be generated under 'temp' folder. The 'pythonw' command is used on OSX, but 'python' should be used on Linux.
 
-2. *The run commands are at the top of the python source code files.*
+2. To avoid import errors, make sure that PYTHONPATH is configured correctly to include the current dir:
+.:/usr/local/lib/python
 
-3. Check the log file in **'python/temp'** folder. Usually it will be named <demo_code>.log. Timeseries demos will output logs under the 'python/temp/timeseries' folder.
+3. *The run commands are at the top of the python source code files.*
+
+4. Check the log file in **'python/temp'** folder. Usually it will be named <demo_code>.log. Timeseries demos will output logs under the 'python/temp/timeseries' folder.
 
 
 Active Anomaly Discovery (AAD)

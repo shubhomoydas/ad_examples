@@ -74,7 +74,7 @@ def get_instances_for_description(x=None, labels=None, metrics=None, instance_in
     return instance_indexes
 
 
-def get_regions_for_description(x, instance_indexes=None, model=None, n_top=-1):
+def get_regions_for_description(x, instance_indexes=None, model=None, region_score_only=False, n_top=-1):
     """ Get the set of candidate regions for describing the instances
 
     Ensures that atmost n_top most anomalous regions that an instance belongs to
@@ -86,11 +86,19 @@ def get_regions_for_description(x, instance_indexes=None, model=None, n_top=-1):
         Indexes of instances whose region memberships need to be checked
     :param model: Aad
         AAD model
+    :param region_score_only: bool
+        If False, score regions by the multiplying region anomaly scores with corresponding weights
+        If True, score regions by only their anomaly scores
+    :param n_top: int
+        Number of top ranked regions (by score) per data instance to use
     :return: np.array(int)
     """
     # instance_region_idxs = np.array(model.get_region_ids(x[instance_indexes, :]))
     # logger.debug(instance_region_idxs)
-    nwd = -np.multiply(model.w, model.d)
+    if region_score_only:
+        nwd = -model.d
+    else:
+        nwd = -np.multiply(model.w, model.d)
     regions = set()
     if n_top < 0:
         n_top = len(nwd)
