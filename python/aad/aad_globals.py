@@ -289,6 +289,9 @@ def get_aad_option_list():
                         help="Whether to include only leaf node regions only or intermediate node regions as well.")
     parser.add_argument("--forest_max_depth", action="store", type=int, default=15,
                         help="Number of samples to build each tree in Forest")
+    parser.add_argument("--forest_replace_frac", action="store", type=float, default=0.2,
+                        help="Number of trees in Forest which will be replaced "
+                             "in streaming setting. This option applies only with --streaming.")
 
     parser.add_argument("--num_query_batch", action="store", type=int, default=5,
                         help="Applies only to querytype %d. " % QUERY_DETERMINISIC +
@@ -456,6 +459,7 @@ class AadOpts(object):
         self.forest_score_type = args.forest_score_type
         self.forest_add_leaf_nodes_only = args.forest_add_leaf_nodes_only
         self.forest_max_depth = args.forest_max_depth
+        self.forest_replace_frac = args.forest_replace_frac
 
         self.n_explore = args.n_explore
 
@@ -514,11 +518,14 @@ class AadOpts(object):
         return s
 
     def streaming_str(self):
-        return "sw%d_asu%s%s_mw%df%d_%d_%s" % (self.stream_window, str(self.allow_stream_update),
-                                               "" if not self.do_not_update_weights else "_no_upd",
-                                               self.max_windows, self.min_feedback_per_window,
-                                               self.max_feedback_per_window,
-                                               stream_retention_types[self.retention_type])
+        return "sw%d_asu%s%s_mw%df%d_%d_%s%s" % (self.stream_window, str(self.allow_stream_update),
+                                                 "" if not self.do_not_update_weights else "_no_upd",
+                                                 self.max_windows, self.min_feedback_per_window,
+                                                 self.max_feedback_per_window,
+                                                 stream_retention_types[self.retention_type],
+                                                 "" if (self.detector_type == AAD_IFOREST and
+                                                        self.forest_replace_frac == 0.2) else "_f%0.2f" % self.forest_replace_frac
+                                                 )
 
     def detector_type_str(self):
         s = detector_types[self.detector_type]

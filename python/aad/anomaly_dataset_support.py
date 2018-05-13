@@ -71,18 +71,18 @@ class ResultDefs(object):
 
 
 dataset_configs = {
-    # 'dataset': [budget, num_anoms, window_size, max_number_of_windows, n_trees, depth]
-    'abalone': [300, 29, 512, 30],
-    'ann_thyroid_1v3': [300, 73, 512, 30],
-    'cardiotocography_1': [300, 45, 512, 30],
-    'yeast': [300, 55, 512, 30],
-    'mammography': [1500, 260, 4096, 30],
-    'covtype': [3000, 2747, 4096, 1000],
-    'kddcup': [3000, 2416, 4096, 30],
-    'shuttle_1v23567': [1500, 867, 4096, 30],
-    'weather': [1000, 656, 1024, 30],
-    'electricity': [1500, 1372, 1024, 30],
-    'toy2': [45, 35, 512, 30]
+    # 'dataset': [budget, num_anoms, window_size, max_number_of_windows, n_trees, display_name]
+    'abalone': [300, 29, 512, 30, "Abalone"],
+    'ann_thyroid_1v3': [300, 73, 512, 30, "ANN-Thyroid-1v3"],
+    'cardiotocography_1': [300, 45, 512, 30, "Cardiotocography"],
+    'yeast': [300, 55, 512, 30, "Yeast"],
+    'mammography': [1500, 260, 4096, 30, "Mammography"],
+    'covtype': [3000, 2747, 4096, 1000, "Covtype"],
+    'kddcup': [3000, 2416, 4096, 30, "KDD-Cup-99"],
+    'shuttle_1v23567': [1500, 867, 4096, 30, "Shuttle"],
+    'weather': [1000, 656, 1024, 30, "Weather"],
+    'electricity': [1500, 1372, 1024, 30, "Electricity"],
+    'toy2': [45, 35, 512, 30, "Toy-2"]
 }
 
 dataset_colors = {"abalone": "red", "yeast": "green", "ann_thyroid_1v3": "blue",

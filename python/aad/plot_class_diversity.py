@@ -19,12 +19,12 @@ pythonw -m aad.plot_class_diversity
 """
 
 
-def plot_results(results, pdffile, num_seen=0, num_anoms=0):
+def plot_results(results, pdffile, num_seen=0, num_anoms=0, axis_fontsize=16):
     cols = ["red", "green", "blue", "orange", "brown", "pink", "black"]
     dp = DataPlotter(pdfpath=pdffile, rows=1, cols=1)
     pl = dp.get_next_plot()
-    plt.xlabel('iter')
-    plt.ylabel('num_seen')
+    plt.xlabel('# instances labeled', fontsize=axis_fontsize)
+    plt.ylabel('% of total anomalies seen', fontsize=axis_fontsize)
     plt.xlim([0, num_seen])
     plt.ylim([0., 1.])
     for i, result in enumerate(results):
@@ -32,7 +32,7 @@ def plot_results(results, pdffile, num_seen=0, num_anoms=0):
         logger.debug("label: %s" % result[0])
         pl.plot(np.arange(len(num_found)), num_found * 1./num_anoms, '--',
                 color=cols[i], linewidth=2, label=result[0])
-    pl.legend(loc='lower right', prop={'size': 14})
+    pl.legend(loc='lower right', prop={'size': 16})
     dp.close()
 
 
@@ -49,7 +49,7 @@ def plot_class_discovery(results, pdffile, batch_size, n_batches):
         logger.debug("label: %s" % result[0])
         pl.plot(np.arange(len(num_found)), num_found, '--',
                 color=cols[i], linewidth=2, label=result[0])
-    pl.legend(loc='lower right', prop={'size': 14})
+    pl.legend(loc='lower right', prop={'size': 16})
     dp.close()
 
 
@@ -109,9 +109,7 @@ def get_result_names(result_type, stream_sig=""):
         raise ValueError("Invalid result_type: %s" % result_type)
 
 
-def process_results(args, result_type, plot=False):
-    stream_sig = ""
-    # stream_sig = "_stream"
+def process_results(args, result_type, plot=False, stream_sig=""):
     result_names = get_result_names(result_type, stream_sig=stream_sig)
     result_lists, result_map = get_result_defs(args)
     num_seen = 0
@@ -155,14 +153,14 @@ def process_results(args, result_type, plot=False):
         dp = DataPlotter(pdfpath="./temp/aad_plots/class_diff/results_diff_classes_%s%s_%s.pdf" %
                                  (args.dataset, stream_sig, result_type), rows=1, cols=1)
         pl = dp.get_next_plot()
-        plt.xlabel('number of batches from start (batch size=3)')
-        plt.ylabel('avg. classes per batch')
+        plt.xlabel('number of batches from start (batch size=3)', fontsize=16)
+        plt.ylabel('avg. classes per batch', fontsize=16)
         plt.xlim([0, len(c_mean)])
         plt.ylim([np.min(c_mean), np.max(c_mean)])
         pl.plot(np.arange(len(c_mean)), c_mean, '--',
                 color="red", linewidth=1, label="diff in num classes")
         pl.axhline(0., color="black", linewidth=1)
-        pl.legend(loc='lower right', prop={'size': 14})
+        pl.legend(loc='lower right', prop={'size': 16})
         dp.close()
 
     return result_type, stream_sig, c_mean
@@ -184,10 +182,14 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
+    stream_sig = ""
+    # stream_sig = "_stream"
+
     datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'covtype',
-                'mammography', 'kddcup', 'shuttle_1v23567', 'weather'
+                'mammography', 'kddcup', 'shuttle_1v23567', 'weather', 'electricity'
                 ]
     # datasets = ['mammography', 'kddcup', 'shuttle_1v23567', 'covtype']
+    # datasets = ['electricity']
     datasets = ['toy2']
     class_diffs = []
     min_diff = np.Inf
@@ -196,33 +198,30 @@ if __name__ == "__main__":
     for dataset in datasets:
         for result_type in ["diverse - top", "diverse - top_random"]:
             args.dataset = dataset
-            result_type, stream_sig, class_diff = process_results(args, result_type=result_type, plot=False)
+            result_type, stream_sig, class_diff = process_results(args, result_type=result_type,
+                                                                  plot=False, stream_sig=stream_sig)
             class_diffs.append((dataset, result_type, stream_sig, class_diff))
             min_diff = min(min_diff, np.min(class_diff))
             max_diff = max(max_diff, np.max(class_diff))
             x_lim = max(x_lim, len(class_diff))
 
-    dataset_colors = {"abalone": "red", "yeast": "green", "ann_thyroid_1v3": "blue",
-                      "cardiotocography_1": "orange", "covtype": "magenta",
-                      "mammography": "pink", "kddcup": "grey", "shuttle_1v23567": "brown",
-                      "weather": "black",
-                      "toy2": "lightblue"}
     if len(class_diffs) > 0:
-        dp = DataPlotter(pdfpath="./temp/aad_plots/class_diff/results_diff_classes_all.pdf", rows=1, cols=1)
+        dp = DataPlotter(pdfpath="./temp/aad_plots/class_diff/results_diff_classes%s_all.pdf" % stream_sig, rows=1, cols=1)
         pl = dp.get_next_plot()
-        plt.xlabel('number of batches from start (batch size=3)')
-        plt.ylabel('avg. difference in #unique classes per batch')
+        plt.xlabel('number of batches from start (batch size=3)', fontsize=14)
+        plt.ylabel('avg. difference in #unique classes per batch', fontsize=14)
         plt.xlim([0, min(100, x_lim)])
         plt.ylim([min_diff, max_diff])
         pl.axhline(0., color="black", linewidth=1)
         legend_handles = list()
         for dataset, result_type, stream_sig, class_diff in class_diffs:
+            dataset_name = dataset_configs[dataset][4]
             ln, = pl.plot(np.arange(len(class_diff)), class_diff, '--' if result_type == "diverse - top_random" else '-',
                           color=dataset_colors[dataset], linewidth=1,
                           # label="%s (%s)" % (dataset, result_type)
-                          label="%s" % (dataset,)
+                          label="%s" % (dataset_name,)
                           )
             if result_type == "diverse - top":
                 legend_handles.append(ln)
-        pl.legend(handles=legend_handles, loc='upper right', prop={'size': 7})
+        pl.legend(handles=legend_handles, loc='upper right', prop={'size': 10})
         dp.close()

@@ -19,24 +19,39 @@ pythonw -m aad.plot_aad_results
 """
 
 
-def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0):
+def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
+                 legend_loc='lower right', legend_datasets=None, axis_fontsize=16):
+    dataset = results[0][0]
     dp = DataPlotter(pdfpath=pdffile, rows=1, cols=1)
     pl = dp.get_next_plot()
-    plt.xlabel('# instances labeled')
-    plt.ylabel('fraction of total anomalies seen')
+    plt.xlabel('# instances labeled', fontsize=axis_fontsize)
+    plt.ylabel('% of total anomalies seen', fontsize=axis_fontsize)
     plt.xlim([0, num_seen])
-    plt.ylim([0., 1.])
+    plt.ylim([0., 100.])
     for i, result in enumerate(results):
-        num_found = result[1]
-        logger.debug("label: %s" % result[0])
-        pl.plot(np.arange(len(num_found)), num_found * 1./num_anoms, '-',
-                color=cols[i], linewidth=1, label=result[0])
-    pl.legend(loc='lower right', prop={'size': 8})
+        num_found = result[2]
+        logger.debug("label: %s" % result[1])
+        pl.plot(np.arange(len(num_found)), num_found * 100./num_anoms, '-',
+                color=cols[i], linewidth=1, label=result[1])
+    if legend_datasets is None or dataset in legend_datasets:
+        pl.legend(loc=legend_loc, prop={'size': 12})
     dp.close()
 
 
 def get_result_names(result_type):
-    if result_type == "ifor_top_vs_random":
+    if result_type == "batch":
+        return ['ifor', 'ifor_baseline', 'loda', 'ifor_noprior_unif', 'ifor_noprior_rand']
+    elif result_type == "stream":
+        return ['ifor', 'ifor_baseline', 'ifor_stream', 'ifor_stream_q8b3', 'hstrees', 'hstrees_orig', 'rsforest_orig']
+    elif result_type == "diversity":
+        return ['ifor', 'ifor_q8b3']
+    elif result_type == "stream_diff":
+        return ['ifor_stream', 'ifor_stream_no_weight_upd']  # , 'ifor_stream_no_model_upd'
+    elif result_type == "stream_diff08":
+        return ['ifor', 'ifor_stream', 'ifor_stream_08', 'ifor_stream_no_weight_upd', 'ifor_stream_no_weight_upd08']  # , 'ifor_stream_no_model_upd'
+    elif result_type == "compare_prior":
+        return ['ifor', 'ifor_baseline', 'ifor_noprior_unif', 'ifor_noprior_rand']
+    elif result_type == "ifor_top_vs_random":
         return ['ifor', 'ifor_q1b3', 'ifor_q8b3', 'ifor_baseline', 'ifor_top_random']
     elif result_type == "ifor_vs_others":
         return [
@@ -57,13 +72,7 @@ def get_result_names(result_type):
         raise ValueError("Invalid result_type: %s" % result_type)
 
 
-def process_results(args):
-    result_type = "ifor_vs_others"
-    result_type = "unsupervised_only"
-    result_type = "hstrees_only"
-    result_type = "hstrees_rsforest"
-    result_type = "ifor_loda"
-    result_type = "ifor_top_vs_random"
+def process_results(args, result_type="batch", plot=True, legend_loc='lower right', legend_datasets=None):
     result_names = get_result_names(result_type)
 
     cols = ["red", "green", "blue", "orange", "brown", "pink", "magenta", "black"]
@@ -76,12 +85,39 @@ def process_results(args):
         rs = result_map[r_name]
         r_avg, r_sd, r_n = rs.get_results(parent_folder)
         logger.debug("[%s]\navg:\n%s\nsd:\n%s" % (rs.name, str(list(r_avg)), str(list(r_sd))))
-        all_results.append([rs.name, r_avg, r_sd, r_n])
+        all_results.append((args.dataset, rs.display_name, r_avg, r_sd, r_n))
         num_seen = max(num_seen, len(r_avg))
         num_anoms = max(num_anoms, rs.num_anoms)
+    if plot:
+        dir_create("./temp/aad_plots/%s" % result_type)
+        plot_results(all_results, cols, "./temp/aad_plots/%s/num_seen-%s.pdf" % (result_type, args.dataset),
+                     num_seen=num_seen, num_anoms=num_anoms, legend_loc=legend_loc, legend_datasets=legend_datasets)
+    return all_results, num_anoms
+
+
+def plot_diversity_all(all_results, result_type, legend_loc='lower right', axis_fontsize=16):
+    line_styles = ["-", "--"]
     dir_create("./temp/aad_plots/%s" % result_type)
-    plot_results(all_results, cols, "./temp/aad_plots/%s/results_anoms_found_%s.pdf" % (result_type, args.dataset),
-                 num_seen=num_seen, num_anoms=num_anoms)
+    dp = DataPlotter(pdfpath="./temp/aad_plots/%s/diversity_num_seen.pdf" % result_type,
+                     rows=1, cols=1)
+    pl = dp.get_next_plot()
+    plt.xlabel('# instances labeled', fontsize=16)
+    plt.ylabel('% of total anomalies seen', fontsize=16)
+    plt.xlim([0, 1500])
+    plt.ylim([0, 100])
+    for i, results_tmp in enumerate(all_results):
+        results, num_anoms = results_tmp
+        for j, rs in enumerate(results):
+            dataset, display_name, r_avg, r_sd, r_n = rs
+            dataset_name = dataset_configs[dataset][4]
+            ln, = pl.plot(np.arange(len(r_avg)), r_avg * 100. / num_anoms,
+                          line_styles[j],
+                          color=dataset_colors[dataset], linewidth=1,
+                          # label="%s (%s)" % (dataset, result_type)
+                          label="%s (%s)" % (display_name, dataset_name)
+                          )
+    pl.legend(loc=legend_loc, prop={'size': 12})
+    dp.close()
 
 
 if __name__ == "__main__":
@@ -100,15 +136,52 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
-    # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1']  # , 'mammography']
-    # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3']
-    datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'kddcup',
-                'shuttle_1v23567', 'mammography', 'covtype',
-                "weather"
-                ]
-    # datasets = ['kddcup', 'shuttle_1v23567', 'covtype', 'mammography']
-    # datasets = ['weather']
+    result_type = "ifor_vs_others"
+    # result_type = "stream"
+    # result_type = "batch"
+    # result_type = "compare_prior"
+    # result_type = "unsupervised_only"
+    # result_type = "hstrees_only"
+    # result_type = "hstrees_rsforest"
+    # result_type = "ifor_loda"
+    # result_type = "ifor_top_vs_random"
+    # result_type = "diversity"
+    # result_type = "stream_diff"
+    # result_type = "stream_diff08"
+
+    legend_loc = 'lower right'
+    legend_datasets = None
+    if result_type == "batch":
+        legend_datasets = ["abalone"]
+    elif result_type == "stream":
+        legend_datasets = ["covtype"]
+        legend_loc = 'upper left'
+
+    if result_type == "diversity":
+        datasets = ['ann_thyroid_1v3', 'mammography', 'shuttle_1v23567']
+    elif result_type == "stream_diff":
+        datasets = ['covtype', 'electricity', 'weather']
+    elif result_type == "stream_diff08":
+        datasets = ['electricity', 'weather']
+        legend_datasets = ["electricity"]
+        legend_loc = 'upper left'
+    else:
+        # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1']  # , 'mammography']
+        # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3']
+        datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'kddcup',
+                    'shuttle_1v23567', 'mammography', 'covtype',
+                    'weather', "electricity"
+                    ]
+        # datasets = ['kddcup', 'shuttle_1v23567', 'covtype', 'mammography']
+        # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'mammography']
+        # datasets = ['weather']
     datasets = ['toy2']
+    all_results = list()
     for dataset in datasets:
         args.dataset = dataset
-        process_results(args)
+        plot = (result_type != "diversity")
+        all_results.append(process_results(args, result_type=result_type, plot=plot,
+                                           legend_loc=legend_loc, legend_datasets=legend_datasets))
+
+    if result_type == "diversity":
+        plot_diversity_all(all_results, result_type)

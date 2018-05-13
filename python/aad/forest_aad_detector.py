@@ -76,7 +76,8 @@ class AadForest(Aad, StreamingSupport):
                  add_leaf_nodes_only=False,
                  detector_type=AAD_IFOREST, n_jobs=1,
                  tree_update_type=TREE_UPD_OVERWRITE,
-                 tree_incremental_update_weight=0.5):
+                 tree_incremental_update_weight=0.5,
+                 forest_replace_frac=0.2):
 
         Aad.__init__(self, detector_type, ensemble_score, random_state)
 
@@ -84,6 +85,7 @@ class AadForest(Aad, StreamingSupport):
         self.max_samples = max_samples
         self.tree_update_type = tree_update_type
         self.tree_incremental_update_weight = tree_incremental_update_weight
+        self.forest_replace_frac = forest_replace_frac
 
         self.score_type = score_type
         if not (self.score_type == IFOR_SCORE_TYPE_INV_PATH_LEN or
@@ -101,6 +103,7 @@ class AadForest(Aad, StreamingSupport):
 
         if detector_type == AAD_IFOREST:
             self.clf = IForest(n_estimators=n_estimators, max_samples=max_samples,
+                               replace_frac=forest_replace_frac,
                                n_jobs=n_jobs, random_state=self.random_state)
         elif detector_type == AAD_HSTREES:
             if not self.add_leaf_nodes_only:
