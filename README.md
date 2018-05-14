@@ -1,12 +1,12 @@
 Python libraries required:
 --------------------------
-    numpy (1.13.3)
-    scipy (0.19.1)
+    numpy (1.14.2)
+    scipy (1.0.0)
     scikit-learn (0.19.1)
-    cvxopt
+    cvxopt (1.1.9)
     pandas (0.21.0)
-    ranking
-    statsmodels
+    ranking (0.3.1)
+    statsmodels (0.8.0)
     matplotlib (2.1.0)
     tensorflow (1.6.0)
 
