@@ -19,8 +19,14 @@ pythonw -m aad.plot_aad_results
 """
 
 
+def get_n_intermediate(x, n=10):
+    m = len(x)
+    p = np.round(np.arange(0, n) * (m * 1. / n)).astype(dtype=int)
+    return x[p]
+
+
 def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
-                 legend_loc='lower right', legend_datasets=None, axis_fontsize=16):
+                 plot_sd=False, legend_loc='lower right', legend_datasets=None, axis_fontsize=16):
     dataset = results[0][0]
     dp = DataPlotter(pdfpath=pdffile, rows=1, cols=1)
     pl = dp.get_next_plot()
@@ -29,10 +35,15 @@ def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
     plt.xlim([0, num_seen])
     plt.ylim([0., 100.])
     for i, result in enumerate(results):
-        num_found = result[2]
+        num_found_avg = result[2]
+        num_found_avg = num_found_avg * 100. / num_anoms
+        num_found_sd = result[3] * 100. / num_anoms
         logger.debug("label: %s" % result[1])
-        pl.plot(np.arange(len(num_found)), num_found * 100./num_anoms, '-',
+        pl.plot(np.arange(len(num_found_avg)), num_found_avg, '-',
                 color=cols[i], linewidth=1, label=result[1])
+        if plot_sd:
+            pts = get_n_intermediate(np.arange(len(num_found_avg) + i*5, dtype=int))
+            pl.errorbar(pts, num_found_avg[pts], yerr=1.96*num_found_sd[pts], fmt='.', color=cols[i])
     if legend_datasets is None or dataset in legend_datasets:
         pl.legend(loc=legend_loc, prop={'size': 12})
     dp.close()
@@ -72,7 +83,8 @@ def get_result_names(result_type):
         raise ValueError("Invalid result_type: %s" % result_type)
 
 
-def process_results(args, result_type="batch", plot=True, legend_loc='lower right', legend_datasets=None):
+def process_results(args, result_type="batch", plot=True, plot_sd=False,
+                    legend_loc='lower right', legend_datasets=None):
     result_names = get_result_names(result_type)
 
     cols = ["red", "green", "blue", "orange", "brown", "pink", "magenta", "black"]
@@ -91,7 +103,8 @@ def process_results(args, result_type="batch", plot=True, legend_loc='lower righ
     if plot:
         dir_create("./temp/aad_plots/%s" % result_type)
         plot_results(all_results, cols, "./temp/aad_plots/%s/num_seen-%s.pdf" % (result_type, args.dataset),
-                     num_seen=num_seen, num_anoms=num_anoms, legend_loc=legend_loc, legend_datasets=legend_datasets)
+                     num_seen=num_seen, num_anoms=num_anoms, plot_sd=plot_sd,
+                     legend_loc=legend_loc, legend_datasets=legend_datasets)
     return all_results, num_anoms
 
 
@@ -149,9 +162,11 @@ if __name__ == "__main__":
     # result_type = "stream_diff"
     # result_type = "stream_diff08"
 
+    plot_sd = False
     legend_loc = 'lower right'
     legend_datasets = None
     if result_type == "batch":
+        plot_sd = True
         legend_datasets = ["abalone"]
     elif result_type == "stream":
         legend_datasets = ["covtype"]
@@ -180,7 +195,7 @@ if __name__ == "__main__":
     for dataset in datasets:
         args.dataset = dataset
         plot = (result_type != "diversity")
-        all_results.append(process_results(args, result_type=result_type, plot=plot,
+        all_results.append(process_results(args, result_type=result_type, plot=plot, plot_sd=plot_sd,
                                            legend_loc=legend_loc, legend_datasets=legend_datasets))
 
     if result_type == "diversity":
