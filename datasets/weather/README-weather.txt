@@ -5,6 +5,10 @@ http://users.rowan.edu/~polikar/research/nse/
 
 To cite this dataset:
 ---------------------
+Incremental learning of concept drift from streaming imbalanced data,
+in IEEE Transactions on Knowledge & Data Engineering, 2013, vol. 25, no. 10, pp. 2283-2301.
+by G. Ditzler and R. Polikar,  
+
 Incremental Learning of Concept Drift in Nonstationary Environments, 
 by Ryan Elwell and Robi Polikar.
 
