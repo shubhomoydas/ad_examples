@@ -73,7 +73,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     plot_rectangular_regions = plot_dataset and is_forest_detector(model.detector_type) and False
     plot_forest_contours = data_2D and is_forest_detector(model.detector_type) and False
     plot_baseline = data_2D and False
-    plot_aad = metrics is not None and data_2D and opts.num_query_batch == 1 and True
+    plot_aad = metrics is not None and data_2D and opts.num_query_batch == 1 and False
     plot_anomalous_regions = plot_dataset and is_forest_detector(model.detector_type) and True
     illustrate_query_diversity = plot_dataset and is_forest_detector(model.detector_type) and True
     plot_some_regions = plot_dataset and is_forest_detector(model.detector_type) and True
@@ -92,13 +92,16 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
         plot_dataset_2D(X_train, labels, model, plot_rectangular_regions, regcols, outputdir)
 
     if plot_anomalous_regions:
+        print "plotting most anomalous regions after feedback to folder %s" % outputdir
         plot_anomalous_2D(X_train, labels, model, metrics, outputdir,
                           n_top=opts.describe_n_top, p=opts.describe_volume_p)
 
     if plot_some_regions:
+        print "plotting most anomalous regions (baseline) to folder %s" % outputdir
         plot_top_regions(X_train, labels, model, pdf_folder=outputdir, n=50)
 
     if illustrate_query_diversity:
+        print "plotting query diversity to folder %s" % outputdir
         plot_query_diversity(X_train, labels, X_train_new, model, metrics, outputdir,
                              n_top=opts.describe_n_top, p=opts.describe_volume_p)
 
@@ -352,10 +355,10 @@ def plot_selected_regions(x, y, model, region_indexes,
     if candidate_instances is not None:
         dp.plot_points(x[candidate_instances, :], pl, labels=None, defaultcol="blue",
                        edgecolor="blue" if candidate_instance_marker == 'o' else None,
-                       s=50, linewidths=2.0, marker=candidate_instance_marker)
+                       s=70, linewidths=3.0, marker=candidate_instance_marker)
 
     if query_instances is not None:
-        dp.plot_points(x[query_instances, :], pl, labels=None, edgecolor="green", s=50, linewidths=2.0, marker='o')
+        dp.plot_points(x[query_instances, :], pl, labels=None, edgecolor="green", s=150, linewidths=3.0, marker='o')
 
     # plot the isolation model tree regions
     axis_lims = (plt.xlim(), plt.ylim())
@@ -373,7 +376,7 @@ def plot_top_regions(x, y, model, pdf_folder, n=50):
     if is_forest_detector(model.detector_type):
         treesig = "_%d_trees" % model.n_estimators
     else:
-        logger.debug("Plotting random regions only supported for tree-based models")
+        logger.debug("Plotting anomalous regions only supported for tree-based models")
         return
 
     all_regions = np.argsort(-model.d)
