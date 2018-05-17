@@ -26,7 +26,7 @@ def get_n_intermediate(x, n=10):
 
 
 def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
-                 plot_sd=False, legend_loc='lower right', legend_datasets=None, axis_fontsize=16):
+                 plot_sd=False, legend_loc='lower right', legend_datasets=None, axis_fontsize=20):
     dataset = results[0][0]
     dp = DataPlotter(pdfpath=pdffile, rows=1, cols=1)
     pl = dp.get_next_plot()
@@ -45,7 +45,7 @@ def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
             pts = get_n_intermediate(np.arange(len(num_found_avg) + i*5, dtype=int))
             pl.errorbar(pts, num_found_avg[pts], yerr=1.96*num_found_sd[pts], fmt='.', color=cols[i])
     if legend_datasets is None or dataset in legend_datasets:
-        pl.legend(loc=legend_loc, prop={'size': 12})
+        pl.legend(loc=legend_loc, prop={'size': 14})
     dp.close()
 
 
@@ -108,14 +108,14 @@ def process_results(args, result_type="batch", plot=True, plot_sd=False,
     return all_results, num_anoms
 
 
-def plot_diversity_all(all_results, result_type, legend_loc='lower right', axis_fontsize=16):
+def plot_diversity_all(all_results, result_type, legend_loc='lower right', axis_fontsize=20):
     line_styles = ["-", "--"]
     dir_create("./temp/aad_plots/%s" % result_type)
     dp = DataPlotter(pdfpath="./temp/aad_plots/%s/diversity_num_seen.pdf" % result_type,
                      rows=1, cols=1)
     pl = dp.get_next_plot()
-    plt.xlabel('# instances labeled', fontsize=16)
-    plt.ylabel('% of total anomalies seen', fontsize=16)
+    plt.xlabel('# instances labeled', fontsize=axis_fontsize)
+    plt.ylabel('% of total anomalies seen', fontsize=axis_fontsize)
     plt.xlim([0, 1500])
     plt.ylim([0, 100])
     for i, results_tmp in enumerate(all_results):
@@ -129,7 +129,7 @@ def plot_diversity_all(all_results, result_type, legend_loc='lower right', axis_
                           # label="%s (%s)" % (dataset, result_type)
                           label="%s (%s)" % (display_name, dataset_name)
                           )
-    pl.legend(loc=legend_loc, prop={'size': 12})
+    pl.legend(loc=legend_loc, prop={'size': 14})
     dp.close()
 
 
