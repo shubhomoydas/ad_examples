@@ -73,7 +73,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
     plot_rectangular_regions = plot_dataset and is_forest_detector(model.detector_type) and False
     plot_forest_contours = data_2D and is_forest_detector(model.detector_type) and False
     plot_baseline = data_2D and False
-    plot_aad = metrics is not None and data_2D and opts.num_query_batch == 1 and False
+    plot_aad = metrics is not None and data_2D and opts.num_query_batch == 1 and True
     plot_anomalous_regions = plot_dataset and is_forest_detector(model.detector_type) and True
     illustrate_query_diversity = plot_dataset and is_forest_detector(model.detector_type) and True
     plot_some_regions = plot_dataset and is_forest_detector(model.detector_type) and True
