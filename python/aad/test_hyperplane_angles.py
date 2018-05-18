@@ -27,12 +27,12 @@ def plot_angle_hist(vals, labels, dp):
     nom_v  = vals[np.where(labels==0)[0]]
     anom_v = vals[np.where(labels==1)[0]]
     bins = np.arange(start=np.min(vals), stop=np.max(vals), step=(np.max(vals)-np.min(vals))/50)
-    font = {'xtick.labelsize': 12,
-            'ytick.labelsize': 12}
+    font = {'xtick.labelsize': 16,
+            'ytick.labelsize': 16}
     mpl.rc(font)
     pl = dp.get_next_plot()
-    plt.xlabel("angle (degrees)", fontsize=16)
-    plt.ylabel("fraction (%)", fontsize=16)
+    plt.xlabel(r"angles from ${\bf w}_{unif}$ (degrees)", fontsize=20)
+    plt.ylabel("fraction of instances (%)", fontsize=20)
     logger.debug("\n%s" % str(list(nom_v)))
     n1, bins1 = np.histogram(nom_v, bins=bins, normed=True)
     n2, bins2 = np.histogram(anom_v, bins=bins, normed=True)
