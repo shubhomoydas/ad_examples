@@ -81,8 +81,23 @@ This codebase supports four different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The Isolation Forest based AAD (**streaming support with model update**)
     - For streaming update, we support two modes:
-      - Replace trees based on KL-divergence. We first compute the average KL-divergence for each tree. This is done as follows: randomly partition the current window of data into two equal sets. Treat each isolation tree as set of histogram bins and compute the instance distributions with each of the two data partitions. Then compute the KL-divergence between these two distributions. Do this 10 times and average. Do this for each isolation tree and obtain the *T* KL divergences where *T* is the number of trees. Next, compute the (1-alpha) quantile value where alpha=0.05 by default. Then compute the distributions for each isolation tree with the complete window of data (let's call this *P*) and set it as the baseline. When a new window of data arrives, compute the distribution in each isolation tree with the new data and call this *Q*. Now drop all trees whose KL-divergence is higher than the previous (1-alpha) quantile value and replace them with new trees created with the new data. Then recompute the (1-alpha) value and the baseline distributions with the new data.
-      - Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set CHECK_KL_IND=0 in aad.sh
+      - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set CHECK_KL_IND=0 in aad.sh.
+      - **Mode 1** (Default): Replace trees based on KL-divergence as follows:
+        - First, randomly partition the current window of data into two equal parts (*A* and *B*).
+        - For each tree in the forest, compute average KL-divergence as follows:
+          - Treat the tree as set of histogram bins
+          - Compute the instance distributions with each of the data partitions *A* and *B*.
+          - Compute the KL-divergence between these two distributions.
+          - Do this 10 times and average.
+        - We now have *T* KL divergences where *T* is the number of trees.
+        - Compute the (1-alpha) quantile value where alpha=0.05 by default.
+        - Now compute the distributions for each isolation tree with the complete window of data -- call this *P* (*P* is a set of *T* distributions) -- and set it as the baseline.
+        - When a new window of data arrives replace trees as follows:
+          - Compute the distribution in each isolation tree with the new data and call this *Q* (*Q* is a set of *T* new distributions).
+          - Drop all trees whose KL-divergence i.e., *KL(p||q)* is higher than the previous (1-alpha) quantile value and replace them with new trees created with the new data.
+          - Recompute the (1-alpha) value and the baseline distributions with the new data.
+        - The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
+        - *For this mode, set CHECK_KL_IND=1 in aad.sh.*
   - HS Trees based AAD (**streaming support with model update**)
     - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
   - RS Forest based AAD (**streaming support with model update**)
