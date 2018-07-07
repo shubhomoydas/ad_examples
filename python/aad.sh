@@ -33,6 +33,7 @@ if [[ "$ARGC" -gt "0" ]]; then
     # 11 - AAD_HSTREES
     # 12 - AAD_RSFOREST
     # 13 - LODA
+    # 15 - AAD_MULTIVIEW_FOREST
     # ------------------------------
     DETECTOR_TYPE=$5
 
@@ -151,6 +152,22 @@ fi
 # IMPORTANT: If the detector type is LODA, the data will not be normalized
 NORM_UNIT_IND=1
 
+# =====================================================
+# DO_NOT_UPDATE_WEIGHTS_IND: Whether weights will be
+#    updated with each feedback.
+#   0 - Weights will be updated after each feedback
+#   1 - Do not update weights. This mode is used to evaluate
+#       performance of algorithms in default mode.
+# NOTE: Applies only to both batch and streaming mode.
+DO_NOT_UPDATE_WEIGHTS_IND=0
+if [[ "$DO_NOT_UPDATE_WEIGHTS_IND" == "1" ]]; then
+    DO_NOT_UPDATE_WEIGHTS_SIG="_no_upd"
+    DO_NOT_UPDATE_WEIGHTS="--do_not_update_weights"
+else
+    DO_NOT_UPDATE_WEIGHTS_SIG=""
+    DO_NOT_UPDATE_WEIGHTS=""
+fi
+
 # ==============================
 # CONSTRAINT_TYPE:
 # ------------------------------
@@ -164,59 +181,6 @@ if [[ "$CONSTRAINT_TYPE" == "4" ]]; then
     TAU_SIG="_xtau"
 else
     TAU_SIG=""
-fi
-
-# =====================================================
-# DO_NOT_UPDATE_WEIGHTS_IND
-#   0 - Weights will be updated after each feedback
-#   1 - Do not update weights. This mode is used to evaluate
-#       performance of algorithms in default mode.
-DO_NOT_UPDATE_WEIGHTS_IND=0
-if [[ "$DO_NOT_UPDATE_WEIGHTS_IND" == "1" ]]; then
-    DO_NOT_UPDATE_WEIGHTS_SIG="_no_upd"
-    DO_NOT_UPDATE_WEIGHTS="--do_not_update_weights"
-else
-    DO_NOT_UPDATE_WEIGHTS_SIG=""
-    DO_NOT_UPDATE_WEIGHTS=""
-fi
-
-# =====================================================
-# TREE_UPDATE_TYPE_VAL - applies only to HS Trees and RD Forest
-#   0 - Replace the old sample node counts with new
-#   1 - Replace old sample counts with the average of the old
-#       sample counts and new sample counts.
-TREE_UPDATE_TYPE_VAL=0
-TREE_UPDATE_TYPE_SIG=""
-TREE_UPDATE_TYPE="--tree_update_type=${TREE_UPDATE_TYPE_VAL}"
-if [[ "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" ]]; then
-    if [[ "$TREE_UPDATE_TYPE_VAL" == "1" ]]; then
-        TREE_UPDATE_TYPE_SIG="_incr"
-    fi
-fi
-
-# =====================================================
-# RESTRICT_LABELED_SET - Applies only to stream setting
-#   0 - Use all labeled instances for minimizing AAD loss
-#       and enforcing constraints. The problem with this
-#       setting is that the proportion of labeled instances
-#       will grow relative to the fixed-sized stream window
-#       and eventually, optimization will become extremely
-#       biased towards historical [labeled] data.
-#   1 - Use a random subset of labeled instances while
-#       minimizing AAD loss and enforcing constraints.
-#       The size of the random subset is determined by the options:
-#       --labeled_to_window_ratio : Ratio of labeled instances
-#           to stream window size, and
-#       --max_labeled_for_stream : The upper bound on the
-#           subset size irrespective of labeled_to_window_ratio
-# See also: MAX_LABELED_FOR_STREAM, LABELED_TO_WINDOW_RATIO
-RESTRICT_LABELED_SET=0
-
-LABELED_TO_WINDOW_RATIO=""
-MAX_LABELED_FOR_STREAM=""
-if [[ "$RESTRICT_LABELED_SET" == "1" ]]; then
-    LABELED_TO_WINDOW_RATIO="--labeled_to_window_ratio=0.2"
-    MAX_LABELED_FOR_STREAM="--max_labeled_for_stream=100"
 fi
 
 CA=1  #100
@@ -253,6 +217,7 @@ N_JOBS=4  # Number of parallel threads
 # 9 - ORIG_TREE_SCORE_TYPE
 # ------------------------------
 INFERENCE_NAME="undefined"
+FEATURE_PARTITIONS=
 FOREST_SCORE_TYPE=3
 N_TREES=100
 MAX_DEPTH=100  # 9  #15  # 10
@@ -264,8 +229,8 @@ elif [[ "$DETECTOR_TYPE" == "11" ]]; then
     INFERENCE_NAME="hstrees"
     NORM_UNIT_IND=0  # DO NOT normalize for HSTrees
     FOREST_SCORE_TYPE=5  # 5-HSTrees Log Score # 6-HSTrees Score # 9-Original
-    N_TREES=50  # 25  # 50  # 30  # 100
-    MAX_DEPTH=8  # 15  # 9
+    N_TREES=25  # 50  # 25  # 50  # 30  # 100
+    MAX_DEPTH=10  # 8  # 15  # 9
     FOREST_LEAF_ONLY=1  # Allow only leaf nodes for HS Trees at this time...
     CA=1
     
@@ -283,8 +248,8 @@ elif [[ "$DETECTOR_TYPE" == "12" ]]; then
     INFERENCE_NAME="rsforest"
     NORM_UNIT_IND=0  # DO NOT normalize for RSForest
     FOREST_SCORE_TYPE=7  # 7-RSForest Log Score # 8-RSForest Score # 9-Original
-    N_TREES=50
-    MAX_DEPTH=8
+    N_TREES=30  # 50
+    MAX_DEPTH=15  # 8
     FOREST_LEAF_ONLY=1  # Allow only leaf nodes for RS Forest at this time...
     CA=1
     
@@ -314,9 +279,13 @@ elif [[ "$DETECTOR_TYPE" == "13" ]]; then
     # results took max 100 feedback.
     MAX_ANOMALIES_CONSTRAINT=100
     MAX_NOMINALS_CONSTRAINT=100
+elif [[ "$DETECTOR_TYPE" == "15" ]]; then
+    INFERENCE_NAME="multiview"
+    MAX_DEPTH=100
+    FEATURE_PARTITIONS="--feature_partitions=120,100"
 fi
 
-if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" ]]; then
+if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" || "$DETECTOR_TYPE" == "15" ]]; then
     if [[ "$FOREST_LEAF_ONLY" == "1" ]]; then
         FOREST_LEAF_ONLY="--forest_add_leaf_nodes_only"
         FOREST_LEAF_ONLY_SIG="_leaf"
@@ -329,6 +298,10 @@ if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" ==
             # SGD, then using geometric means might help because we can work with
             # logarithmic leaf scores.
             FOREST_SCORE_TYPE=7  #7 #8
+        elif [[ "$DETECTOR_TYPE" == "15" ]]; then
+            # 3 - IFOR_SCORE_TYPE_CONST
+            # 4 - IFOR_SCORE_TYPE_NEG_PATH_LEN (isolation forest leaf-only)
+            FOREST_SCORE_TYPE=4
         fi
     else
         FOREST_LEAF_ONLY=""
@@ -375,13 +348,6 @@ SIGMA2=0.5
 # ---------------------------------------------------
 TAU_SCORE_TYPE=1
 
-MIN_FEEDBACK_PER_WINDOW=2
-MAX_FEEDBACK_PER_WINDOW=20
-MAX_WINDOWS=30
-
-TILL_BUDGET_IND=1
-ALLOW_STREAM_UPDATE_IND=1
-
 PRIOR_INFLUENCE_SIG=
 if [[ "$PRIOR_INFLUENCE" == "1" ]]; then
     PRIOR_INFLUENCE_SIG="_adapt"
@@ -410,6 +376,63 @@ else
     FIXED_TAU_SCORE_SIG=""
 fi
 
+MIN_FEEDBACK_PER_WINDOW=2
+MAX_FEEDBACK_PER_WINDOW=20
+MAX_WINDOWS=30
+
+TILL_BUDGET_IND=1
+ALLOW_STREAM_UPDATE_IND=1
+
+# =====================================================
+# TREE_UPDATE_TYPE_VAL - applies only to HS Trees and RD Forest
+#   0 - Replace the old sample node counts with new
+#   1 - Replace old sample counts with the average of the old
+#       sample counts and new sample counts.
+TREE_UPDATE_TYPE_VAL=0
+TREE_UPDATE_TYPE_SIG=""
+TREE_UPDATE_TYPE="--tree_update_type=${TREE_UPDATE_TYPE_VAL}"
+if [[ "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" ]]; then
+    if [[ "$TREE_UPDATE_TYPE_VAL" == "1" ]]; then
+        TREE_UPDATE_TYPE_SIG="_incr"
+    fi
+fi
+
+# =====================================================
+# RESTRICT_LABELED_SET - Applies only to stream setting
+#   0 - Use all labeled instances for minimizing AAD loss
+#       and enforcing constraints. The problem with this
+#       setting is that the proportion of labeled instances
+#       will grow relative to the fixed-sized stream window
+#       and eventually, optimization will become extremely
+#       biased towards historical [labeled] data.
+#   1 - Use a random subset of labeled instances while
+#       minimizing AAD loss and enforcing constraints.
+#       The size of the random subset is determined by the options:
+#       --labeled_to_window_ratio : Ratio of labeled instances
+#           to stream window size, and
+#       --max_labeled_for_stream : The upper bound on the
+#           subset size irrespective of labeled_to_window_ratio
+# See also: MAX_LABELED_FOR_STREAM, LABELED_TO_WINDOW_RATIO
+RESTRICT_LABELED_SET=0
+
+LABELED_TO_WINDOW_RATIO=""
+MAX_LABELED_FOR_STREAM=""
+if [[ "$RESTRICT_LABELED_SET" == "1" ]]; then
+    LABELED_TO_WINDOW_RATIO="--labeled_to_window_ratio=0.2"
+    MAX_LABELED_FOR_STREAM="--max_labeled_for_stream=100"
+fi
+
+# ===================================================
+# FOREST_REPLACE_FRAC: The fraction of trees which will
+#   be replaced (*for forests which support this update*)
+#   in a streaming setting.
+#   This option applies only when ALLOW_STREAM_UPDATE_IND=1
+#   and currently only Isolation Forest supports this.
+FOREST_REPLACE_FRAC=0.2
+# FOREST_REPLACE_FRAC=1.0
+# FOREST_REPLACE_FRAC=0.8
+# ---------------------------------------------------
+
 if [[ "$TILL_BUDGET_IND" == "1" ]]; then
     TILL_BUDGET="--till_budget"
     TILL_BUDGET_SIG="_tillbudget"
@@ -434,6 +457,22 @@ if [[ "$ALLOW_STREAM_UPDATE_IND" == "1" ]]; then
     ALLOW_STREAM_UPDATE_SIG="asu"
 fi
 
+# ==============================
+# CHECK_KL: Whether to check KL-divergence before updating model 
+#   in streaming mode. If true, then trees which exceed a threshold
+#   based on ${KL_ALPHA} will be discarded and replaced with new ones.
+# NOTE: Applies only to streaming mode for forest-based algorithms 
+#   when --allow_stream_update flag is set.
+# ------------------------------
+CHECK_KL_IND=1
+CHECK_KL_SIG=""
+CHECK_KL=""
+KL_ALPHA=0.05
+if [[ "$CHECK_KL_IND" == "1" ]]; then
+    CHECK_KL_SIG="_KL${KL_ALPHA}"
+    CHECK_KL="--check_KL_divergence"
+fi
+
 DATASET_FOLDER=datasets
 #if [[ "$DATASET" == "covtype" || "$DATASET" == "kddcup" ]]; then
 if [[ "$DATASET" == "covtype" ]]; then
@@ -444,7 +483,10 @@ fi
 if [[ "$STREAMING_IND" == "1" ]]; then
     STREAMING="--streaming"
     STREAMING_SIG="_stream"
-    STREAMING_FLAGS="${STREAM_WINDOW}${ALLOW_STREAM_UPDATE_SIG}_mw${MAX_WINDOWS}f${MIN_FEEDBACK_PER_WINDOW}_${MAX_FEEDBACK_PER_WINDOW}_ret${RETENTION_TYPE}${TILL_BUDGET_SIG}"
+    STREAMING_FLAGS="${STREAM_WINDOW}${ALLOW_STREAM_UPDATE_SIG}${CHECK_KL_SIG}_mw${MAX_WINDOWS}f${MIN_FEEDBACK_PER_WINDOW}_${MAX_FEEDBACK_PER_WINDOW}_ret${RETENTION_TYPE}${TILL_BUDGET_SIG}"
+    if [[ "${DETECTOR_TYPE}" == "7" && "${ALLOW_STREAM_UPDATE_IND}" == "1" && "${FOREST_REPLACE_FRAC}" != "0.2" && "$CHECK_KL_IND" != "1" ]]; then
+        STREAMING_FLAGS="${STREAMING_FLAGS}_f${FOREST_REPLACE_FRAC}"
+    fi
     PYSCRIPT=aad_stream.py
     PYMODULE=aad.aad_stream
 elif [[ "$STREAMING_IND" == "0" ]]; then
@@ -470,7 +512,7 @@ fi
 RUN_TYPE=multi
 
 NAME_PREFIX="undefined"
-if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" ]]; then
+if [[ "$DETECTOR_TYPE" == "7" || "$DETECTOR_TYPE" == "11" || "$DETECTOR_TYPE" == "12" || "$DETECTOR_TYPE" == "15" ]]; then
     NAME_PREFIX="${INFERENCE_NAME}${TREE_UPDATE_TYPE_SIG}_trees${N_TREES}_samples${N_SAMPLES}_i${DETECTOR_TYPE}_${QUERY_SIG}${QUERY_CONFIDENT_SIG}_bd${BUDGET}_nscore${FOREST_SCORE_TYPE}${FOREST_LEAF_ONLY_SIG}_tau${TAU}${TAU_SIG}${WITH_PRIOR_SIG}_init${INIT_TYPE}_ca${CA}_cx${CX}_ma${MAX_ANOMALIES_CONSTRAINT}_mn${MAX_NOMINALS_CONSTRAINT}_d${MAX_DEPTH}${STREAMING_SIG}${STREAMING_FLAGS}${DO_NOT_UPDATE_WEIGHTS_SIG}${NORM_UNIT_SIG}${FIXED_TAU_SCORE_SIG}"
 elif [[ "$DETECTOR_TYPE" == "9" ]]; then
     NAME_PREFIX="${INFERENCE_NAME}_trees${N_TREES}_samples${N_SAMPLES}"
@@ -546,4 +588,6 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     --max_feedback_per_window=${MAX_FEEDBACK_PER_WINDOW} \
     ${STREAMING} ${ALLOW_STREAM_UPDATE} --stream_window=${STREAM_WINDOW} \
     --retention_type=${RETENTION_TYPE} ${TILL_BUDGET} \
+    --forest_replace_frac=${FOREST_REPLACE_FRAC} ${FEATURE_PARTITIONS} \
+    ${CHECK_KL} --kl_alpha=${KL_ALPHA} \
     ${PLOT2D} --debug

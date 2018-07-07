@@ -13,6 +13,7 @@ from aad.aad_base import *
 from aad.query_model import *
 from aad.random_split_trees import *
 from aad.aad_loss import *
+from aad.multiview_forest import *
 
 
 class RegionData(object):
@@ -35,7 +36,8 @@ class RegionData(object):
 def is_forest_detector(detector_type):
     return (detector_type == AAD_IFOREST or
             detector_type == AAD_HSTREES or
-            detector_type == AAD_RSFOREST)
+            detector_type == AAD_RSFOREST or
+            detector_type == AAD_MULTIVIEW_FOREST)
 
 
 def is_in_region(x, region):
@@ -77,7 +79,8 @@ class AadForest(Aad, StreamingSupport):
                  detector_type=AAD_IFOREST, n_jobs=1,
                  tree_update_type=TREE_UPD_OVERWRITE,
                  tree_incremental_update_weight=0.5,
-                 forest_replace_frac=0.2):
+                 forest_replace_frac=0.2,
+                 feature_partitions=None):
 
         Aad.__init__(self, detector_type, ensemble_score, random_state)
 
@@ -86,6 +89,7 @@ class AadForest(Aad, StreamingSupport):
         self.tree_update_type = tree_update_type
         self.tree_incremental_update_weight = tree_incremental_update_weight
         self.forest_replace_frac = forest_replace_frac
+        self.feature_partitions = feature_partitions
 
         self.score_type = score_type
         if not (self.score_type == IFOR_SCORE_TYPE_INV_PATH_LEN or
@@ -117,9 +121,13 @@ class AadForest(Aad, StreamingSupport):
                                 n_jobs=n_jobs, random_state=self.random_state,
                                 update_type=self.tree_update_type,
                                 incremental_update_weight=tree_incremental_update_weight)
+        elif detector_type == AAD_MULTIVIEW_FOREST:
+            self.clf = IForestMultiview(n_estimators=n_estimators, max_samples=max_samples,
+                                        n_jobs=n_jobs, random_state=self.random_state,
+                                        feature_partitions=feature_partitions)
         else:
-            raise ValueError("Incorrect detector type: %d. Only tree-based detectors (%d|%d|%d) supported." %
-                             (detector_type, AAD_IFOREST, AAD_HSTREES, AAD_RSFOREST))
+            raise ValueError("Incorrect detector type: %d. Only tree-based detectors (%d|%d|%d|%d) supported." %
+                             (detector_type, AAD_IFOREST, AAD_HSTREES, AAD_RSFOREST, AAD_MULTIVIEW_FOREST))
 
         # store all regions grouped by tree
         self.regions_in_forest = None
@@ -417,6 +425,13 @@ class AadForest(Aad, StreamingSupport):
             raise ValueError("Only current=False supported")
         self.clf.add_samples(X, current=current)
 
+    def _get_tree_partitions(self):
+        if self.detector_type == AAD_MULTIVIEW_FOREST:
+            partitions = self.clf.n_estimators_view
+        else:
+            partitions = np.array([self.n_estimators], dtype=int)
+        return partitions
+
     def update_region_scores(self):
         for i, estimator in enumerate(self.clf.estimators_):
             tree = estimator.tree_
@@ -426,19 +441,99 @@ class AadForest(Aad, StreamingSupport):
                 self.all_regions[region_id].node_samples = tree.n_node_samples[node_id]
         self.d, _, _ = self.get_region_scores(self.all_regions)
 
-    def update_model_from_stream_buffer(self):
-        if self.detector_type == AAD_IFOREST:
-            self.update_trees_by_replacement()
+    def update_model_from_stream_buffer(self, replace_trees=None):
+        if self.detector_type == AAD_IFOREST or self.detector_type == AAD_MULTIVIEW_FOREST:
+            self.update_trees_by_replacement(replace_trees=replace_trees)
         else:
-            self.clf.update_model_from_stream_buffer()
+            self.clf.update_model_from_stream_buffer(replace_trees=replace_trees)
             self.update_region_scores()
 
-    def update_trees_by_replacement(self):
+    def update_trees_by_replacement(self, replace_trees=None):
         """ Replaces older trees with newer ones and updates region bookkeeping data structures """
-        if self.detector_type != AAD_IFOREST:
+        if not (self.detector_type == AAD_IFOREST or self.detector_type == AAD_MULTIVIEW_FOREST):
+            raise ValueError("Replacement of trees is supported for IForest and IForestMultiview only")
+
+        old_replaced_idxs, old_retained_idxs, new_trees = self.clf.update_trees_by_replacement(replace_trees=replace_trees)
+        new_trees_flattened = None if new_trees is None else [y for x in new_trees for y in x]
+        if new_trees_flattened is None or len(new_trees_flattened) == 0:
+            # no updates to the model
+            return
+
+        new_region_id = 0
+
+        # all regions grouped by tree
+        new_regions_in_forest = list()
+
+        # all regions in a flattened list (ungrouped)
+        new_all_regions = list()
+
+        # list of node index to region index maps for all trees
+        new_all_node_regions = list()
+
+        new_d = list()
+        new_w = list()
+        new_w_idxs = np.array([], dtype=int)
+
+        # process each feature group
+        for p in range(len(new_trees)):
+            for i in old_retained_idxs[p]:
+                regions = self.regions_in_forest[i]
+                node_regions = self.all_node_regions[i]
+                new_regions_in_forest.append(regions)
+                new_all_regions.extend(regions)
+                new_node_regions = {}
+                for region in regions:
+                    new_d.append(self.d[node_regions[region.node_id]])
+                    new_w.append(self.w[node_regions[region.node_id]])
+                    # replace previous region ids with new ids
+                    new_node_regions[region.node_id] = new_region_id
+                    new_region_id += 1
+                new_all_node_regions.append(new_node_regions)
+
+            added_regions = list()
+            for i, tree in enumerate(new_trees[p]):
+                regions = self.extract_leaf_regions_from_tree(tree, self.add_leaf_nodes_only)
+                new_regions_in_forest.append(regions)
+                new_all_regions.extend(regions)
+                added_regions.extend(regions)
+                new_node_regions = {}
+                for region in regions:
+                    new_node_regions[region.node_id] = new_region_id
+                    new_region_id += 1
+                new_all_node_regions.append(new_node_regions)
+
+            n_new_d = len(new_d)
+            added_d, _, _ = self.get_region_scores(added_regions)
+            new_d.extend(added_d)
+            n_d = len(added_d)
+            new_w.extend(np.zeros(n_d, dtype=float))
+            new_w_idxs = np.append(new_w_idxs, np.arange(n_d, dtype=int)+n_new_d)
+
+        new_d = np.array(new_d, dtype=np.float64)
+        new_w = np.array(new_w, dtype=np.float64)
+        new_w[new_w_idxs] = np.sqrt(1./len(new_d))
+        new_w = normalize(new_w)
+
+        # Finally, update all bookkeeping structures
+        self.regions_in_forest = new_regions_in_forest
+        self.all_regions = new_all_regions
+        self.all_node_regions = new_all_node_regions
+        self.d = new_d
+        self.w = new_w
+        self.w_unif_prior = np.ones(len(self.w), dtype=self.w.dtype) * np.sqrt(1./len(self.w))
+
+    def _update_trees_by_replacement(self, replace_trees=None):
+        """ Replaces older trees with newer ones and updates region bookkeeping data structures """
+        if not (self.detector_type == AAD_IFOREST or self.detector_type == AAD_MULTIVIEW_FOREST):
             raise ValueError("Replacement of trees is supported for IForest only")
 
-        old_replaced_idxs, old_retained_idxs, new_trees = self.clf.update_trees_by_replacement()
+        old_replaced_idxs, old_retained_idxs, new_trees = self.clf.update_trees_by_replacement(replace_trees=replace_trees)
+        old_replaced_idxs = old_replaced_idxs[0]
+        old_retained_idxs = old_retained_idxs[0]
+        new_trees = None if new_trees is None else new_trees[0]
+        if new_trees is None or len(new_trees) == 0:
+            # no updates to the model
+            return
 
         n_regions_replaced = 0
         for i in old_replaced_idxs:
@@ -642,3 +737,101 @@ class AadForest(Aad, StreamingSupport):
                 instance_regions = [tree_node_regions[node_idx] for node_idx in tree_paths[0]]
                 all_regions.update(instance_regions)
         return list(all_regions)
+
+    def get_node_sample_distributions(self, X, delta=1e-16):
+        n = X.shape[0]
+        delta_ = (delta * 1. / n)
+        nodes = self.clf.get_node_ids(X, getleaves=self.add_leaf_nodes_only)
+        dists = np.ones(len(self.d), dtype=np.float32) * delta_  # take care of zero counts
+        start_region = 0
+        for i, tree_node_regions in enumerate(self.all_node_regions):
+            denom = n + delta_ * len(tree_node_regions)  # for probabilities to add to 1.0
+            tree_nodes = nodes[i]
+            for node in tree_nodes:
+                dists[tree_node_regions[node]] += 1.
+            dists[start_region:(start_region+len(tree_node_regions))] /= denom
+            start_region += len(tree_node_regions)
+        return dists
+
+    def get_KL_divergence(self, p, q):
+        """KL(p || q)"""
+        log_p = np.log(p)
+        log_q = np.log(q)
+        kl_tmp = np.multiply(p, log_p - log_q)
+        kl_trees = np.zeros(self.n_estimators, dtype=np.float32)
+        start_region = 0
+        for i, tree_node_regions in enumerate(self.all_node_regions):
+            n_regions = len(tree_node_regions)
+            kl_trees[i] = np.sum(kl_tmp[start_region:(start_region+n_regions)])
+            start_region += n_regions
+        return kl_trees, np.sum(kl_trees) / self.n_estimators
+
+    def get_KL_divergence_distribution(self, x, p=None, alpha=0.05, n_tries=10):
+        kls = list()
+        for i in range(n_tries):
+            all_i = np.arange(x.shape[0], dtype=int)
+            np.random.shuffle(all_i)
+            h = int(len(all_i) // 2)
+            if p is None:
+                x1 = x[0:h, :]
+                p1 = self.get_node_sample_distributions(x1)
+            else:
+                p1 = p
+            x2 = x[h:len(all_i), :]
+            p2 = self.get_node_sample_distributions(x2)
+            kl_trees, _= self.get_KL_divergence(p1, p2)
+            kls.append(kl_trees)
+        kls = np.vstack(kls)
+        kls = np.mean(kls, axis=0).flatten()
+
+        partitions = self._get_tree_partitions()
+
+        q_alpha = np.zeros(len(partitions), dtype=float)
+        start = 0
+        for i, n_features in enumerate(partitions):
+            end = start + n_features
+            q_alpha[i] = quantile(kls[start:end], (1. - alpha) * 100.)
+            start = end
+
+        return kls, q_alpha
+
+    def get_trees_to_replace(self, kl_trees, kl_q_alpha):
+        # replace_trees_by_kl = np.array(np.where(kl_trees > kl_q_alpha[0])[0], dtype=int)
+        partitions = self._get_tree_partitions()
+        replaced_trees = list()
+        start = 0
+        for i, n_features in enumerate(partitions):
+            end = start + n_features
+            kls_group = kl_trees[start:end]
+            replace_group = np.where(kls_group > kl_q_alpha[i])[0]
+            if len(replace_group) > 0:
+                replaced_trees.extend(replace_group + start)
+            start = end
+        replace_trees_by_kl = np.array(replaced_trees, dtype=int)
+        return replace_trees_by_kl
+
+    def get_normalized_KL_divergence(self, p, q):
+        """Normalizes by a 'reasonable' value
+
+        Assumes that the probability distribution opposite to the current (expected)
+        one is a reasonable estimate for a 'large' KL divergence. By opposite, we
+        mean that the regions having least probability end up having value same as
+        the highest probability and vice-versa. This is a work-around since KL-divergence
+        is otherwise in [0, inf].
+
+        Note: The normalized value is still not guaranteed to be in [0, 1]. For example,
+        if the current probability is uniform, the 'normalized' value would be Inf because
+        we would divide by 0.
+        """
+        spp = np.array(p)
+        spn = np.array(-p)
+        start_region = 0
+        for i, tree_node_regions in enumerate(self.all_node_regions):
+            n_regions = len(tree_node_regions)
+            spp[start_region:(start_region+n_regions)] = np.sort(spp[start_region:(start_region+n_regions)])
+            spn[start_region:(start_region+n_regions)] = -np.sort(spn[start_region:(start_region + n_regions)])
+            start_region += n_regions
+        _, high_kl = self.get_KL_divergence(spp, spn)
+        kl_vals, kl = self.get_KL_divergence(p, q)
+        norm_kl = kl / high_kl
+        return norm_kl, kl_vals / high_kl

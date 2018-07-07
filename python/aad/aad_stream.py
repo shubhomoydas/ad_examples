@@ -48,6 +48,15 @@ class StreamingAnomalyDetector(object):
         self.qstate = None
         self.feature_ranges = None  # required if diverse querying strategy is used
 
+        self.current_dists = None
+        self.kl_alpha = opts.kl_alpha
+        self.kl_q_alpha = 0.
+        if is_forest_detector(self.opts.detector_type):
+            self.current_dists = self.model.get_node_sample_distributions(unlabeled_x)
+            kl_trees, self.kl_q_alpha = self.model.get_KL_divergence_distribution(unlabeled_x, alpha=self.kl_alpha)
+            logger.debug("kl kl_q_alpha: %s (alpha=%0.2f), kl mean: %f, kl_trees:\n%s" %
+                         (str(list(self.kl_q_alpha)), self.kl_alpha, np.mean(kl_trees), str(list(kl_trees))))
+
     def reset_buffer(self):
         self.buffer = None
 
@@ -89,6 +98,7 @@ class StreamingAnomalyDetector(object):
                 missed = int(np.sum(tmp.y[missedidxs])) if missedidxs is not None else 0
                 retained = int(np.sum(self.unlabeled.y)) if self.unlabeled.y is not None else 0
                 logger.debug("[top anomalous] true anomalies: missed(%d), retained(%d)" % (missed, retained))
+        self.feature_ranges = get_sample_feature_ranges(self.unlabeled.x)
         self.reset_buffer()
 
     def get_num_instances(self):
@@ -132,8 +142,24 @@ class StreamingAnomalyDetector(object):
             logger.warning("Insufficient samples (%d) for model update. Minimum required: %d." %
                            (0 if self.buffer is None or self.buffer.x is None else self.buffer.x.shape[0], self.min_samples_for_update))
         else:
-            self.model.update_model_from_stream_buffer()
-            self.feature_ranges = get_sample_feature_ranges(self.buffer.x)
+            replace_trees_by_kl = None
+            if self.opts.check_KL_divergence:
+                kl_trees, _ = self.model.get_KL_divergence_distribution(self.buffer.x, p=self.current_dists) if self.opts.check_KL_divergence else 0.
+                replace_trees_by_kl = self.model.get_trees_to_replace(kl_trees, self.kl_q_alpha)
+                kl = np.mean(kl_trees)
+                logger.debug("kl kl_q_alpha: %s (alpha=%0.2f), kl mean: %f, kl_trees:\n%s\n(#replace: %d): %s" %
+                             (str(list(self.kl_q_alpha)), self.kl_alpha, kl, str(list(kl_trees)), len(replace_trees_by_kl), str(list(replace_trees_by_kl))))
+            if self.opts.check_KL_divergence and len(replace_trees_by_kl) == 0:  # kl <= self.kl_q_alpha:
+                logger.debug("Model not updated since KL-divergence of all trees <= %s (check_KL: %s, alpha: %0.2f)" %
+                             (str(list(self.kl_q_alpha)), str(self.opts.check_KL_divergence), self.kl_alpha))
+            else:
+                logger.debug("Model updated KL-divergence: threshold: %s (check_KL: %s, alpha: %0.2f)" %
+                             (str(list(self.kl_q_alpha)), str(self.opts.check_KL_divergence), self.kl_alpha))
+                self.model.update_model_from_stream_buffer(replace_trees=replace_trees_by_kl)
+                if is_forest_detector(self.opts.detector_type):
+                    self.current_dists = self.model.get_node_sample_distributions(self.buffer.x)
+                    kl_trees, self.kl_q_alpha = self.model.get_KL_divergence_distribution(self.buffer.x, alpha=self.kl_alpha)
+                    logger.debug("kl kl_q_alpha: %s, kl mean: %f, kl_trees:\n%s" % (str(list(self.kl_q_alpha)), np.mean(kl_trees), str(list(kl_trees))))
 
         if transform:
             if self.labeled is not None and self.labeled.x is not None:
@@ -234,7 +260,7 @@ class StreamingAnomalyDetector(object):
 
     def get_instance_stats(self):
         nha = nhn = nul = 0
-        if self.labeled.y is not None:
+        if self.labeled is not None and self.labeled.y is not None:
             nha = len(np.where(self.labeled.y == 1)[0])
             nhn = len(np.where(self.labeled.y == 0)[0])
         if self.unlabeled is not None:
@@ -396,6 +422,18 @@ class StreamingAnomalyDetector(object):
         queried_baseline = order_baseline[0:n_seen_baseline]
         seen_baseline = self.unlabeled.y[queried_baseline]
 
+        # the number of true anomalies discovered might end up being high
+        # relative to the data in the memory. We need to adjust for that...
+        orig_tau = self.opts.tau
+        nha, nhn, nul = self.get_instance_stats()
+        frac_known_anom = nha * 1.0 / (nha + nhn + nul)
+        if frac_known_anom >= orig_tau:
+            new_tau = frac_known_anom + 0.01
+            logger.debug("Exceeded original tau (%f); setting tau=%f" % (orig_tau, new_tau))
+            self.opts.tau = new_tau
+        else:
+            self.opts.tau = orig_tau
+
         seen = np.zeros(0, dtype=int)
         n_unlabeled = np.zeros(0, dtype=int)
         queried = np.zeros(0, dtype=int)
@@ -404,6 +442,7 @@ class StreamingAnomalyDetector(object):
         n_feedback = 0
         while n_feedback < max_feedback:
             i += 1
+
             # scores based on current weights
             xi_, x, y, ids, x_transformed, ha, hn, order_anom_idxs, anom_score = \
                 self.get_query_data(unl=unl, n_query=self.opts.n_explore)
@@ -464,6 +503,7 @@ class StreamingAnomalyDetector(object):
                 # continue
             n_unlabeled = np.append(n_unlabeled, [int(np.sum(self.unlabeled.y))])
             # logger.debug("y:\n%s" % str(list(y)))
+        self.opts.tau = orig_tau
         # logger.debug("w:\n%s" % str(list(sad.model.w)))
         return seen, seen_baseline, queried, None, n_unlabeled
 
@@ -592,7 +632,7 @@ def aad_stream():
             # to be updated, then we transform the data while reading from stream
             instances = sad.get_next_from_stream(sad.max_buffer,
                                                  transform=(not opts.allow_stream_update) or compute_debug_metrics)
-            if instances is None or iter >= opts.max_windows:
+            if instances is None or iter >= opts.max_windows or len(queried) >= opts.budget:
                 if iter >= opts.max_windows:
                     logger.debug("Exceeded %d iters; exiting stream read..." % opts.max_windows)
                 stop_iter = True

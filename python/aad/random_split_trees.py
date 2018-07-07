@@ -31,7 +31,8 @@ from multiprocessing import Pool
 from common.utils import *
 from aad.data_stream import *
 
-__all__ = ["ArrTree", "HSSplitter", "HSTree", "HSTrees",
+__all__ = ["get_tree_partitions", "RandomSplitTree", "RandomSplitForest",
+           "ArrTree", "HSSplitter", "HSTree", "HSTrees",
            "RSForestSplitter", "RSTree", "RSForest",
            "IForest", "StreamingSupport",
            "TREE_UPD_OVERWRITE", "TREE_UPD_INCREMENTAL", "tree_update_types"]
@@ -51,6 +52,16 @@ EPSILON = np.finfo('double').eps
 TREE_UPD_OVERWRITE = 0
 TREE_UPD_INCREMENTAL = 1
 tree_update_types = ["ovr", "incr"]
+
+
+def get_tree_partitions(n_trees, n_views):
+    """Returns an array with (almost) equal values representing an uniform partition"""
+    # assume equal number of trees per view
+    n_trees_per_view = int(n_trees / n_views)
+    n_estimators_view = np.ones(n_views, dtype=int) * n_trees_per_view
+    # adjust the number of trees for the last view so that the total is n_trees
+    n_estimators_view[n_views - 1] = n_trees - np.sum(n_estimators_view[:-1])
+    return n_estimators_view
 
 
 class SplitContext(object):
@@ -805,10 +816,33 @@ class RandomSplitForest(StreamingSupport):
         for tree in self.estimators_:
             tree.tree_.add_samples(X, current)
 
-    def update_trees_by_replacement(self, X=None):
+    def get_node_ids(self, X, getleaves=True):
+        if not getleaves:
+            raise ValueError("Operation supported for leaf level only")
+        forest_nodes = list()
+        for estimator in self.estimators_:
+            tree_nodes = estimator.apply(X)
+            forest_nodes.append(tree_nodes)
+        return forest_nodes
+
+    def update_trees_by_replacement(self, X=None, replace_trees=None):
+        """ Replaces current trees with new ones constructed from X
+
+        :param X: numpy.ndarray
+            Data matrix from which new trees will be constructed
+        :param replace_trees: numpy.array(dtype=int)
+            The indexes of trees to be replaced
+        :return:
+        """
         raise NotImplementedError("update_trees_by_replacement() is not implemented")
 
-    def update_model_from_stream_buffer(self):
+    def update_model_from_stream_buffer(self, replace_trees=None):
+        """ Updates the model from current internal buffer
+
+        :param replace_trees: numpy.array(dtype=int)
+            The indexes of trees to be replaced
+        :return:
+        """
         for tree in self.estimators_:
             tree.tree_.update_model_from_stream_buffer()
 
@@ -1167,39 +1201,52 @@ class IForest(RandomSplitForest):
         else:
             self.buffer = np.vstack([self.buffer, X])
 
-    def update_trees_by_replacement(self, X=None):
+    def update_trees_by_replacement(self, X=None, replace_trees=None):
         if X is None:
             X = self.buffer
         if X is None:
             logger.warning("No new data for update")
             return None
 
-        n_new_trees = int(self.replace_frac * len(self.estimators_))
-        new_ifor = IsolationForest(n_estimators=n_new_trees,
-                                   max_samples=self.max_samples,
-                                   contamination=self.contamination,
-                                   max_features=self.max_features,
-                                   bootstrap=self.bootstrap,
-                                   n_jobs=self.n_jobs,
-                                   random_state=self.random_state,
-                                   verbose=self.verbose)
-        new_ifor.fit(X, y=None, sample_weight=None)
+        if replace_trees is not None:
+            replace_set = set(replace_trees)
+            n_new_trees = len(replace_set)
+            if n_new_trees < 0:
+                raise ValueError("Replacement set is larger than allowed")
+            old_tree_indexes_replaced = replace_trees
+            old_tree_indexes_retained = np.array([i for i in range(len(self.estimators_)) if i not in replace_set], dtype=int)
+        else:
+            n_new_trees = int(self.replace_frac * len(self.estimators_))
+            old_tree_indexes_replaced = np.arange(0, n_new_trees, dtype=int)
+            old_tree_indexes_retained = np.arange(n_new_trees, len(self.estimators_))
 
-        old_tree_indexes_replaced = np.arange(0, n_new_trees, dtype=int)
-        old_tree_indexes_retained = np.arange(n_new_trees, len(self.estimators_))
+        if n_new_trees > 0:
+            new_ifor = IsolationForest(n_estimators=n_new_trees,
+                                       max_samples=self.max_samples,
+                                       contamination=self.contamination,
+                                       max_features=self.max_features,
+                                       bootstrap=self.bootstrap,
+                                       n_jobs=self.n_jobs,
+                                       random_state=self.random_state,
+                                       verbose=self.verbose)
+            new_ifor.fit(X, y=None, sample_weight=None)
 
-        # retain estimators and features
-        self.estimators_ = [self.estimators_[i] for i in old_tree_indexes_retained]
-        self.estimators_features_ = [self.estimators_features_[i] for i in old_tree_indexes_retained]
-        # append the new trees at the end of the list of older trees
-        for estimator, features in zip(new_ifor.estimators_, new_ifor.estimators_features_):
-            self.estimators_.append(estimator)
-            self.estimators_features_.append(features)
+            # retain estimators and features
+            self.estimators_ = [self.estimators_[i] for i in old_tree_indexes_retained]
+            self.estimators_features_ = [self.estimators_features_[i] for i in old_tree_indexes_retained]
+            # append the new trees at the end of the list of older trees
+            for estimator, features in zip(new_ifor.estimators_, new_ifor.estimators_features_):
+                self.estimators_.append(estimator)
+                self.estimators_features_.append(features)
 
-        # Now, update the underlying isolation forest
-        # NOTE: This might make the model inconsistent
-        self.ifor.estimators_ = self.estimators_
-        self.ifor.estimators_features_ = self.estimators_features_
+            # Now, update the underlying isolation forest
+            # NOTE: This might make the model inconsistent
+            self.ifor.estimators_ = self.estimators_
+            self.ifor.estimators_features_ = self.estimators_features_
+
+            new_estimators = new_ifor.estimators_
+        else:
+            new_estimators = None
 
         self.updated = True
         self.buffer = None
@@ -1208,7 +1255,8 @@ class IForest(RandomSplitForest):
             logger.debug("IForest update_trees_by_replacement(): n_new_trees: %d, samples: %s" %
                          (n_new_trees, str(X.shape)))
 
-        return old_tree_indexes_replaced, old_tree_indexes_retained, new_ifor.estimators_
+        # we return lists in order to support feature groups in multiview forest (see IForestMultiview)
+        return [old_tree_indexes_replaced], [old_tree_indexes_retained], [new_estimators]
 
-    def update_model_from_stream_buffer(self):
+    def update_model_from_stream_buffer(self, replace_trees=None):
         return self.update_trees_by_replacement(self.buffer)

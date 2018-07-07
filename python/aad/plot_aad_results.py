@@ -53,13 +53,14 @@ def get_result_names(result_type):
     if result_type == "batch":
         return ['ifor', 'ifor_baseline', 'loda', 'ifor_noprior_unif', 'ifor_noprior_rand']
     elif result_type == "stream":
-        return ['ifor', 'ifor_baseline', 'ifor_stream', 'ifor_stream_q8b3', 'hstrees', 'hstrees_orig', 'rsforest_orig']
+        # return ['ifor', 'ifor_baseline', 'ifor_stream', 'ifor_stream_q8b3', 'hstrees', 'hstrees_orig', 'rsforest_orig']
+        return ['ifor', 'ifor_baseline', 'ifor_stream', 'ifor_stream_KL', 'hstrees', 'hstrees_orig', 'rsforest_orig']
     elif result_type == "diversity":
         return ['ifor', 'ifor_q8b3']
     elif result_type == "stream_diff":
         return ['ifor_stream', 'ifor_stream_no_weight_upd']  # , 'ifor_stream_no_model_upd'
     elif result_type == "stream_diff08":
-        return ['ifor', 'ifor_stream', 'ifor_stream_08', 'ifor_stream_no_weight_upd', 'ifor_stream_no_weight_upd08']  # , 'ifor_stream_no_model_upd'
+        return ['ifor', 'ifor_stream', 'ifor_stream_08', 'ifor_stream_no_weight_upd', 'ifor_stream_no_weight_upd08', 'ifor_stream_KL']  # , 'ifor_stream_no_model_upd'
     elif result_type == "compare_prior":
         return ['ifor', 'ifor_baseline', 'ifor_noprior_unif', 'ifor_noprior_rand']
     elif result_type == "ifor_top_vs_random":
@@ -94,6 +95,8 @@ def process_results(args, result_type="batch", plot=True, plot_sd=False,
     all_results = list()
     for i, r_name in enumerate(result_names):
         parent_folder = "./temp/aad/%s" % args.dataset
+        if r_name == "ifor_stream_KL":
+            parent_folder = "./temp/aad/%s-new" % args.dataset
         rs = result_map[r_name]
         r_avg, r_sd, r_n = rs.get_results(parent_folder)
         logger.debug("[%s]\navg:\n%s\nsd:\n%s" % (rs.name, str(list(r_avg)), str(list(r_sd))))
@@ -149,7 +152,7 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
-    result_type = "ifor_vs_others"
+    # result_type = "ifor_vs_others"
     # result_type = "stream"
     # result_type = "batch"
     # result_type = "compare_prior"
@@ -157,7 +160,7 @@ if __name__ == "__main__":
     # result_type = "hstrees_only"
     # result_type = "hstrees_rsforest"
     # result_type = "ifor_loda"
-    # result_type = "ifor_top_vs_random"
+    result_type = "ifor_top_vs_random"
     # result_type = "diversity"
     # result_type = "stream_diff"
     # result_type = "stream_diff08"

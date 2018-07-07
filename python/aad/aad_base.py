@@ -345,6 +345,7 @@ class Aad(object):
         if (opts.detector_type == AAD_IFOREST or
                 opts.detector_type == AAD_HSTREES or
                 opts.detector_type == AAD_RSFOREST or
+                opts.detector_type == AAD_MULTIVIEW_FOREST or
                 opts.detector_type == LODA or
                 opts.detector_type == PRECOMPUTED_SCORES):
             w_new = self.aad_weight_update(w, x, y, hf=append(ha, hn),

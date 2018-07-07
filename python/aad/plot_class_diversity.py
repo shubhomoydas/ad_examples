@@ -218,10 +218,10 @@ if __name__ == "__main__":
             dataset_name = dataset_configs[dataset][4]
             ln, = pl.plot(np.arange(len(class_diff)), class_diff, '--' if result_type == "diverse - top_random" else '-',
                           color=dataset_colors[dataset], linewidth=1,
-                          # label="%s (%s)" % (dataset, result_type)
-                          label="%s" % (dataset_name,)
+                          label="%s (%s)" % (dataset, result_type)
+                          # label="%s" % (dataset_name,)
                           )
-            if result_type == "diverse - top":
+            if result_type == "diverse - top" or True:
                 legend_handles.append(ln)
         pl.legend(handles=legend_handles, loc='upper right', prop={'size': 10})
         dp.close()

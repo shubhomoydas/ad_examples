@@ -27,12 +27,13 @@ AAD_HSTREES = 11
 AAD_RSFOREST = 12
 LODA = 13
 PRECOMPUTED_SCORES = 14
+AAD_MULTIVIEW_FOREST = 15
 
 # Detector type names - first is blank string so these are 1-indexed
 detector_types = ["", "simple_online", "online_optim", "aad",
                   "aad_slack", "baseline", "iter_grad", "iforest",
                   "simple_pairwise", "iforest_orig", "if_atgp", "hstrees", "rsfor",
-                  "loda", "precomputed"]
+                  "loda", "precomputed", "multiview_forest"]
 
 # ==============================
 # Tau Score Types
@@ -332,6 +333,13 @@ def get_aad_option_list():
                         help="Whether to query only those top ranked instances for which we " +
                              "are confident the score is at least 1 std-dev higher than tau-th " +
                              "ranked instance' score")
+    parser.add_argument("--kl_alpha", action="store", type=float, default=0.05,
+                        help="The KL divergence threshold for updating model from stream data. "
+                             "All trees whose KL divergence exceeds (1 - kl_alpha) significance will be replaced with each new window of data. "
+                             "This only applies to forest-based models in streaming setting and only when the check_KL_divergence flag is True.")
+    parser.add_argument("--check_KL_divergence", action="store_true", default=False,
+                        help="Whether to check KL-divergence before model update in the streaming setting. "
+                             "This only applies to forest-based models in streaming setting.")
     parser.add_argument("--describe_anomalies", action="store_true", default=False,
                         help="Whether to report compact descriptions for discovered anomalies " +
                              "(supported only for forest-based detectors)")
@@ -347,6 +355,10 @@ def get_aad_option_list():
     parser.add_argument("--query_class_name", action="store", type=str, default="QueryTopDiverseSubspace",
                         help="Class name of the custom query model to use. " +
                              "Only applies when querytype=" + str(QUERY_CUSTOM_MODULE))
+
+    parser.add_argument("--feature_partitions", action="store", type=str, default=None,
+                        help="Feature partitions for multiview forest. " +
+                             "Only applies when detector_type=" + str(AAD_MULTIVIEW_FOREST))
     return parser
 
 
@@ -478,6 +490,8 @@ class AadOpts(object):
         self.query_confident = args.query_confident
         self.tree_update_type = args.tree_update_type
         self.do_not_update_weights = args.do_not_update_weights
+        self.kl_alpha = args.kl_alpha
+        self.check_KL_divergence = args.check_KL_divergence
 
         self.describe_anomalies = args.describe_anomalies
         self.describe_n_top = args.describe_n_top
@@ -485,6 +499,11 @@ class AadOpts(object):
 
         self.query_module_name = args.query_module_name
         self.query_class_name = args.query_class_name
+
+        self.feature_partitions = None
+        if args.feature_partitions is not None:
+            str_features = args.feature_partitions.split(',')
+            self.feature_partitions = [int(f) for f in str_features]
 
         self.modelfile = args.modelfile
         self.load_model = args.load_model
@@ -518,14 +537,17 @@ class AadOpts(object):
         return s
 
     def streaming_str(self):
-        return "sw%d_asu%s%s_mw%df%d_%d_%s%s" % (self.stream_window, str(self.allow_stream_update),
-                                                 "" if not self.do_not_update_weights else "_no_upd",
-                                                 self.max_windows, self.min_feedback_per_window,
-                                                 self.max_feedback_per_window,
-                                                 stream_retention_types[self.retention_type],
-                                                 "" if (self.detector_type == AAD_IFOREST and
-                                                        self.forest_replace_frac == 0.2) else "_f%0.2f" % self.forest_replace_frac
-                                                 )
+        return "sw%d_asu%s%s%s_mw%df%d_%d_%s%s" % (self.stream_window, str(self.allow_stream_update),
+                                                   "_KL%0.2f" % self.kl_alpha if self.check_KL_divergence else "",
+                                                   "" if not self.do_not_update_weights else "_no_upd",
+                                                   self.max_windows, self.min_feedback_per_window,
+                                                   self.max_feedback_per_window,
+                                                   stream_retention_types[self.retention_type],
+                                                   "" if (self.check_KL_divergence or (
+                                                              (self.detector_type == AAD_IFOREST or self.detector_type == AAD_MULTIVIEW_FOREST) and
+                                                              self.forest_replace_frac == 0.2)
+                                                          ) else "_f%0.2f" % self.forest_replace_frac
+                                                   )
 
     def detector_type_str(self):
         s = detector_types[self.detector_type]
@@ -539,7 +561,8 @@ class AadOpts(object):
         if self.detector_type == AAD_UPD_TYPE:
             return "%s_%s" % (s, constraint_types[self.constrainttype])
         elif (self.detector_type == AAD_IFOREST or self.detector_type == ATGP_IFOREST or
-                self.detector_type == AAD_HSTREES or self.detector_type == AAD_RSFOREST):
+                self.detector_type == AAD_HSTREES or self.detector_type == AAD_RSFOREST or
+                self.detector_type == AAD_MULTIVIEW_FOREST):
             return "%s_%s-trees%d_samples%d_nscore%d%s" % \
                    (s, constraint_types[self.constrainttype],
                     self.forest_n_trees, self.forest_n_samples, self.forest_score_type,

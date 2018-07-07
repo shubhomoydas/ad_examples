@@ -24,7 +24,8 @@ def get_aad_model(x, opts, random_state=None):
                           ensemble_score=opts.ensemble_score,
                           detector_type=opts.detector_type, n_jobs=opts.n_jobs,
                           tree_update_type=opts.tree_update_type,
-                          forest_replace_frac=opts.forest_replace_frac)
+                          forest_replace_frac=opts.forest_replace_frac,
+                          feature_partitions=opts.feature_partitions)
     elif opts.detector_type == PRECOMPUTED_SCORES:
         model = AadPrecomputed(opts, random_state=random_state)
     else:

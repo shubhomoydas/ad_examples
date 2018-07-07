@@ -197,6 +197,85 @@ def get_synthetic_samples(sampledefs=None, label_order=None, ns=None, stype=1):
     return s, np.array(labels)
 
 
+def get_hard_samples(stype=1):
+    if stype == 1:
+        ns = [200, 250, 6, 8, 5, 5, 5, 3, 2]
+    else:
+        ns = [200, 250, 6, 8, 5, 5, 5, 3, 2]
+
+    label_order = ["nominal", "nominal", "anomaly", "anomaly", "anomaly",
+                   "anomaly", "anomaly", "anomaly", "anomaly"]
+
+    sampledefs = list([
+        MVNParams(
+            mu=np.array([1.0, 3.5]),
+            mcorr=np.array([
+                [1, 0.5],
+                [0, 1.0]]),
+            dvar=np.array([3., 2.])
+        ),
+        MVNParams(
+            mu=np.array([3.25, 1.75]),
+            mcorr=np.array([
+                [1, 0.5],
+                [0, 1.0]]),
+            dvar=np.array([2., 3.])
+        ),
+        MVNParams(
+            mu=np.array([0, 4.25]),
+            mcorr=np.array([
+                [1, 0.5],
+                [0, 1.0]]),
+            dvar=np.array([0.05, 0.05])
+        ),
+        MVNParams(
+            mu=np.array([2.5, 4.5]),
+            mcorr=np.array([
+                [1, 0.5],
+                [0, 1.0]]),
+            dvar=np.array([0.1, 0.1])
+        ),
+        MVNParams(
+            mu=np.array([1., 2.5]),
+            mcorr=np.array([
+                [1, 0.5],
+                [0, 1.0]]),
+            dvar=np.array([0.04, 0.04])
+        ),
+        MVNParams(
+            mu=np.array([2.5, 2.25]),
+            mcorr=np.array([
+                [1, 0.5],
+                [0, 1.0]]),
+            dvar=np.array([0.03, 0.03])
+        ),
+        MVNParams(
+            mu=np.array([2.25, 0.25]),
+            mcorr=np.array([
+                [1, 0.5],
+                [0, 1.0]]),
+            dvar=np.array([0.05, 0.05])
+        ),
+        MVNParams(
+            mu=np.array([5.0, 3.25]),
+            mcorr=np.array([
+                [1, 0.0],
+                [0, 1.0]]),
+            dvar=np.array([0.05, 0.05])
+        ),
+        MVNParams(
+            mu=np.array([4.0, 0.]),
+            mcorr=np.array([
+                [1, 0.0],
+                [0, 1.0]]),
+            dvar=np.array([0.05, 0.05])
+        )
+    ])
+
+    x, y = get_synthetic_samples(sampledefs=sampledefs, label_order=label_order, ns=ns)
+    return x, y, ns
+
+
 def load_donut_data(with_diffusion=False):
     if not with_diffusion:
         df = read_csv("../datasets/donut-shape.csv", header=True)

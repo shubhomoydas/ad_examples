@@ -80,11 +80,15 @@ Running AAD
 This codebase supports four different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The Isolation Forest based AAD (**streaming support with model update**)
-    - For streaming update, we replace the oldest 20% trees with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length.
+    - For streaming update, we support two modes:
+      - Replace trees based on KL-divergence. We first compute the average KL-divergence for each tree. This is done as follows: randomly partition the current window of data into two equal sets. Treat each isolation tree as set of histogram bins and compute the instance distributions with each of the two data partitions. Then compute the KL-divergence between these two distributions. Do this 10 times and average. Do this for each isolation tree and obtain the *T* KL divergences where *T* is the number of trees. Next, compute the (1-alpha) quantile value where alpha=0.05 by default. Then compute the distributions for each isolation tree with the complete window of data (let's call this *P*) and set it as the baseline. When a new window of data arrives, compute the distribution in each isolation tree with the new data and call this *Q*. Now drop all trees whose KL-divergence is higher than the previous (1-alpha) quantile value and replace them with new trees created with the new data. Then recompute the (1-alpha) value and the baseline distributions with the new data.
+      - Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set CHECK_KL_IND=0 in aad.sh
   - HS Trees based AAD (**streaming support with model update**)
     - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
   - RS Forest based AAD (**streaming support with model update**)
     - See the previous HS Trees streaming update options above.
+  - The Isolation Forest based AAD with *Multiview* (**streaming support with model update**)
+    - This is useful if (say) there are groups of features that represent coherent groups and we want to create trees only with the features in a particular group. For instance, in a malware detection application, we might have 100 features computed with static program features and 120 computed with dynamic program features. Then we want 50 isolation trees with only the 100 static features and 50 trees with the 120 dynamic features for a total of 100 trees. In a streaming situation, we would want the tree replacement to take into account the grouping as well, for example, if there has been no drift in the static features while there is a significant drift in dynamic features, we should not replace the trees of static features and only replace the trees of dynamic features.
 
 To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
 
@@ -94,6 +98,7 @@ To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the 
     for HSTrees, set <detector_type>=11;
     for RSForest, set <detector_type>=12;
     for LODA, set <detector_type>=13;
+    for Isolation Forest Multiview, set <detector_type>=15;
 
 Example (with Isolation Forest, non-streaming):
 
