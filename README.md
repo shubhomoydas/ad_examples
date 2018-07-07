@@ -77,7 +77,7 @@ The above command will generate a pdf file with plots illustrating how the data 
 
 Running AAD
 -----------
-This codebase supports four different anomaly detection algorithms:
+This codebase supports five different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The Isolation Forest based AAD (**streaming support with model update**)
     - For streaming update, we support two modes:
