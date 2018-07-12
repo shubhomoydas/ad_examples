@@ -99,9 +99,9 @@ This codebase supports five different anomaly detection algorithms:
         - The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
         - *For this mode, set CHECK_KL_IND=1 in aad.sh.*
         - For more details, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plot](https://github.com/shubhomoydas/ad_examples/blob/master/figures/test_concept_drift_weather.pdf) generated:
-        
-            pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
-            
+    
+    pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
+    
   - HS Trees based AAD (**streaming support with model update**)
     - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
   - RS Forest based AAD (**streaming support with model update**)
