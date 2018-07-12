@@ -98,7 +98,8 @@ This codebase supports five different anomaly detection algorithms:
           - Recompute the (1-alpha) value and the baseline distributions with the new data.
         - The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
         - *For this mode, set CHECK_KL_IND=1 in aad.sh.*
-        - For more details, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plot](https://github.com/shubhomoydas/ad_examples/blob/master/figures/test_concept_drift_weather.pdf) generated:
+    
+    For more details on KL-divergence based concept drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plot](https://github.com/shubhomoydas/ad_examples/blob/master/figures/test_concept_drift_weather.pdf) generated:
     
     pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
     
