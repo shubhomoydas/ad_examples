@@ -82,7 +82,7 @@ This codebase supports five different anomaly detection algorithms:
   - The Isolation Forest based AAD (**streaming support with model update**)
     - For streaming update, we support two modes:
       - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set CHECK_KL_IND=0 in aad.sh.
-      - **Mode 1** (Default): *For this mode, set CHECK_KL_IND=1 in aad.sh.* Further details are [below](#concept-drift-detection).
+      - **Mode 1** (Default): Replace trees based on KL-divergence. Further details are [below](#concept-drift-detection). *For this mode, set CHECK_KL_IND=1 in aad.sh.*
   - HS Trees based AAD (**streaming support with model update**)
     - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
   - RS Forest based AAD (**streaming support with model update**)
@@ -194,7 +194,7 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 
 Concept Drift Detection
 -------------------------------------------
-This section applies to isolation tree-based detectors (such as Isolation Forest and Multiview Isolation Forest). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have in the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
+This section applies to isolation tree-based detectors (such as Isolation Forest and Multiview Isolation Forest). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
   - First, randomly partition the current window of data into two equal parts (*A* and *B*).
   - For each tree in the forest, compute average KL-divergence as follows:
     - Treat the tree as set of histogram bins
@@ -206,10 +206,10 @@ This section applies to isolation tree-based detectors (such as Isolation Forest
   - Now compute the distributions for each isolation tree with the complete window of data -- call this *P* (*P* is a set of *T* distributions) -- and set it as the baseline.
   - When a new window of data arrives replace trees as follows:
     - Compute the distribution in each isolation tree with the new data and call this *Q* (*Q* is a set of *T* new distributions).
-    - If the KL-divergence i.e., *KL(p||q)* of at least (2*alpha*T) trees exceed *KL-q*, then replace all trees whose *KL(p||q)* is higher than *KL-q* with new trees created with the new data.
+    - If the KL-divergence i.e., *KL(p||q)* of at least (2\*alpha\*T) trees exceed *KL-q*, then replace all trees whose *KL(p||q)* is higher than *KL-q* with new trees created with the new data.
     - Recompute *KL-q* and the baseline distributions with the new data and the updated model.
 
-For more details on KL-divergence based concept drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift.pdf) generated:
+For more details on KL-divergence based concept drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated:
     
     pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
 
