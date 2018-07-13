@@ -82,27 +82,7 @@ This codebase supports five different anomaly detection algorithms:
   - The Isolation Forest based AAD (**streaming support with model update**)
     - For streaming update, we support two modes:
       - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set CHECK_KL_IND=0 in aad.sh.
-      - **Mode 1** (Default): Replace trees based on KL-divergence as follows:
-        - First, randomly partition the current window of data into two equal parts (*A* and *B*).
-        - For each tree in the forest, compute average KL-divergence as follows:
-          - Treat the tree as set of histogram bins
-          - Compute the instance distributions with each of the data partitions *A* and *B*.
-          - Compute the KL-divergence between these two distributions.
-          - Do this 10 times and average.
-        - We now have *T* KL divergences where *T* is the number of trees.
-        - Compute the (1-alpha) quantile value where alpha=0.05 by default.
-        - Now compute the distributions for each isolation tree with the complete window of data -- call this *P* (*P* is a set of *T* distributions) -- and set it as the baseline.
-        - When a new window of data arrives replace trees as follows:
-          - Compute the distribution in each isolation tree with the new data and call this *Q* (*Q* is a set of *T* new distributions).
-          - Drop all trees whose KL-divergence i.e., *KL(p||q)* is higher than the previous (1-alpha) quantile value and replace them with new trees created with the new data.
-          - Recompute the (1-alpha) value and the baseline distributions with the new data.
-        - The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
-        - *For this mode, set CHECK_KL_IND=1 in aad.sh.*
-    
-    For more details on KL-divergence based concept drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plot](https://github.com/shubhomoydas/ad_examples/blob/master/figures/test_concept_drift_weather.pdf) generated:
-    
-    pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
-    
+      - **Mode 1** (Default): *For this mode, set CHECK_KL_IND=1 in aad.sh.* Further details are [below](#concept-drift-detection).
   - HS Trees based AAD (**streaming support with model update**)
     - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
   - RS Forest based AAD (**streaming support with model update**)
@@ -210,6 +190,30 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
     pythonw -m aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=../datasets/toy.csv --scoresfile=../datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
 
 **Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (**--init=1**) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
+
+
+Concept Drift Detection
+-------------------------------------------
+This section applies to isolation tree-based detectors (such as Isolation Forest and Multiview Isolation Forest). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have in the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
+  - First, randomly partition the current window of data into two equal parts (*A* and *B*).
+  - For each tree in the forest, compute average KL-divergence as follows:
+    - Treat the tree as set of histogram bins
+    - Compute the instance distributions with each of the data partitions *A* and *B*.
+    - Compute the KL-divergence between these two distributions.
+    - Do this 10 times and average.
+  - We now have *T* KL divergences where *T* is the number of trees.
+  - Compute the (1-alpha) quantile value where alpha=0.05 by default, and call this *KL-q*.
+  - Now compute the distributions for each isolation tree with the complete window of data -- call this *P* (*P* is a set of *T* distributions) -- and set it as the baseline.
+  - When a new window of data arrives replace trees as follows:
+    - Compute the distribution in each isolation tree with the new data and call this *Q* (*Q* is a set of *T* new distributions).
+    - If the KL-divergence i.e., *KL(p||q)* of at least (2*alpha*T) trees exceed *KL-q*, then replace all trees whose *KL(p||q)* is higher than *KL-q* with new trees created with the new data.
+    - Recompute *KL-q* and the baseline distributions with the new data and the updated model.
+
+For more details on KL-divergence based concept drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift.pdf) generated:
+    
+    pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
+
+The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
 
 
 Activity Modeling
