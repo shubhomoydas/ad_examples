@@ -136,30 +136,59 @@ class StreamingAnomalyDetector(object):
         return instances
 
     def update_model_from_buffer(self, transform=False):
-        tm = Timer()
+        """Updates the underlying model if it meets the criteria
 
-        if self.buffer is None or self.buffer.x is None or self.buffer.x.shape[0] < self.min_samples_for_update:
-            logger.warning("Insufficient samples (%d) for model update. Minimum required: %d." %
-                           (0 if self.buffer is None or self.buffer.x is None else self.buffer.x.shape[0], self.min_samples_for_update))
+        The minimum number of samples required for model update is:
+            max(self.min_samples_for_update, self.opts.stream_window//2)
+
+        We will replace trees in the following conditions:
+            - if check_KL_divergence is True, then check whether the KL-divergence
+                from reference distributions of 2*kl_alpha number of trees exceed
+                the alpha-threshold; if so, then replace all trees which exceed their
+                respective thresholds.
+            - if check_KL_divergence is False, then replace the configured fraction of
+                oldest trees. The fraction is configured with the command line
+                parameter --forest_replace_frac.
+
+        :param transform: bool
+        :return:
+        """
+        model_updated = False
+
+        min_samples_required = max(self.min_samples_for_update, self.opts.stream_window//2)
+        if self.buffer is None or self.buffer.x is None or self.buffer.x.shape[0] < min_samples_required:
+            logger.warning("Insufficient samples (%d) for model update. Minimum required: %d = max(%d,%d)." %
+                           (0 if self.buffer is None or self.buffer.x is None else self.buffer.x.shape[0],
+                            min_samples_required, self.min_samples_for_update, self.opts.stream_window//2))
         else:
+            tm = Timer()
+            n_trees = self.model.clf.n_estimators
+            n_threshold = int(2 * self.kl_alpha * n_trees)
             replace_trees_by_kl = None
+
             if self.opts.check_KL_divergence:
-                kl_trees, _ = self.model.get_KL_divergence_distribution(self.buffer.x, p=self.current_dists) if self.opts.check_KL_divergence else 0.
+                kl_trees, _ = self.model.get_KL_divergence_distribution(self.buffer.x, p=self.current_dists)
                 replace_trees_by_kl = self.model.get_trees_to_replace(kl_trees, self.kl_q_alpha)
-                kl = np.mean(kl_trees)
-                logger.debug("kl kl_q_alpha: %s (alpha=%0.2f), kl mean: %f, kl_trees:\n%s\n(#replace: %d): %s" %
-                             (str(list(self.kl_q_alpha)), self.kl_alpha, kl, str(list(kl_trees)), len(replace_trees_by_kl), str(list(replace_trees_by_kl))))
-            if self.opts.check_KL_divergence and len(replace_trees_by_kl) == 0:  # kl <= self.kl_q_alpha:
-                logger.debug("Model not updated since KL-divergence of all trees <= %s (check_KL: %s, alpha: %0.2f)" %
-                             (str(list(self.kl_q_alpha)), str(self.opts.check_KL_divergence), self.kl_alpha))
-            else:
-                logger.debug("Model updated KL-divergence: threshold: %s (check_KL: %s, alpha: %0.2f)" %
-                             (str(list(self.kl_q_alpha)), str(self.opts.check_KL_divergence), self.kl_alpha))
+                logger.debug("kl kl_q_alpha: %s (alpha=%0.2f), kl_trees:\n%s\n(#replace: %d): %s" %
+                             (str(list(self.kl_q_alpha)), self.kl_alpha, str(list(kl_trees)), len(replace_trees_by_kl), str(list(replace_trees_by_kl))))
+
+            n_replace = 0 if replace_trees_by_kl is None else len(replace_trees_by_kl)
+
+            # check whether conditions for tree-replacement are satisfied.
+            do_replace = not self.opts.check_KL_divergence or (n_trees > 0 and n_replace >= n_threshold)
+            if do_replace:
                 self.model.update_model_from_stream_buffer(replace_trees=replace_trees_by_kl)
                 if is_forest_detector(self.opts.detector_type):
                     self.current_dists = self.model.get_node_sample_distributions(self.buffer.x)
                     kl_trees, self.kl_q_alpha = self.model.get_KL_divergence_distribution(self.buffer.x, alpha=self.kl_alpha)
-                    logger.debug("kl kl_q_alpha: %s, kl mean: %f, kl_trees:\n%s" % (str(list(self.kl_q_alpha)), np.mean(kl_trees), str(list(kl_trees))))
+                    logger.debug("kl kl_q_alpha: %s, kl_trees:\n%s" % (str(list(self.kl_q_alpha)), str(list(kl_trees))))
+                model_updated = True
+
+            logger.debug(tm.message(
+                "Model%s updated; n_replace: %d, n_threshold: %d, kl_q_alpha: %s (check_KL: %s, alpha: %0.2f)" %
+                (" not" if not do_replace else "", n_replace, n_threshold,
+                 str(list(self.kl_q_alpha)), str(self.opts.check_KL_divergence), self.kl_alpha)
+            ))
 
         if transform:
             if self.labeled is not None and self.labeled.x is not None:
@@ -169,7 +198,7 @@ class StreamingAnomalyDetector(object):
             if self.buffer is not None and self.buffer.x is not None:
                 self.buffer.x_transformed = self.get_transformed(self.buffer.x)
 
-        logger.debug(tm.message("Updated model from buffer"))
+        return model_updated
 
     def stream_buffer_empty(self):
         return self.stream.empty()
@@ -272,6 +301,44 @@ class StreamingAnomalyDetector(object):
         if self.labeled is not None:
             return len(self.labeled.y)
         return 0
+
+    def reestimate_tau(self, default_tau):
+        """Re-estimate the proportion of anomalies
+
+        The number of true anomalies discovered might end up being high
+        relative to the data in the memory. We need to adjust for that...
+
+        :param default_tau: float
+            default proportion of anomalies
+        :return: float
+        """
+        new_tau = default_tau
+        nha, nhn, nul = self.get_instance_stats()
+        frac_known_anom = nha * 1.0 / (nha + nhn + nul)
+        if frac_known_anom >= default_tau:
+            new_tau = frac_known_anom + 0.01
+            logger.debug("Exceeded original tau (%f); setting tau=%f" % (default_tau, new_tau))
+        return new_tau
+
+    def update_weights_with_no_feedback(self):
+        """Runs the weight update n times
+
+        This is useful when there has been a significant update to the model
+        because of (say) data drift and we want to iteratively estimate the
+        ensemble weights and the tau-quantile value a number of times
+        """
+        if self.opts.do_not_update_weights or self.opts.n_weight_updates_after_stream_window <= 0:
+            return
+
+        tm = Timer()
+        tmp, ha, hn = self.setup_data_for_feedback()
+        x, y, ids, x_transformed = tmp.x, tmp.y, tmp.ids, tmp.x_transformed
+        orig_tau = self.opts.tau
+        self.opts.tau = self.reestimate_tau(orig_tau)
+        for i in range(self.opts.n_weight_updates_after_stream_window):
+            self.model.update_weights(x_transformed, y, ha, hn, self.opts)
+        self.opts.tau = orig_tau
+        logger.debug(tm.message("Updated weights %d times with no feedback " % self.opts.n_weight_updates_after_stream_window))
 
     def get_query_data(self, x=None, y=None, ids=None, ha=None, hn=None, unl=None, w=None, n_query=1):
         """Returns the best instance that should be queried, along with other data structures
@@ -422,17 +489,8 @@ class StreamingAnomalyDetector(object):
         queried_baseline = order_baseline[0:n_seen_baseline]
         seen_baseline = self.unlabeled.y[queried_baseline]
 
-        # the number of true anomalies discovered might end up being high
-        # relative to the data in the memory. We need to adjust for that...
         orig_tau = self.opts.tau
-        nha, nhn, nul = self.get_instance_stats()
-        frac_known_anom = nha * 1.0 / (nha + nhn + nul)
-        if frac_known_anom >= orig_tau:
-            new_tau = frac_known_anom + 0.01
-            logger.debug("Exceeded original tau (%f); setting tau=%f" % (orig_tau, new_tau))
-            self.opts.tau = new_tau
-        else:
-            self.opts.tau = orig_tau
+        self.opts.tau = self.reestimate_tau(orig_tau)
 
         seen = np.zeros(0, dtype=int)
         n_unlabeled = np.zeros(0, dtype=int)
@@ -643,10 +701,14 @@ def aad_stream():
                     all_scores = np.append(all_scores, scores)
                     all_y = np.append(all_y, instances.y)
 
+                model_updated = False
                 if opts.allow_stream_update:
-                    sad.update_model_from_buffer(transform=True)
+                    model_updated = sad.update_model_from_buffer(transform=True)
 
                 sad.move_buffer_to_unlabeled()
+
+                if model_updated:
+                    sad.update_weights_with_no_feedback()
 
             logger.debug(tm.message("Stream window [%d]: algo [%d/%d]; baseline [%d/%d]; unlabeled anoms [%d]: " %
                                     (iter, int(np.sum(seen)), len(seen),

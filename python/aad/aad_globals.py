@@ -340,6 +340,9 @@ def get_aad_option_list():
     parser.add_argument("--check_KL_divergence", action="store_true", default=False,
                         help="Whether to check KL-divergence before model update in the streaming setting. "
                              "This only applies to forest-based models in streaming setting.")
+    parser.add_argument("--n_weight_updates_after_stream_window", action="store", type=int, default=0,
+                        help="Number of times the weight should be updated without feedback after the model "
+                             "gets updated with each stream window")
     parser.add_argument("--describe_anomalies", action="store_true", default=False,
                         help="Whether to report compact descriptions for discovered anomalies " +
                              "(supported only for forest-based detectors)")
@@ -492,6 +495,7 @@ class AadOpts(object):
         self.do_not_update_weights = args.do_not_update_weights
         self.kl_alpha = args.kl_alpha
         self.check_KL_divergence = args.check_KL_divergence
+        self.n_weight_updates_after_stream_window = args.n_weight_updates_after_stream_window
 
         self.describe_anomalies = args.describe_anomalies
         self.describe_n_top = args.describe_n_top
@@ -537,7 +541,7 @@ class AadOpts(object):
         return s
 
     def streaming_str(self):
-        return "sw%d_asu%s%s%s_mw%df%d_%d_%s%s" % (self.stream_window, str(self.allow_stream_update),
+        return "sw%d_asu%s%s%s_mw%df%d_%d_%s%s%s" % (self.stream_window, str(self.allow_stream_update),
                                                    "_KL%0.2f" % self.kl_alpha if self.check_KL_divergence else "",
                                                    "" if not self.do_not_update_weights else "_no_upd",
                                                    self.max_windows, self.min_feedback_per_window,
@@ -546,7 +550,8 @@ class AadOpts(object):
                                                    "" if (self.check_KL_divergence or (
                                                               (self.detector_type == AAD_IFOREST or self.detector_type == AAD_MULTIVIEW_FOREST) and
                                                               self.forest_replace_frac == 0.2)
-                                                          ) else "_f%0.2f" % self.forest_replace_frac
+                                                          ) else "_f%0.2f" % self.forest_replace_frac,
+                                                     "" if self.n_weight_updates_after_stream_window == 0 else "_u%d" % self.n_weight_updates_after_stream_window
                                                    )
 
     def detector_type_str(self):

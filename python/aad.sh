@@ -422,6 +422,18 @@ if [[ "$RESTRICT_LABELED_SET" == "1" ]]; then
     MAX_LABELED_FOR_STREAM="--max_labeled_for_stream=100"
 fi
 
+
+# ===================================================
+# N_WEIGHT_UPDATES_AFTER_STREAM: The number of times
+# the weights will be updated *without* feedback
+# immediately after the model is updated due to a new
+# window of data. This is helpful when (say) many trees 
+# are dropped we need to run multiple iterations of learning
+# ensemble weights as well as estimating the tau-quantile
+# score. This option applies to streaming setting only.
+N_WEIGHT_UPDATES_AFTER_STREAM=10  # 5
+# ---------------------------------------------------
+
 # ===================================================
 # FOREST_REPLACE_FRAC: The fraction of trees which will
 #   be replaced (*for forests which support this update*)
@@ -486,6 +498,9 @@ if [[ "$STREAMING_IND" == "1" ]]; then
     STREAMING_FLAGS="${STREAM_WINDOW}${ALLOW_STREAM_UPDATE_SIG}${CHECK_KL_SIG}_mw${MAX_WINDOWS}f${MIN_FEEDBACK_PER_WINDOW}_${MAX_FEEDBACK_PER_WINDOW}_ret${RETENTION_TYPE}${TILL_BUDGET_SIG}"
     if [[ "${DETECTOR_TYPE}" == "7" && "${ALLOW_STREAM_UPDATE_IND}" == "1" && "${FOREST_REPLACE_FRAC}" != "0.2" && "$CHECK_KL_IND" != "1" ]]; then
         STREAMING_FLAGS="${STREAMING_FLAGS}_f${FOREST_REPLACE_FRAC}"
+    fi
+    if [[ "${N_WEIGHT_UPDATES_AFTER_STREAM}" != "0" ]]; then
+        STREAMING_FLAGS="${STREAMING_FLAGS}_u${N_WEIGHT_UPDATES_AFTER_STREAM}"
     fi
     PYSCRIPT=aad_stream.py
     PYMODULE=aad.aad_stream
@@ -590,4 +605,5 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     --retention_type=${RETENTION_TYPE} ${TILL_BUDGET} \
     --forest_replace_frac=${FOREST_REPLACE_FRAC} ${FEATURE_PARTITIONS} \
     ${CHECK_KL} --kl_alpha=${KL_ALPHA} \
+    --n_weight_updates_after_stream_window=${N_WEIGHT_UPDATES_AFTER_STREAM} \
     ${PLOT2D} --debug
