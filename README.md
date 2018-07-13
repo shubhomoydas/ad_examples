@@ -213,6 +213,10 @@ For more details on KL-divergence based concept drift detection, check the [demo
     
     pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
 
+Following is the concept drift detection plot for the dataset **Weather**:
+
+![Concept Drift Detection - Weather](figures/concept_drift_weather.png)
+
 The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
 
 
