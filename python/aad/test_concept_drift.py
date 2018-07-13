@@ -10,6 +10,7 @@ from aad.aad_support import *
 from aad.data_stream import *
 from common.gen_samples import read_anomaly_dataset
 from common.data_plotter import *
+from aad.anomaly_dataset_support import *
 
 
 """
@@ -42,12 +43,14 @@ def test_kl_data_drift():
 
     np.random.seed(42)
 
-    stream_window = 1024
+    dataset_config = dataset_configs[args.dataset]
+    stream_window = dataset_config[2]
     alpha = 0.05
 
-    logger.debug("dataset: %s, stream_window: %d, alpha: %0.3f" % (args.dataset, stream_window, alpha))
-
     X_full, y_full = read_anomaly_dataset(args.dataset)
+    logger.debug("dataset: %s (%d, %d), stream_window: %d, alpha: %0.3f" %
+                 (args.dataset, X_full.shape[0], X_full.shape[1], stream_window, alpha))
+
     stream = DataStream(X_full, y_full, IdServer(initial=0))
     training_set = stream.read_next_from_stream(stream_window)
     x, y, ids = training_set.x, training_set.y, training_set.ids
@@ -86,9 +89,17 @@ def test_kl_data_drift():
 
         # find which trees exceed alpha-level threshold
         replace_trees_by_kl = model.get_trees_to_replace(comp_kls, kl_q_alpha)
-        if replace_trees_by_kl is not None and len(replace_trees_by_kl) > 0:
-            logger.debug("window %d: #replace_trees_by_kl: %d\n%s" %
-                         (window, len(replace_trees_by_kl), str(list(replace_trees_by_kl))))
+        n_trees = model.clf.n_estimators
+        n_replace = 0 if replace_trees_by_kl is None else len(replace_trees_by_kl)
+        n_threshold = int(2*alpha*n_trees)
+        # we will replace if 2*alpha number of trees exceed the alpha-threshold
+        do_replace = n_trees > 0 and n_replace >= n_threshold
+        logger.debug("window %d: n_replace: %d, threshold num: %d, do_replace: %s" %
+                     (window, n_replace, n_threshold, str(do_replace)))
+        if do_replace:
+            if False:
+                logger.debug("window %d: #replace_trees_by_kl: %d\n%s" %
+                             (window, len(replace_trees_by_kl), str(list(replace_trees_by_kl))))
             trees_replaced.append(len(replace_trees_by_kl))
             model.update_model_from_stream_buffer(replace_trees=replace_trees_by_kl)
             # recompute KL replacement threshold *without* p
@@ -97,8 +108,9 @@ def test_kl_data_drift():
             # now recompute reference p
             p = model.get_node_sample_distributions(x)
         else:
-            logger.debug("window %d: model not updated; replace_trees_by_kl: %s" %
-                         (window, str(list(replace_trees_by_kl)) if replace_trees_by_kl is not None else None))
+            if False:
+                logger.debug("window %d: model not updated; replace_trees_by_kl: %s" %
+                             (window, str(list(replace_trees_by_kl)) if replace_trees_by_kl is not None else None))
             trees_replaced.append(0)
 
     if args.plot:
