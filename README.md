@@ -213,7 +213,7 @@ For more details on KL-divergence based concept drift detection, check the [demo
     
     pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
 
-Following is the concept drift detection plot for the dataset **Weather**:
+Following is the concept drift detection plot for the dataset **Weather**. The total number of trees *T* = **100**, and the streaming window size is 1024.
 
 ![Concept Drift Detection - Weather](figures/concept_drift_weather.png)
 
