@@ -194,7 +194,7 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 
 Concept Drift Detection
 -------------------------------------------
-This section applies to isolation tree-based detectors (such as Isolation Forest and Multiview Isolation Forest). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
+This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
   - First, randomly partition the current window of data into two equal parts (*A* and *B*).
   - For each tree in the forest, compute average KL-divergence as follows:
     - Treat the tree as set of histogram bins
