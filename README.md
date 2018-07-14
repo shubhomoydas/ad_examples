@@ -122,7 +122,7 @@ Streaming currently supports two strategies for data retention:
 
 
 **Note on Query Diversity**
-See further below for diversity based querying strategy. The query_type=8 option selects this. **To actually see benefits of this option, set batch size to greater than 1 (e.g., 3)**.
+See further [below](#query-diversity-with-compact-descriptions) for diversity based querying strategy. The '--query_type=8' option selects this. **To actually see benefits of this option, set batch size to greater than 1 (e.g., 3)**.
 
 
 Generating compact descriptions with AAD
