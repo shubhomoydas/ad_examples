@@ -82,7 +82,7 @@ This codebase supports five different anomaly detection algorithms:
   - The Isolation Forest based AAD (**streaming support with model update**)
     - For streaming update, we support two modes:
       - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set CHECK_KL_IND=0 in aad.sh.
-      - **Mode 1** (Default): Replace trees based on KL-divergence. Further details are [below](#concept-drift-detection). *For this mode, set CHECK_KL_IND=1 in aad.sh.*
+      - **Mode 1** (Default): Replace trees based on KL-divergence. Further details are [below](#data-drift-detection). *For this mode, set CHECK_KL_IND=1 in aad.sh.*
   - HS Trees based AAD (**streaming support with model update**)
     - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
   - RS Forest based AAD (**streaming support with model update**)
@@ -192,7 +192,7 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 **Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (**--init=1**) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
 
 
-Concept Drift Detection
+Data Drift Detection
 -------------------------------------------
 This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
   - First, randomly partition the current window of data into two equal parts (*A* and *B*).
