@@ -81,8 +81,8 @@ This codebase supports five different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The Isolation Forest based AAD (**streaming support with model update**)
     - For streaming update, we support two modes:
-      - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set CHECK_KL_IND=0 in aad.sh.
-      - **Mode 1** (Default): Replace trees based on KL-divergence. Further details are [below](#data-drift-detection). *For this mode, set CHECK_KL_IND=1 in aad.sh.*
+      - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set *CHECK_KL_IND=0* in aad.sh.
+      - **Mode 1** (Default): Replace trees based on KL-divergence. Further details are [below](#data-drift-detection). For this mode, set *CHECK_KL_IND=1* in aad.sh.
   - HS Trees based AAD (**streaming support with model update**)
     - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
   - RS Forest based AAD (**streaming support with model update**)
