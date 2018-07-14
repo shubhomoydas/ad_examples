@@ -110,7 +110,7 @@ example (with HSTrees streaming):
 
     bash ./aad.sh toy2 35 1 0.03 11 1 0 1 256 0 1 1
 
-**Note:** In case the data does not have concept drift, I would **recommend using Isolation forest** instead of HSTrees and RSForest:
+**Note:** I **recommend using Isolation forest** instead of HSTrees and RSForest even if there is drift in data:
 
     bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 1 1 1
 
@@ -210,13 +210,13 @@ This section applies to isolation tree-based detectors (such as [IForest](python
       - Replace all trees whose *KL(p||q)* is higher than *KL-q* with new trees created with the new data.
       - Recompute *KL-q* and the baseline distributions *P* with the new data and the updated model.
 
-For more details on KL-divergence based concept drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated:
+For more details on KL-divergence based data drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated:
     
     pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
 
-Following is the concept drift detection plot for the dataset **Weather**. The total number of trees *T* = **100**, and the streaming window size is 1024.
+Following is the data drift detection plot for the dataset **Weather**. The total number of trees *T* = **100**, and the streaming window size is 1024.
 
-![Concept Drift Detection - Weather](figures/concept_drift_weather.png)
+![Data Drift Detection - Weather](figures/concept_drift_weather.png)
 
 The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
 
