@@ -58,7 +58,7 @@ To execute the code:
 
 Active Anomaly Discovery (AAD)
 ------------------------------
-This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
+This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies. The [section below](#intuition-behind-active-anomaly-discovery) explains the intuition behind AAD. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
 
 To run (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
 
@@ -221,7 +221,7 @@ Following is the data drift detection plot for the dataset **Weather**. The tota
 The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
 
 
-Some thoughts on Active Anomaly Discovery
+Intuition behind Active Anomaly Discovery
 -----------------------------------------
 ![Geometric Intuition for Active Learning](figures/geometric_intuition.png)
 *Question: Why should active learning help in anomaly detection with ensembles?* Let us assume the anomaly scores are uniformly distributed on a 2D unit sphere as in the above figure (this is a setting commonly analysed in active learning theory literature as it is easier to convey the intuition). Also assume that *tau* fraction of instances are anomalous. When we treat the ensemble scores as 'features', then most anomaly 'feature' vectors will be closer to the uniform unit vector (uniform unit vector has the same values for all 'features') than nominals because anomaly detectors tend to assign higher scores to anomalies. This is another way of saying that the average of the anomaly scores across all ensemble members is a good representative of anomalousness (i.e., the dot product of the transformed 'features' with the uniform weight vector).
