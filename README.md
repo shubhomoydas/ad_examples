@@ -58,7 +58,7 @@ To execute the code:
 
 Active Anomaly Discovery (AAD)
 ------------------------------
-This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies. The [section below](#intuition-behind-active-anomaly-discovery) explains the intuition behind AAD. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
+This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies. The section below ['Intuition behind Active Anomaly Discovery'](#intuition-behind-active-anomaly-discovery) explains the intuition behind AAD. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
 
 To run (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
 
