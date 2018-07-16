@@ -115,13 +115,13 @@ example (with HSTrees streaming):
     bash ./aad.sh toy2 35 1 0.03 7 1 0 1 512 1 1 1
 
 
-**Note on Streaming**
+**Note on Streaming:**
 Streaming currently supports two strategies for data retention:
   - Retention Type 0: Here the new instances from the stream completely overwrite the older *unlabeled instances* in memory.
   - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded. **This is highly recommended.**
 
 
-**Note on Query Diversity**
+**Note on Query Diversity:**
 See further [below](#query-diversity-with-compact-descriptions) for diversity based querying strategy. The '--query_type=8' option selects this. **To actually see benefits of this option, set batch size to greater than 1 (e.g., 3)**.
 
 
@@ -221,6 +221,28 @@ Following is the data drift detection plot for the dataset **Weather**. The tota
 The idea is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
 
 
+Some thoughts on Active Anomaly Discovery
+-----------------------------------------
+![Geometric Intuition for Active Learning](figures/geometric_intuition.png)
+*Question: Why should active learning help in anomaly detection with ensembles?* Let us assume the anomaly scores are uniformly distributed on a 2D unit sphere as in the above figure (this is a setting commonly analysed in active learning theory literature as it is easier to convey the intuition). Also assume that *tau* fraction of instances are anomalous. When we treat the ensemble scores as 'features', then most anomaly 'feature' vectors will be closer to the uniform unit vector (uniform unit vector has the same values for all 'features' where 'd' is the number of ensembles) than non-anomalies because anomaly detectors tend to assign higher scores to anomalies. This is another way of saying that the average of the anomaly scores would be a good representative of anomalousness (dot product of the transformed 'features' with the uniform weight vector).
+
+Seen another way, the hyper-plane perpendicular to the uniform weight vector and offset by *cos(pi\*tau)* (in this simple 2D setting) should a good prior for the separating hyper-plane between anomalies and nominals such that the *tau* fraction of anomalous instances lie at the extreme end -- the top right side of the hyperplane. The *ideal* classification rule then is: *sign(w.x - cos(pi.tau))* such that +1 is anomaly, -1 is nominal. On real-world data however, the true hyper-plane is not exactly same as the uniform vector, but should be close (else the anomaly detectors forming the ensemble are poor). AAD is basically trying to find this true hyper-plane by solving a large-margin classification problem. The example `percept.percept` illustrates this where we have true anomaly distribution (red points in the plots) at a slight angle from the uniform weights.
+
+With active learning, the true anomaly region on the unit sphere (centered around blue line) can be discovered in a more efficient manner if we set the uniform vector as a prior. To understand this intuitively, observe that when the ensemble members are good, the anomalies lie close to the hyperplane as illustrated above. By design, this hyperplane is displaced from the origin such that a small (*fraction*) of instances are on the extreme top-right side and the rest are on the other side. Now, note three important observations: (1) top ranked instances are close to the hyperplane, (2) since instances close to the hyperplane have the most uncertain labels, top-ranked instances lie in the region of uncertainty (from the margin perspective), and (3) ensembles are designed so that most anomalies are top-ranked in the score-space. Selecting top-ranked instances then results in uncertainty sampling which makes active learning *efficient* (refer to active learning theory) for learning the true hyperplane. It also makes querying top-ranked instances efficient for discovering anomalies because: if the instance is an anomaly, it is a success; on the other hand, if it is a nominal, then it helps to efficiently adjust the margin so that future query instances are more likely to be anomalies.
+
+**Note:** The hyperplane displacement *cos(pi\*tau)* was assumed only in the simple 2D scenario. In a real setting, we need to estimate the hyperplane displacement from the data, as is done by AAD.
+
+**Caution:** By design, the uniform weight vector is more closely aligned with the ensemble score vectors of **true anomalies** than with the ensemble score vectors of true nominals. However, this alignment cannot be guaranteed when the score vectors are normalized to unit length (such that they all lie on a unit sphere). Still, if the number of ensemble members is very high -- such as with IForest where leaf nodes represent the members -- then the normalization is more likely to preserve the intended alignment. This is probably due to some properties of high-dimensional geometry. The distribution of the angles between the normalized score vectors and the uniform weight vector can be checked with aad.test_hyperplane_angles. The plotted histograms show that true anomalies are usually closer to uniform vector (measured in angles) when IForest is used, and the optimal hyperplane (computed with a perceptron) has an acute angle with uniform vector. As a recommendation: the IForest leaf-based scores may be normalied, but LODA based scores should *not* be normalied to unit length because the number of LODA projections is smaller.
+
+
+Note on Spectral Clustering by label diffusion
+----------------------------------------------
+Spectral clustering tries to first find a lower dimensional representation of the data where it is better clustered after taking into account the inherent manifold structures. Next, any standard anomaly detector can be applied on the new representation. Although the python code has the [implementation](python/ad/spectral_outlier.py), the last step requires non-metric MDS transform and the scikit-learn implementation is not as good as R. Hence, use the R code (R/manifold_learn.R) for generating the transformed features.
+
+For details, refer to:
+Supervised and Semi-supervised Approaches Based on Locally-Weighted Logistic Regression by Shubhomoy Das, Travis Moore, Weng-keen Wong, Simone Stumpf, Ian Oberst, Kevin Mcintosh, Margaret Burnett, Artificial Intelligence, 2013.
+
+
 Activity Modeling
 -----------------
 A simple application of word2vec for activity modeling can be found [here](python/timeseries/activity_word2vec.py). We try to infer relative sensor locations from sequence of sensor triggerings. The true [floor plan](http://ailab.wsu.edu/casas/hh/hh101/profile/page-6.html) and the inferred sensor locations (**for sensor ids starting with 'M' and 'MA'**) are shown below.
@@ -233,18 +255,4 @@ Please refer to the following paper and the [CASAS website](http://ailab.wsu.edu
     D. Cook, A. Crandall, B. Thomas, and N. Krishnan.
     CASAS: A smart home in a box. IEEE Computer, 46(7):62-69, 2013.
 
-
-Note on Spectral Clustering by label diffusion
-----------------------------------------------
-Although the python code has the implementation, the last step requires non-metric MDS transform and the scikit-learn implementation is not as good as R. Hence, use the R code (R/manifold_learn.R) for generating the transformed output.
-
-For details, refer to:
-Supervised and Semi-supervised Approaches Based on Locally-Weighted Logistic Regression by Shubhomoy Das, Travis Moore, Weng-keen Wong, Simone Stumpf, Ian Oberst, Kevin Mcintosh, Margaret Burnett, Artificial Intelligence, 2013.
-
-
-Some thoughts on Active Anomaly Discovery
------------------------------------------
-*Question: Why should active learning help in anomaly detection with ensembles?* Let us assume the anomaly scores are uniformly distributed on a 2D unit sphere (this is a setting commonly analysed in active learning theory literature). When we treat the ensemble scores as 'features', then most anomaly 'feature' vectors will be closer to the uniform unit vector (uniform unit vector has the same values for all 'features' where 'd' is the number of ensembles) than non-anomalies because anomaly detectors tend to assign higher scores to anomalies. This is another way of saying that the average of the anomaly scores would be a good representative of anomalousness (dot product of the transformed 'features' with the uniform weight vector). Seen another way, the hyper-plane perpendicular to the uniform weight vector and offset by cos(pi.tau) should a good prior for the separating hyper-plane between anomalies and nominals. The classification rule is: *sign(w.x - cos(pi.tau))* such that +1 is anomaly, -1 is nominal. On real-world data, the true hyper-plane is not exactly same as the uniform vector, but should be close (else the anomaly detectors forming the ensemble are poor). AAD is basically trying to find this true hyper-plane by solving a large-margin classification problem. The example 'percept.percept' illustrates this where we have true anomaly distribution (red points in the plots) at a slight angle from the uniform weights. With active learning, the true anomaly region on the unit sphere (centered around blue line) can be discovered in a more efficient manner if we set the uniform vector as a prior. Most current theory on active learning revolves around learning hyper-planes passing through the origin. This theory can be applied to ensemble-based anomaly detection by introducing the fixed cos(pi.tau) bias (the green line in the plots represents the learned hyperplane; the red line is perpendicular to it).
-
-**Caution:** By design, the uniform weight vector is more closely aligned with the ensemble score vectors of **true anomalies** than with the ensemble score vectors of true nominals. However, this alignment cannot be guaranteed when the score vectors are normalized to unit length (such that they all lie on a unit sphere). Still, if the number of ensemble members is very high -- such as with IForest where leaf nodes represent the members -- then the normalization is more likely to preserve the intended alignment. This is probably due to some properties of high-dimensional geometry. The distribution of the angles between the normalized score vectors and the uniform weight vector can be checked with aad.test_hyperplane_angles. The plotted histograms show that true anomalies are usually closer to uniform vector (measured in angles) when IForest is used, and the optimal hyperplane (computed with a perceptron) has an acute angle with uniform vector. As a recommendation: the IForest leaf-based scores may be normalied, but LODA based scores should *not* be normalied to unit length because the number of LODA projections is smaller.
 
