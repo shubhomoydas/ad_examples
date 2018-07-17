@@ -239,7 +239,9 @@ With this setup, active learning can help discover the true anomaly region on th
 
 ![General Setup for Active Learning](figures/geometric_intuition_rect.png)
 
-##References:
+
+References:
+-----------
   - [1] David Cohn, Les Atlas, and Richard Ladner. *Improving generalization with active learning.* Machine Learning, 15(2):201–221, May 1994.
   - [2] Maria-Florina Balcan, Andrei Z. Broder, and Tong Zhang. *Margin based active learning.* In COLT, 2007.
 
