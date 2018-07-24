@@ -46,7 +46,7 @@ The codebase also includes some [activity modeling stuff](#activity-modeling).
 
 To execute the code:
 
-1. **Run code from 'python' folder**. The outputs will be generated under 'temp' folder. The 'pythonw' command is used on OSX, but 'python' should be used on Linux.
+1. **Run code from 'python' folder**. The outputs will be generated under 'temp' folder. The `pythonw` command is used on OSX, but `python` should be used on Linux.
 
 2. To avoid import errors, make sure that PYTHONPATH is configured correctly to include the current dir:
 .:/usr/local/lib/python
@@ -79,20 +79,20 @@ Running AAD
 -----------
 This codebase supports five different anomaly detection algorithms:
   - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
-  - The Isolation Forest based AAD (**streaming support with model update**)
+  - The [Isolation Forest based AAD](python/aad/random_split_trees.py) (**streaming support with model update**)
     - For streaming update, we support two modes:
-      - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set *CHECK_KL_IND=0* in aad.sh.
-      - **Mode 1** (Default): Replace trees based on KL-divergence. Further details are [below](#data-drift-detection). For this mode, set *CHECK_KL_IND=1* in aad.sh.
-  - HS Trees based AAD (**streaming support with model update**)
-    - For streaming update, the option '--tree_update_type=0' replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option '--tree_update_type=1' updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
-  - RS Forest based AAD (**streaming support with model update**)
+      - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set `CHECK_KL_IND=0` in aad.sh.
+      - **Mode 1** (Default): Replace trees based on KL-divergence. Further details are [below](#data-drift-detection). For this mode, set `CHECK_KL_IND=1` in `aad.sh`.
+  - [HS Trees based AAD](python/aad/random_split_trees.py) (**streaming support with model update**)
+    - For streaming update, the option `--tree_update_type=0` replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option `--tree_update_type=1` updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
+  - [RS Forest based AAD](python/aad/random_split_trees.py) (**streaming support with model update**)
     - See the previous HS Trees streaming update options above.
-  - The Isolation Forest based AAD with *Multiview* (**streaming support with model update**)
+  - The [Isolation Forest based AAD with Multiview](python/aad/multiview_forest.py) (**streaming support with model update**)
     - This is useful if (say) there are groups of features that represent coherent groups and we want to create trees only with the features in a particular group. For instance, in a malware detection application, we might have 100 features computed with static program features and 120 computed with dynamic program features. Then we want 50 isolation trees with only the 100 static features and 50 trees with the 120 dynamic features for a total of 100 trees. In a streaming situation, we would want the tree replacement to take into account the grouping as well, for example, if there has been no drift in the static features while there is a significant drift in dynamic features, we should not replace the trees of static features and only replace the trees of dynamic features.
 
 To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
 
-    bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]> <with_prior[0|1]> <init_type[0|1|2]>
+    bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type[1|2|8|9]> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]> <with_prior[0|1]> <init_type[0|1|2]>
 
     for Isolation Forest, set <detector_type>=7; 
     for HSTrees, set <detector_type>=11;
@@ -122,7 +122,11 @@ Streaming currently supports two strategies for data retention:
 
 
 **Note on Query Diversity:**
-See further [below](#query-diversity-with-compact-descriptions) for diversity based querying strategy. The '--query_type=8' option selects this. **To actually see benefits of this option, set batch size to greater than 1 (e.g., 3)**.
+See further [below](#query-diversity-with-compact-descriptions) for diversity based querying strategy. The `--querytype=8` option selects this. **To actually see benefits of this option, set batch size to greater than 1 (e.g., 3)**.
+
+
+**Note on querying strategies:**
+See [below](#does-query-diversity-with-compact-descriptions-help) for query strategies currently supported. `QUERY_TYPE` variable in `aad.sh` determines the query strategy.
 
 
 Generating compact descriptions with AAD
@@ -152,12 +156,12 @@ To generate the below, use the command:
 Does Query diversity with compact descriptions help?
 -------------------------------------------
 We compare the following query strategies:
-  - **Top:** (*QUERY_TYPE=1, N_BATCH=3*) [Select](python/aad/query_model.py) a batch of three top-most instances ordered by anomaly score.
-  - **Top Random:** (*QUERY_TYPE=2, N_BATCH=3*) [Select](python/aad/query_model.py) a random batch of three instances among top 10 anomalous instances.
-  - **Diverse descriptions:** (*QUERY_TYPE=8, N_BATCH=3*) [Select](python/aad/query_model_other.py) three instances among top 10 anomalous instances which have most diverse descriptions (explained in [previous section](#query-diversity-with-compact-descriptions)).
-  - **Farthest in euclidean space:** (*QUERY_TYPE=9, N_BATCH=3*) [Select](python/aad/query_model_euclidean.py) three instances among the top 10 anomalous instances which have the highest average euclidean distance between them. First short-list the top 10 anomalous instances as candidates. Now, to select a batch of (three) instances, first add the most anomalous instance from these candidates to the selected list. Then iterate (two more times); in each iteration, add that instance (from the candidates) to the selected list which has the maximum average distance from the instances currently in the selected list. This is a diversity strategy common in existing literature.
+  - **Top:** (`QUERY_TYPE=1, N_BATCH=3`) [Select](python/aad/query_model.py) a batch of three top-most instances ordered by anomaly score.
+  - **Top Random:** (`QUERY_TYPE=2, N_BATCH=3`) [Select](python/aad/query_model.py) a random batch of three instances among top 10 anomalous instances.
+  - **Diverse descriptions:** (`QUERY_TYPE=8, N_BATCH=3`) [Select](python/aad/query_model_other.py) three instances among top 10 anomalous instances which have most diverse descriptions (explained in [previous section](#query-diversity-with-compact-descriptions)).
+  - **Farthest in euclidean space:** (`QUERY_TYPE=9, N_BATCH=3`) [Select](python/aad/query_model_euclidean.py) three instances among the top 10 anomalous instances which have the highest average euclidean distance between them. First short-list the top 10 anomalous instances as candidates. Now, to select a batch of (three) instances, first add the most anomalous instance from these candidates to the selected list. Then iterate (two more times); in each iteration, add that instance (from the candidates) to the selected list which has the maximum average distance from the instances currently in the selected list. This is a diversity strategy common in existing literature.
 
-The plots below show that the description-based diversity strategy indeed helps. While selecting the top-most anomalous instances is highly efficient for discovering anomalies, we can also improve the diversity in each batch through descriptions without loss in efficiency. Employing descriptions for diversity also has similar anomaly detection efficiency on the *Toy-2* dataset as that with maximizing euclidean distance; however, the description based strategy has the advantage of being more user-friendly.
+The plots below show that the description-based diversity strategy indeed helps. While selecting the top-most anomalous instances is highly efficient for discovering anomalies, we can also improve the diversity in each batch through descriptions without loss in efficiency. Employing descriptions for diversity also has similar anomaly detection efficiency on the *toy2* dataset as that with maximizing euclidean distance; however, the description based strategy has the advantage of being more user-friendly.
 
 To generate the below plots, perform the following steps (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
 
@@ -196,7 +200,7 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 
     pythonw -m aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=../datasets/toy.csv --scoresfile=../datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
 
-**Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (**--init=1**) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
+**Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (`--init=1`) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
 
 
 Data Drift Detection
