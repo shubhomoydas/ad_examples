@@ -48,6 +48,7 @@ if [[ "$ARGC" -gt "0" ]]; then
     # QUERY_GP = 6 (Gaussian Process)
     # QUERY_SCORE_VAR = 7 (Score Variance)
     # QUERY_CUSTOM_MODULE = 8
+    # QUERY_EUCLIDEAN = 9
     #     NOTE: QUERY_CUSTOM_MODULE requires --query_module_name and --query_class_name
     #           to specify the correct query model class. By default:
     #           --query_module_name=aad.query_model_other
@@ -145,7 +146,7 @@ if [[ "${N_BATCH}" != "1" ]]; then
 fi
 
 QUERY_SIG="q${QUERY_TYPE}${N_BATCH_SIG}"
-if [[ "${QUERY_TYPE}" == "2" || "${QUERY_TYPE}" == "8" ]]; then
+if [[ "${QUERY_TYPE}" == "2" || "${QUERY_TYPE}" == "8" || "${QUERY_TYPE}" == "9" ]]; then
     QUERY_SIG="q${QUERY_TYPE}n${N_EXPLORE}b${N_BATCH}"
 fi
 
