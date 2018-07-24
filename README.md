@@ -78,7 +78,7 @@ The above command will generate a pdf file with plots illustrating how the data 
 Running AAD
 -----------
 This codebase supports five different anomaly detection algorithms:
-  - The LODA based AAD (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
+  - The [LODA based AAD](python/aad/loda_aad.py) (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The [Isolation Forest based AAD](python/aad/random_split_trees.py) (**streaming support with model update**)
     - For streaming update, we support two modes:
       - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set `CHECK_KL_IND=0` in aad.sh.
