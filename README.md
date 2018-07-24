@@ -151,7 +151,13 @@ To generate the below, use the command:
 
 Does Query diversity with compact descriptions help?
 -------------------------------------------
-The below plots show that the above diversity strategy indeed helps.
+We compare the description based query diversity strategy explained above with the following other query strategies:
+  - **Top:** (*QUERY_TYPE=1, N_BATCH=3*) [Select](python/aad/query_model.py) a batch of three top-most instances ordered by anomaly score.
+  - **Top Random:** (*QUERY_TYPE=2, N_BATCH=3*) [Select](python/aad/query_model.py) a random batch of three instances among top 10 anomalous instances.
+  - **Diverse descriptions:** (*QUERY_TYPE=8, N_BATCH=3*) [Select](python/aad/query_model_other.py) three instances among top 10 anomalous instances which have most diverse descriptions (explained in previous section).
+  - **Farthest in euclidean space:** (*QUERY_TYPE=9, N_BATCH=3*) [Select](python/aad/query_model_euclidean.py) three instances among the top 10 anomalous instances which have the highest average euclidean distance between them. First short-list the top 10 anomalous instances as candidates. Now, to select a batch of (three) instances, first add the most anomalous instance from these candidates to the selected list. Then iterate (two more times); in each iteration, add that instance (from the candidates) to the selected list which has the maximum average distance from the instances currently in the selected list. This is a diversity strategy common in existing literature.
+
+The plots below show that the above diversity strategy indeed helps. While selecting the top-most anomalous instances is highly efficient for discovering anomalies, we can also improve the diversity in each batch through descriptions without loss in efficiency. Employing descriptions for diversity also has similar anomaly detection efficiency on the *Toy-2* dataset as that with maximizing euclidean distance; however, the description based strategy has the advantage of being more user-friendly.
 
 To generate the below plots, perform the following steps (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
 
@@ -164,6 +170,7 @@ To generate the below plots, perform the following steps (**remember to run the 
         bash ./aad.sh toy2 45 10 0.03 7 1 0 0 512 0 1 1
         bash ./aad.sh toy2 45 10 0.03 7 2 0 0 512 0 1 1
         bash ./aad.sh toy2 45 10 0.03 7 8 0 0 512 0 1 1
+        bash ./aad.sh toy2 45 10 0.03 7 9 0 0 512 0 1 1
 
     - Next, generate anomaly discovery curves:
         

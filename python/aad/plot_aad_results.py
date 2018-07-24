@@ -64,7 +64,7 @@ def get_result_names(result_type):
     elif result_type == "compare_prior":
         return ['ifor', 'ifor_baseline', 'ifor_noprior_unif', 'ifor_noprior_rand']
     elif result_type == "ifor_top_vs_random":
-        return ['ifor', 'ifor_q1b3', 'ifor_q8b3', 'ifor_baseline', 'ifor_top_random']
+        return ['ifor', 'ifor_q1b3', 'ifor_q8b3', 'ifor_q9b3', 'ifor_baseline', 'ifor_top_random']
     elif result_type == "ifor_vs_others":
         return [
             # 'ifor', 'ifor_stream', 'ifor_q8b3', 'ifor_stream_q8b3', 'ifor_stream_q1b3', 'ifor_baseline', # 'ifor_stream_no_upd', 'loda', 'loda_orig'

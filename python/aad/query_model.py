@@ -33,6 +33,11 @@ class Query(object):
             return QueryRandom(opts=opts, **kwargs)
         elif querytype == QUERY_CUSTOM_MODULE:
             return Query.get_custom_query_model(opts, **kwargs)
+        elif querytype == QUERY_EUCLIDEAN:
+            # doing it this round-about way else there will be a circular module dependency
+            module = importlib.import_module("aad.query_model_euclidean")
+            class_ = getattr(module, "QueryTopDiverseByEuclideanDistance")
+            return class_(opts, **kwargs)
         else:
             raise ValueError("Invalid/unsupported query type %d" % (querytype,))
 

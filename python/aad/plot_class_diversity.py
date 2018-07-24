@@ -105,6 +105,8 @@ def get_result_names(result_type, stream_sig=""):
         return ['ifor_top_random', 'ifor_q8b3']
     elif result_type == "diverse - top":
         return ['ifor%s_q1b3' % stream_sig, 'ifor%s_q8b3' % stream_sig]
+    elif result_type == "diverse - euclidean":
+        return ['ifor%s_q9b3' % stream_sig, 'ifor%s_q8b3' % stream_sig]
     else:
         raise ValueError("Invalid result_type: %s" % result_type)
 
@@ -191,12 +193,15 @@ if __name__ == "__main__":
     # datasets = ['mammography', 'kddcup', 'shuttle_1v23567', 'covtype']
     # datasets = ['electricity']
     datasets = ['toy2']
+    line_types = {"diverse - top": "-", "diverse - top_random": "--", "diverse - euclidean": "-."}
     class_diffs = []
     min_diff = np.Inf
     max_diff = -np.Inf
     x_lim = 1
     for dataset in datasets:
-        for result_type in ["diverse - top", "diverse - top_random"]:
+        # diversity_comparisons = ["diverse - top", "diverse - top_random"]
+        diversity_comparisons = ["diverse - top", "diverse - top_random", "diverse - euclidean"]
+        for result_type in diversity_comparisons:
             args.dataset = dataset
             result_type, stream_sig, class_diff = process_results(args, result_type=result_type,
                                                                   plot=False, stream_sig=stream_sig)
@@ -206,6 +211,7 @@ if __name__ == "__main__":
             x_lim = max(x_lim, len(class_diff))
 
     if len(class_diffs) > 0:
+        dataset_legend_only = False
         dp = DataPlotter(pdfpath="./temp/aad_plots/class_diff/results_diff_classes%s_all.pdf" % stream_sig, rows=1, cols=1)
         pl = dp.get_next_plot()
         plt.xlabel('number of batches from start (batch size=3)', fontsize=14)
@@ -214,14 +220,17 @@ if __name__ == "__main__":
         plt.ylim([min_diff, max_diff])
         pl.axhline(0., color="black", linewidth=1)
         legend_handles = list()
+        result_idx = 0
         for dataset, result_type, stream_sig, class_diff in class_diffs:
             dataset_name = dataset_configs[dataset][4]
-            ln, = pl.plot(np.arange(len(class_diff)), class_diff, '--' if result_type == "diverse - top_random" else '-',
-                          color=dataset_colors[dataset], linewidth=1,
-                          label="%s (%s)" % (dataset, result_type)
-                          # label="%s" % (dataset_name,)
-                          )
-            if result_type == "diverse - top" or True:
+            if dataset_legend_only:
+                label = "%s" % (dataset_name,)
+            else:
+                label = "%s (%s)" % (dataset, result_type)
+            ln, = pl.plot(np.arange(len(class_diff)), class_diff, line_types[result_type],
+                          color=dataset_colors[dataset], linewidth=1, label=label)
+            if not dataset_legend_only or result_idx == 0:
                 legend_handles.append(ln)
+            result_idx += 1
         pl.legend(handles=legend_handles, loc='upper right', prop={'size': 10})
         dp.close()

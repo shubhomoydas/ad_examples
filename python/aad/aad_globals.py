@@ -110,9 +110,10 @@ QUERY_SEQUENTIAL = 5  # Some MDP/reinforcement learning based stuff for later
 QUERY_GP = 6  # Gaussian Process support for later
 QUERY_SCORE_VAR = 7  # Based on variance of scores assigned at the leaves
 QUERY_CUSTOM_MODULE = 8  # Custom modules which will be dynamically instantiated
+QUERY_EUCLIDEAN = 9  # Query such mean distance between query instances is maximized
 
 # first blank string makes the other names 1-indexed
-query_type_names = ["", "top", "toprandom", "quantile", "random", "sequential", "gp", "scvar", "custom"]
+query_type_names = ["", "top", "toprandom", "quantile", "random", "sequential", "gp", "scvar", "custom", "euclidean"]
 # ------------------------------
 
 
