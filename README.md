@@ -244,7 +244,7 @@ With this setup, active learning can help discover the true anomaly region on th
 
 ![General Setup for Active Learning](figures/geometric_intuition_rect.png)
 
-The distribution of the angles between the normalized score vectors and the uniform weight vector can be checked with aad.test_hyperplane_angles. As a recommendation: the IForest leaf-based scores may be normalied (though, not required), but LODA based scores should *not* be normalied to unit length.
+The distribution of the angles between the normalized score vectors and the uniform weight vector can be checked with aad.test_hyperplane_angles. As a recommendation: the IForest leaf-based scores may be normalized (though, not required), but LODA based scores should *not* be normalized to unit length.
 
 References:
 -----------
