@@ -215,6 +215,7 @@ This section applies to isolation tree-based detectors (such as [IForest](python
     - Next, check the KL-divergences between the distributions in P and the corresponding distributions in Q. If the KL-divergence i.e., *KL(p||q)* of at least (2\*alpha\*T) trees exceed *KL-q*, then:
       - Replace all trees whose *KL(p||q)* is higher than *KL-q* with new trees created with the new data.
       - Recompute *KL-q* and the baseline distributions *P* with the new data and the updated model.
+      - Retrain the weights certain number of times (determined by `N_WEIGHT_UPDATES_AFTER_STREAM` in `aad.sh`, 10 works well) with just the labeled data available so far (no additional feedback). This step helps tune the ensemble weights better after significant change to the model.
 
 For more details on KL-divergence based data drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated:
     
