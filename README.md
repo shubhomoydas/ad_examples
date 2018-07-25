@@ -143,7 +143,7 @@ To generate the below, use the command:
 
 Query diversity with compact descriptions
 -------------------------------------------
-Again, the idea for querying a diverse set of instances without significantly affecting the anomaly detection efficiency is explained in https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf.
+Again, the idea for querying a diverse set of instances without significantly affecting the anomaly detection efficiency is explained in [anomaly_description.pdf](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf).
 
 To generate the below, use the command:
     
