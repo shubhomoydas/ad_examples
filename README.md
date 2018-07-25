@@ -130,7 +130,7 @@ See [below](#does-query-diversity-with-compact-descriptions-help) for query stra
 
 Generating compact descriptions with AAD
 -------------------------------------------
-ADD, when used with a forest-based detector such as Isolation Forest, can output a compact set of subspaces that contain all labeled anomalies. The idea is explained in https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf. Following illustrations show the results of this approach.
+AAD, when used with a forest-based detector such as Isolation Forest, can output a compact set of subspaces that contain all labeled anomalies. The idea is explained in [anomaly_description.pdf](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf). Following illustrations show the results of this approach.
 
 To generate the below, use the command:
     
