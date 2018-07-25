@@ -89,7 +89,7 @@ dataset_colors = {"abalone": "red", "yeast": "green", "ann_thyroid_1v3": "blue",
                       "cardiotocography_1": "orange", "covtype": "magenta",
                       "mammography": "pink", "kddcup": "grey", "shuttle_1v23567": "brown",
                       "weather": "black", "electricity": "cyan",
-                      "toy2": "lightblue"}
+                      "toy2": "black"}
 
 def get_result_defs(args):
     budget = dataset_configs[args.dataset][0]
