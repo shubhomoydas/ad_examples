@@ -58,21 +58,20 @@ To execute the code:
 
 Active Anomaly Discovery (AAD)
 ------------------------------
-This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies. The section ['Intuition behind Active Anomaly Discovery'](#intuition-behind-active-anomaly-discovery) explains the idea. **Assuming that the ensemble scores have already been computed**, the file (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
+This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies. The section ['Intuition behind Active Anomaly Discovery'](#intuition-behind-active-anomaly-discovery) explains the idea. **Assuming that the ensemble scores have already been computed**, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
 
-To run (https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
+To run [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
 
     pythonw -m percept.percept
 
-The above command will generate a pdf file with plots illustrating how the data was actively labeled (https://github.com/shubhomoydas/ad_examples/blob/master/documentation/percept_taurel_fixedtau_prior.pdf).
+The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/percept_taurel_fixedtau_prior.pdf) with plots illustrating how the data was actively labeled.
 
 **Reference(s)**:
-  - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2016). Incorporating Expert Feedback into Active Anomaly Discovery in the Proceedings of the IEEE International Conference on Data Mining. (http://web.engr.oregonstate.edu/~wongwe/papers/pdf/ICDM2016.AAD.pdf)
-  (https://github.com/shubhomoydas/aad/blob/master/overview/ICDM2016-AAD.pptx)
+  - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2016). Incorporating Expert Feedback into Active Anomaly Discovery in the Proceedings of the IEEE International Conference on Data Mining. [(pdf)](http://web.engr.oregonstate.edu/~wongwe/papers/pdf/ICDM2016.AAD.pdf)[(presentation)](https://github.com/shubhomoydas/aad/blob/master/overview/ICDM2016-AAD.pptx)
 
-  - Das, S., Wong, W-K., Fern, A., Dietterich, T. and Siddiqui, A. (2017). Incorporating Feedback into Tree-based Anomaly Detection, KDD Interactive Data Exploration and Analytics (IDEA) Workshop.
-  (http://poloclub.gatech.edu/idea2017/papers/p25-das.pdf)
-  (https://github.com/shubhomoydas/pyaad/blob/master/presentations/IDEA17_slides.pptx)
+  - Das, S., Wong, W-K., Fern, A., Dietterich, T. and Siddiqui, A. (2017). Incorporating Feedback into Tree-based Anomaly Detection, KDD Interactive Data Exploration and Analytics (IDEA) Workshop. [(pdf)](https://arxiv.org/pdf/1708.09441)[(presentation)](https://github.com/shubhomoydas/pyaad/blob/master/presentations/IDEA17_slides.pptx)
+  
+  - Das, S. (2017). *Incorporating User Feedback into Machine Learning Systems.* [(PhD Thesis)](http://ir.library.oregonstate.edu/concern/graduate_thesis_or_dissertations/9019s7533) [(pdf)](https://ir.library.oregonstate.edu/downloads/m900p057t) -- Much of the work in this repository originated in my PhD research.
 
 
 Running AAD
@@ -156,10 +155,11 @@ To generate the below, use the command:
 Does Query diversity with compact descriptions help?
 -------------------------------------------
 We compare the following query strategies:
-  - **Top:** (`QUERY_TYPE=1, N_BATCH=3`) [Select](python/aad/query_model.py) a batch of three top-most instances ordered by anomaly score.
-  - **Top Random:** (`QUERY_TYPE=2, N_BATCH=3`) [Select](python/aad/query_model.py) a random batch of three instances among top 10 anomalous instances.
-  - **Diverse descriptions:** (`QUERY_TYPE=8, N_BATCH=3`) [Select](python/aad/query_model_other.py) three instances among top 10 anomalous instances which have most diverse descriptions (explained in [previous section](#query-diversity-with-compact-descriptions)).
-  - **Farthest in euclidean space:** (`QUERY_TYPE=9, N_BATCH=3`) [Select](python/aad/query_model_euclidean.py) three instances among the top 10 anomalous instances which have the highest average euclidean distance between them. First short-list the top 10 anomalous instances as candidates. Now, to select a batch of (three) instances, first add the most anomalous instance from these candidates to the selected list. Then iterate (two more times); in each iteration, add that instance (from the candidates) to the selected list which has the maximum average distance from the instances currently in the selected list. This is a diversity strategy common in existing literature.
+  - **Select the single-most anomalous instance per feedback iteration:** (`QUERY_TYPE=1, N_BATCH=1`) [Select](python/aad/query_model.py) a batch of three top-most instances ordered by anomaly score. (**BAL (Adaptive Prior)** in the plots below.)
+  - **Select a set of the top-most anomalous instances per feedback iteration:** (`QUERY_TYPE=1, N_BATCH=3`) [Select](python/aad/query_model.py) a batch of three top-most instances ordered by anomaly score. (**ifor\_q1b3** in the plots below.)
+  - **Select a random subset of the most anomalous instances per feedback iteration:** (`QUERY_TYPE=2, N_BATCH=3`) [Select](python/aad/query_model.py) a random batch of three instances among top 10 anomalous instances. (**ifor\_top\_random** in the plots below.)
+  - **Select a subset of most anomalous instances whose descriptions are diverse within a feedback iteration:** (`QUERY_TYPE=8, N_BATCH=3`) [Select](python/aad/query_model_other.py) three instances among top 10 anomalous instances which have most diverse descriptions (explained in [previous section](#query-diversity-with-compact-descriptions)). (**BAL-D** in the plots below.)
+  - **Select a subset of most anomalous instances which are farthest from each other within a feedback iteration:** (`QUERY_TYPE=9, N_BATCH=3`) [Select](python/aad/query_model_euclidean.py) three instances among the top 10 anomalous instances which have the highest average euclidean distance between them. First short-list the top 10 anomalous instances as candidates. Now, to select a batch of (three) instances, first add the most anomalous instance from these candidates to the selected list. Then iterate (two more times); in each iteration, add that instance (from the candidates) to the selected list which has the maximum average distance from the instances currently in the selected list. This is a diversity strategy common in existing literature. (**BAL-E** in the plots below.)
 
 The plots below show that the description-based diversity strategy indeed helps. While selecting the top-most anomalous instances is highly efficient for discovering anomalies, we can also improve the diversity in each batch through descriptions without loss in efficiency. Employing descriptions for diversity also has similar anomaly detection efficiency on the *toy2* dataset as that with maximizing euclidean distance; however, the description based strategy has the advantage of being more user-friendly.
 
