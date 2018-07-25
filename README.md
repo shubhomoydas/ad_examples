@@ -120,8 +120,7 @@ Streaming currently supports two strategies for data retention:
   - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded. **This is highly recommended.**
 
 
-##Note on Query Strategies
-See [below](#does-query-diversity-with-compact-descriptions-help) for query strategies currently supported. `QUERY_TYPE` variable in `aad.sh` determines the query strategy. One of the strategies discussed in detail below is to diversify queries using [descriptions](#query-diversity-with-compact-descriptions). This is invoked by `QUERY_TYPE=8` option. **To actually see benefits of this option, set batch size to greater than 1 (e.g., 3)**.
+**Note on Query Strategies:** See [below](#does-query-diversity-with-compact-descriptions-help) for query strategies currently supported. `QUERY_TYPE` variable in `aad.sh` determines the query strategy. One of the strategies discussed in detail below is to diversify queries using [descriptions](#query-diversity-with-compact-descriptions). This is invoked by `QUERY_TYPE=8` option. **To actually see benefits of this option, set batch size to greater than 1 (e.g., 3)**.
 
 
 Generating compact descriptions with AAD
