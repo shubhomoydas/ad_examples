@@ -57,7 +57,19 @@ To execute the code:
 
 Active Anomaly Discovery (AAD)
 ------------------------------
-This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies. The section ['Intuition behind Active Anomaly Discovery'](#intuition-behind-active-anomaly-discovery) explains the idea. **Assuming that the ensemble scores have already been computed**, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
+This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies.
+
+The main idea that helps understand AAD can be summarized as follows:
+  - Uncertainty sampling for active learning in standard classification setting is label efficient
+  - Anomaly detector ensembles, **by design**, enable uncertainty sampling for anomaly detection (this is **not** obvious) such that both learning the *margin* (in a linear model) as well as discovering anomalies is efficient:
+    - For uncertainty sampling with a linear model, the hyperplane margin should pass through the region of uncertainty
+    - The uncertainty region has a well-known prior when anomaly detector ensembles are employed
+    - AAD designs a hyperplane that passes through the uncertainty region and tries to maintain it there so that uncertainty sampling can then be employed for anomaly detection
+    - instances on one side of the margin are much more likely to be anomalies than on the other side; presenting instances from the 'anomaly' side to the analyst then reveals true anomalies faster
+
+The section ['Intuition behind Active Anomaly Discovery'](#intuition-behind-active-anomaly-discovery) explains the idea in more depth.
+
+**Assuming that the ensemble scores have already been computed**, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
 
 To run [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
 
