@@ -77,7 +77,7 @@ To run [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/pyth
 
 The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/percept_taurel_fixedtau_prior.pdf) with plots illustrating how the data was actively labeled.
 
-![Simplified AAD illustration](figures/percept/percept.png)
+![Simplified AAD illustration](figures/percept.png)
 
 
 **Reference(s)**:
