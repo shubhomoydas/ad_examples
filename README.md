@@ -36,7 +36,14 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - i.i.d
       - [Windows/Shingle based](python/timeseries/timeseries_shingles.py) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - human-in-the-loop (active learning)
-    - [Active Anomaly Discovery](python/aad) -- see [section on AAD below](#active-anomaly-discovery-aad) for instructions on how to run.
+    - [Active Anomaly Discovery](#active-anomaly-discovery-aad)
+      - [general instructions on running AAD](#running-aad)
+      - [generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
+      - [diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
+      - [properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
+      - [running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
+      - [data drift detection and model update with streaming data](#data-drift-detection)
+      - [a bit of theory](#intuition-behind-active-anomaly-discovery)
 
 There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'python/temp' folder when executed.
 
