@@ -194,13 +194,16 @@ if __name__ == "__main__":
     # datasets = ['electricity']
     datasets = ['toy2']
     line_types = {"diverse - top": "-", "diverse - top_random": "--", "diverse - euclidean": "-."}
+
+    # diversity_comparisons = ["diverse - top", "diverse - top_random"]
+    # diversity_comparisons = ["diverse - top", "diverse - euclidean"]
+    diversity_comparisons = ["diverse - top", "diverse - top_random", "diverse - euclidean"]
+
     class_diffs = []
     min_diff = np.Inf
     max_diff = -np.Inf
     x_lim = 1
     for dataset in datasets:
-        # diversity_comparisons = ["diverse - top", "diverse - top_random"]
-        diversity_comparisons = ["diverse - top", "diverse - top_random", "diverse - euclidean"]
         for result_type in diversity_comparisons:
             args.dataset = dataset
             result_type, stream_sig, class_diff = process_results(args, result_type=result_type,
@@ -229,7 +232,7 @@ if __name__ == "__main__":
                 label = "%s (%s)" % (dataset, result_type)
             ln, = pl.plot(np.arange(len(class_diff)), class_diff, line_types[result_type],
                           color=dataset_colors[dataset], linewidth=1, label=label)
-            if not dataset_legend_only or result_idx == 0:
+            if not dataset_legend_only or result_type == diversity_comparisons[0]:
                 legend_handles.append(ln)
             result_idx += 1
         pl.legend(handles=legend_handles, loc='upper right', prop={'size': 10})
