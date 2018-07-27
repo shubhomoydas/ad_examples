@@ -156,7 +156,7 @@ Compact descriptions have multiple uses including:
   - Discovery of diverse classes of anomalies very quickly by querying instances from different subspaces of the description
   - Improved interpretability and explainability of anomalous instances
 
-**Note:** Compact descriptions as derived above can also be considered to be a non-parametric clustering algorithm.
+**Note:** The algorithm to compute compact descriptions, as explained, above might also be considered to be a non-parametric clustering algorithm where each 'description' is a cluster.
   
 We assume that in a practical setting, the analyst(s) will be presented with instances along with their corresponding description(s). Additional information can be derived from the descriptions and shown to the analyst such as the number of instances in each description, which can help prioritize the analysis. Unfortunately, most uses of descriptions are subjective or application dependent, and therefore, hard to evaluate. However, we can evaluate the improvement in query [diversity](#query-diversity-with-compact-descriptions) objectively as we do [below](#does-query-diversity-with-compact-descriptions-help).
 
