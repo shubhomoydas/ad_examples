@@ -37,6 +37,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Windows/Shingle based](python/timeseries/timeseries_shingles.py) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - human-in-the-loop (active learning)
     - [Active Anomaly Discovery](#active-anomaly-discovery-aad)
+      - [high-level summary of the approach](#active-anomaly-discovery-aad)
       - [general instructions on running AAD](#running-aad)
       - [generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
       - [diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
