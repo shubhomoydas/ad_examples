@@ -37,20 +37,20 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Windows/Shingle based](python/timeseries/timeseries_shingles.py) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - human-in-the-loop (active learning)
     - [Active Anomaly Discovery](#active-anomaly-discovery-aad)
-      - [high-level summary of the approach](#active-anomaly-discovery-aad)
-      - [general instructions on running AAD](#running-aad)
-      - [generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
-      - [diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
-      - [properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
-      - [running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
-      - [data drift detection and model update with streaming data](#data-drift-detection)
-      - [a bit of theory](#intuition-behind-active-anomaly-discovery)
+      - High-level summary of the approach
+      - [General instructions on running AAD](#running-aad)
+      - [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
+      - [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
+      - [Some properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
+      - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
+      - [Data drift detection and model update with streaming data](#data-drift-detection)
+      - [A bit of theoretical intuition](#intuition-behind-active-anomaly-discovery)
+  - [Reducing activity sequences to i.i.d](#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
+
 
 There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'python/temp' folder when executed.
 
 **AUC** is the most common metric used to report anomaly detection performance. See [here](python/dnn/autoencoder.py) for a complete example with standard datasets.
-
-The codebase also includes some [activity modeling stuff](#activity-modeling).
 
 To execute the code:
 
@@ -298,7 +298,7 @@ Supervised and Semi-supervised Approaches Based on Locally-Weighted Logistic Reg
 
 Activity Modeling
 -----------------
-A simple application of word2vec for activity modeling can be found [here](python/timeseries/activity_word2vec.py). We try to infer relative sensor locations from sequence of sensor triggerings. The true [floor plan](http://ailab.wsu.edu/casas/hh/hh101/profile/page-6.html) and the inferred sensor locations (**for sensor ids starting with 'M' and 'MA'**) are shown below.
+A simple application of word2vec for activity modeling can be found [here](python/timeseries/activity_word2vec.py). We try to infer relative sensor locations from sequence of sensor triggerings. The true [floor plan](http://ailab.wsu.edu/casas/hh/hh101/profile/page-6.html) and the inferred sensor locations (**for sensor ids starting with 'M' and 'MA'**) are shown below ([download the data here](http://casas.wsu.edu/datasets/hh101.zip)). This demonstrates a form of 'embedding' of the sensors in a latent space. The premise is that the **non-iid data such as activity sequences may be represented in the latent space as i.i.d data on which standard anomaly detectors may be employed**. We can be a bit more creative and try to apply **transfer learning** with this embedding. For example, imagine that we have a house (House-1) with labeled sensors (such as 'kitchen', 'living room', etc.) and another (House-2) with partially labeled sensors. Then, if we try to reduce the 'distance' between similarly labeled sensors in the latent space (by adding another loss-component to the word2vec embeddings), it can provide more information on which of the unlabeled sensors in House-2 are similar to the labeled ones in House-1.
 
 ![Floor Plan](datasets/CASAS/floor_plans/HH101-sensormap.png)
 
