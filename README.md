@@ -254,15 +254,15 @@ This section applies to isolation tree-based detectors (such as [IForest](python
       - Recompute *KL-q* and the baseline distributions *P* with the new data and the updated model.
       - Retrain the weights certain number of times (determined by `N_WEIGHT_UPDATES_AFTER_STREAM` in `aad.sh`, 10 works well) with just the labeled data available so far (no additional feedback). This step helps tune the ensemble weights better after significant change to the model.
 
-For more details on KL-divergence based data drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following sample command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated:
+For more details on KL-divergence based data drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following sample command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated (on the *Weather* dataset):
     
     pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
 
-Following shows the results of integrating drift detection along with label feedback in a streaming/limited memory setting. We used `RETENTION_TYPE=1` in `aad.sh` for all datasets. The commands for generating the discovery plots are below. **These experiments will take a pretty long time to run because: (1) streaming implementation is currently not very efficient, (2) we get feedback for many iterations, and (3) we run all experiments 10 times to report an average.**
+Following shows the results of integrating drift detection along with label feedback in a streaming/limited memory setting for the three datasets (*Covtype, Electricity, Weather*) which we determined have significant drift. We used `RETENTION_TYPE=1` in `aad.sh` for all datasets. The commands for generating the discovery plots are below. **These experiments will take a pretty long time to run because: (1) streaming implementation is currently not very efficient, (2) we get feedback for many iterations, and (3) we run all experiments 10 times to report an average.**
 
-    bash ./aad-job.sh weather 1000 10 0.03 7 1 0 1 1024 1 1 1
-    bash ./aad-job.sh electricity 1500 10 0.03 7 1 0 1 1024 1 1 1
-    bash ./aad-job.sh covtype 3000 10 0.03 7 1 0 1 4096 1 1 1
+    bash ./aad.sh weather 1000 10 0.03 7 1 0 1 1024 1 1 1
+    bash ./aad.sh electricity 1500 10 0.03 7 1 0 1 1024 1 1 1
+    bash ./aad.sh covtype 3000 10 0.03 7 1 0 1 4096 1 1 1
 
 ![Integrated Data Drift Detection and Label Feedback](figures/streaming_results.png)
 
