@@ -1,4 +1,5 @@
 \documentclass{article} % For LaTeX2e
+\usepackage[legalpaper, margin=0.5in]{geometry}
 \usepackage{amsmath}
 \usepackage{amsfonts,dsfont}
 \usepackage{amssymb}
@@ -89,7 +90,7 @@ A different approach to generate descriptions might train a cost-based decision 
 		\caption{Compact AAD}
 		\label{fig:compact_rects}
 	\end{subfigure}
-	\caption{Top $30$ subspaces ranked by ${\bf w}\circ{\bf d}$. Figure~\ref{fig:baseline_rects} shows the top $30$ subspaces with no feedback. We can see that most of these are just the exterior regions of the dataset. Figure~\ref{fig:aad_rects} shows that after feedback, the most anomalous subspaces are those around the labeled anomalies. Figure~\ref{fig:compact_rects} shows the most compact set of subspaces (for AAD) which cover all labeled anomalies. These are computed with Equation~\ref{eqn:opt}. Note that the compact subspaces only cover anomalies that were discovered in the $35$ feedback iterations. Anomalies which were not detected are likely to fall outside these compact subspaces.} \label{fig:rects}
+	\caption{Top $30$ subspaces ranked by ${\bf w}\circ{\bf d}$. Figure~\ref{fig:baseline_rects} shows the top $30$ most important subspaces (w.r.t their \textit{anomalousness}) without any feedback. We can see that initially, these simply correspond to the exterior regions of the dataset. AAD \textbf{learns the true importance of subspaces} automatically with feedback. For example, after incorporating the labels of $35$ instances, the subspaces around the labeled anomalies have emerged as the most important (Figure~\ref{fig:aad_rects}). Figure~\ref{fig:compact_rects} shows the most compact set of subspaces (for AAD) which cover all labeled anomalies. These are computed with Equation~\ref{eqn:opt}. We might even think of this as a non-parametric clustering. Note that the compact subspaces only cover anomalies that were discovered in the $35$ feedback iterations. Anomalies which were not detected are likely to fall outside these compact subspaces.} \label{fig:rects}
 \end{figure}
 
 \section{Querying Diversity}
