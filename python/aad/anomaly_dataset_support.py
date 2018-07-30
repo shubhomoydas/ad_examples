@@ -136,8 +136,8 @@ def get_result_defs(args):
     ifor_q2b3_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-toprandomb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
     ifor_q2b3_d = "if_aad_trees{trees}_samples256_i7_q2n10b3_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma1000_mn1000_d100_norm"
 
-    ifor_stream_f = "{dataset}-iforest_tau_instance-trees100_samples256_nscore4_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuTrue_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
-    ifor_stream_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}asu_mw{max_windows}f2_20_ret1_tillbudget_norm"
+    ifor_stream_02_f = "{dataset}-iforest_tau_instance-trees100_samples256_nscore4_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuTrue_mw{max_windows}f2_20_anomalous_u10_tillbudget-{type}.csv"
+    ifor_stream_02_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}asu_mw{max_windows}f2_20_ret1_tillbudget_u10_norm"
 
     ifor_stream_08_f = "{dataset}-iforest_tau_instance-trees100_samples256_nscore4_leaf-topb3-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuTrue_mw{max_windows}f2_20_anomalous_f0_80_tillbudget-{type}.csv"
     ifor_stream_08_d = "if_aad_trees{trees}_samples256_i7_q1b3_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}asu_mw{max_windows}f2_20_ret1_tillbudget_f0.8_norm"
@@ -175,8 +175,8 @@ def get_result_defs(args):
     ifor_noprior_rand_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-noprior-init_random-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
     ifor_noprior_rand_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_noprior_init2_ca1_cx1_ma1000_mn1000_d100_norm"
 
-    ifor_stream_no_model_update_f = "{dataset}-iforest_tau_instance-trees100_samples256_nscore4_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuFalse_mw{max_windows}f2_20_anomalous_tillbudget-{type}.csv"
-    ifor_stream_no_model_update_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}_mw{max_windows}f2_20_ret1_tillbudget_norm"
+    ifor_stream_no_model_update_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuFalse_KL0_05_mw{max_windows}f2_20_anomalous_u10_tillbudget-{type}.csv"
+    ifor_stream_no_model_update_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}_KL0.05_mw{max_windows}f2_20_ret1_tillbudget_u10_norm"
 
     result_lists = [
         ResultDefs(name="rsforest_orig", display_name="RSF-Batch", dataset=args.dataset, num_anoms=num_anoms,
@@ -225,10 +225,10 @@ def get_result_defs(args):
                    filename=ifor_q2b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen"),
                    subdir=ifor_q2b3_d.format(dataset=args.dataset, budget=budget, trees=100),
                    queried=ifor_q2b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried")),
-        ResultDefs(name="ifor_stream", display_name="SAL", dataset=args.dataset, num_anoms=num_anoms,
-                   filename=ifor_stream_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
-                   subdir=ifor_stream_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
-                   queried=ifor_stream_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried", window_size=window_size, max_windows=max_windows)),
+        ResultDefs(name="ifor_stream_02", display_name="SAL (Replace 20% Trees)", dataset=args.dataset, num_anoms=num_anoms,
+                   filename=ifor_stream_02_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
+                   subdir=ifor_stream_02_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
+                   queried=ifor_stream_02_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried", window_size=window_size, max_windows=max_windows)),
         ResultDefs(name="ifor_stream_08", display_name="SAL (Replace 80% Trees)", dataset=args.dataset, num_anoms=num_anoms,
                    filename=ifor_stream_08_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
                    subdir=ifor_stream_08_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
