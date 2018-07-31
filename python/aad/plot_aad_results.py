@@ -58,10 +58,10 @@ def get_result_names(result_type):
     elif result_type == "diversity":
         return ['ifor', 'ifor_q8b3']
     elif result_type == "stream_diff":
-        # return ['ifor_stream_02', 'ifor_stream_no_weight_upd']  # , 'ifor_stream_no_model_upd'
-        return ['ifor_stream_KL', 'ifor_stream_02', 'ifor_stream_no_model_upd', 'ifor']  # , 'ifor_stream_no_model_upd'
+        # return ['ifor_stream_02', 'ifor_stream_no_weight_upd']  # , 'ifor_stream_no_tree_replace'
+        return ['ifor_stream_KL', 'ifor_stream_02', 'ifor_stream_no_tree_replace', 'ifor']  # , 'ifor_stream_no_tree_replace'
     elif result_type == "stream_diff08":
-        return ['ifor', 'ifor_stream_02', 'ifor_stream_08', 'ifor_stream_no_weight_upd', 'ifor_stream_no_weight_upd08', 'ifor_stream_KL']  # , 'ifor_stream_no_model_upd'
+        return ['ifor', 'ifor_stream_02', 'ifor_stream_08', 'ifor_stream_no_weight_upd', 'ifor_stream_no_weight_upd08', 'ifor_stream_KL']  # , 'ifor_stream_no_tree_replace'
     elif result_type == "compare_prior":
         return ['ifor', 'ifor_baseline', 'ifor_noprior_unif', 'ifor_noprior_rand']
     elif result_type == "ifor_top_vs_random":

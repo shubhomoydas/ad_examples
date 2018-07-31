@@ -175,8 +175,8 @@ def get_result_defs(args):
     ifor_noprior_rand_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-noprior-init_random-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
     ifor_noprior_rand_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_noprior_init2_ca1_cx1_ma1000_mn1000_d100_norm"
 
-    ifor_stream_no_model_update_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuFalse_KL0_05_mw{max_windows}f2_20_anomalous_u10_tillbudget-{type}.csv"
-    ifor_stream_no_model_update_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}_KL0.05_mw{max_windows}f2_20_ret1_tillbudget_u10_norm"
+    ifor_stream_no_tree_replace_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuFalse_KL0_05_mw{max_windows}f2_20_anomalous_u10_tillbudget-{type}.csv"
+    ifor_stream_no_tree_replace_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}_KL0.05_mw{max_windows}f2_20_ret1_tillbudget_u10_norm"
 
     result_lists = [
         ResultDefs(name="rsforest_orig", display_name="RSF-Batch", dataset=args.dataset, num_anoms=num_anoms,
@@ -245,10 +245,10 @@ def get_result_defs(args):
                    filename=ifor_stream_no_weight_upd_08_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
                    subdir=ifor_stream_no_weight_upd_08_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
                    queried=ifor_stream_no_weight_upd_08_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried", window_size=window_size, max_windows=max_windows)),
-        ResultDefs(name="ifor_stream_no_model_upd", display_name="SAL (No Model Update)", dataset=args.dataset, num_anoms=num_anoms,
-                   filename=ifor_stream_no_model_update_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
-                   subdir=ifor_stream_no_model_update_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
-                   queried=ifor_stream_no_model_update_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried", window_size=window_size, max_windows=max_windows)),
+        ResultDefs(name="ifor_stream_no_tree_replace", display_name="SAL (No Tree Replace)", dataset=args.dataset, num_anoms=num_anoms,
+                   filename=ifor_stream_no_tree_replace_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
+                   subdir=ifor_stream_no_tree_replace_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
+                   queried=ifor_stream_no_tree_replace_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried", window_size=window_size, max_windows=max_windows)),
         ResultDefs(name="ifor_q8b3", display_name="BAL-D", dataset=args.dataset, num_anoms=num_anoms,
                    filename=ifor_q8b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
                    subdir=ifor_q8b3_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
