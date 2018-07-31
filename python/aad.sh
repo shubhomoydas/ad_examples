@@ -230,8 +230,8 @@ elif [[ "$DETECTOR_TYPE" == "11" ]]; then
     INFERENCE_NAME="hstrees"
     NORM_UNIT_IND=0  # DO NOT normalize for HSTrees
     FOREST_SCORE_TYPE=5  # 5-HSTrees Log Score # 6-HSTrees Score # 9-Original
-    N_TREES=25  # 50  # 25  # 50  # 30  # 100
-    MAX_DEPTH=10  # 8  # 15  # 9
+    N_TREES=50  # 25  # 50  # 30  # 100
+    MAX_DEPTH=8  # 10  # 15  # 9
     FOREST_LEAF_ONLY=1  # Allow only leaf nodes for HS Trees at this time...
     CA=1
     
@@ -249,8 +249,8 @@ elif [[ "$DETECTOR_TYPE" == "12" ]]; then
     INFERENCE_NAME="rsforest"
     NORM_UNIT_IND=0  # DO NOT normalize for RSForest
     FOREST_SCORE_TYPE=7  # 7-RSForest Log Score # 8-RSForest Score # 9-Original
-    N_TREES=30  # 50
-    MAX_DEPTH=15  # 8
+    N_TREES=50  # 30
+    MAX_DEPTH=8  # 15
     FOREST_LEAF_ONLY=1  # Allow only leaf nodes for RS Forest at this time...
     CA=1
     
