@@ -36,7 +36,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - i.i.d
       - [Windows/Shingle based](python/timeseries/timeseries_shingles.py) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - human-in-the-loop (active learning)
-    - Active Anomaly Discovery ([batch setup](python/aad/aad_batch.py), [streaming setup](python/aad/aad_stream.py)) -- **Includes illustrations (see sections below)**
+    - Active Anomaly Discovery ([batch setup](python/aad/aad_batch.py), [streaming setup](python/aad/aad_stream.py)) -- **Includes plots and illustrations (see sections below)**
       - [High-level summary of the approach](#active-anomaly-discovery-aad)
       - **Jump right in:** [General instructions on running AAD](#running-aad)
       - **Explanations and Interpretability:** [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
