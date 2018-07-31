@@ -36,11 +36,11 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - i.i.d
       - [Windows/Shingle based](python/timeseries/timeseries_shingles.py) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - human-in-the-loop (active learning)
-    - [Active Anomaly Discovery](#active-anomaly-discovery-aad)
-      - High-level summary of the approach
-      - [General instructions on running AAD](#running-aad)
-      - [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
-      - [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
+    - Active Anomaly Discovery ([batch setup](python/aad/aad_batch.py), [streaming setup](python/aad/aad_stream.py))
+      - [High-level summary of the approach](#active-anomaly-discovery-aad)
+      - **Jump right in:** [General instructions on running AAD](#running-aad)
+      - **Explanations and Interpretability:** [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
+      - **Query strategies:** [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
       - [Some properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
       - [Data drift detection and model update with streaming data](#data-drift-detection)
@@ -74,6 +74,16 @@ The main idea that helps understand AAD can be summarized as follows:
     - The uncertainty region has a well-known prior when anomaly detector ensembles are employed
     - AAD designs a hyperplane that passes through the uncertainty region and tries to maintain it there so that uncertainty sampling can then be employed for anomaly detection
     - instances on one side of the margin are much more likely to be anomalies than on the other side; presenting instances from the 'anomaly' side to the analyst then reveals true anomalies faster
+
+The **desired properties** of an ensemble-based detector which will make it well-suited for active learning are:
+  - **Inexpensive members:** computationally cheap to create ensemble members. If we employ a linear model (such as with AAD), it helps to have a large number of members because it then increases the capacity of the model to incorporate a large number of instance labels.
+  - **Somewhat-OK (weak?) accuracy:** if accuracy is low, then more members will be desired
+  - **Many and diverse members:** a large number of high-precision-low-recall members might work well in combination (such as the leaf nodes of tree-based detectors)
+
+Some anomaly detectors which fit the above desiderata are:
+  - LODA: The one-dimensional projections are the members
+  - Tree-based detectors such as Isolation Forest: We may treat each tree in the forest or each node in the trees as the members
+  - Feature bagging: Detectors created from each random feature subset act as the members
 
 The section ['Intuition behind Active Anomaly Discovery'](#intuition-behind-active-anomaly-discovery) below explains the idea in more depth.
 
