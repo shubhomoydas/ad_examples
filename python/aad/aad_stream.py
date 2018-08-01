@@ -25,8 +25,8 @@ class StreamingAnomalyDetector(object):
         opts: AadOpts
     """
     def __init__(self, stream, model, labeled_x=None, labeled_y=None, labeled_ids=None,
-                 unlabeled_x=None, unlabeled_y=None, unlabeled_ids=None, opts=None, max_buffer=512,
-                 min_samples_for_update=256):
+                 unlabeled_x=None, unlabeled_y=None, unlabeled_ids=None, opts=None,
+                 n_pretrain=0, max_buffer=512, min_samples_for_update=256):
         self.model = model
         self.stream = stream
         self.max_buffer = max_buffer
@@ -51,11 +51,28 @@ class StreamingAnomalyDetector(object):
         self.current_dists = None
         self.kl_alpha = opts.kl_alpha
         self.kl_q_alpha = 0.
+
         if is_forest_detector(self.opts.detector_type):
-            self.current_dists = self.model.get_node_sample_distributions(unlabeled_x)
-            kl_trees, self.kl_q_alpha = self.model.get_KL_divergence_distribution(unlabeled_x, alpha=self.kl_alpha)
+            # initialize the baseline instance distributions required for evaluating KL-divergence
+            all_instances = self._get_all_instances()
+            self.current_dists = self.model.get_node_sample_distributions(all_instances.x)
+
+            kl_trees, self.kl_q_alpha = self.model.get_KL_divergence_distribution(all_instances.x, alpha=self.kl_alpha)
             logger.debug("kl kl_q_alpha: %s (alpha=%0.2f), kl mean: %f, kl_trees:\n%s" %
                          (str(list(self.kl_q_alpha)), self.kl_alpha, np.mean(kl_trees), str(list(kl_trees))))
+
+        if self.labeled is not None and n_pretrain > 0:
+            logger.debug("Labeled instances found. Pre-training %d rounds..." % n_pretrain)
+            self.update_weights_with_no_feedback(n_train=n_pretrain)
+
+    def _get_all_instances(self):
+        if self.labeled is not None and self.unlabeled is not None:
+            all_instances = append_instance_lists(self.labeled, self.unlabeled)
+        elif self.labeled is not None:
+            all_instances = self.labeled
+        else:
+            all_instances = self.unlabeled
+        return all_instances
 
     def reset_buffer(self):
         self.buffer = None
@@ -320,7 +337,7 @@ class StreamingAnomalyDetector(object):
             logger.debug("Exceeded original tau (%f); setting tau=%f" % (default_tau, new_tau))
         return new_tau
 
-    def update_weights_with_no_feedback(self):
+    def update_weights_with_no_feedback(self, n_train=None):
         """Runs the weight update n times
 
         This is useful when there has been a significant update to the model
@@ -335,7 +352,8 @@ class StreamingAnomalyDetector(object):
         x, y, ids, x_transformed = tmp.x, tmp.y, tmp.ids, tmp.x_transformed
         orig_tau = self.opts.tau
         self.opts.tau = self.reestimate_tau(orig_tau)
-        for i in range(self.opts.n_weight_updates_after_stream_window):
+        n = n_train if n_train is not None else self.opts.n_weight_updates_after_stream_window
+        for i in range(n):
             self.model.update_weights(x_transformed, y, ha, hn, self.opts)
         self.opts.tau = orig_tau
         logger.debug(tm.message("Updated weights %d times with no feedback " % self.opts.n_weight_updates_after_stream_window))
@@ -598,6 +616,53 @@ def prepare_aad_model(x, y, opts):
     return model
 
 
+def prepare_stream_anomaly_detector(stream, opts, pretrain=False, n_pretrain=10):
+    """Prepares an instance of the StreamingAnomalyDetector
+
+    :param stream: DataStream
+    :param opts: AadOpts
+    :param pretrain: boolean
+        If True, then treats the first window of data as fully *LABELED* and updates
+            the weights with the labeled data. Next, fetches the next window of data
+            as fully *UNLABELED* and updates tree structure if needed.
+        If False, then treats the first window of data as fully unlabeled.
+    :param n_pretrain: int
+        Number of times to run the weight update if pre-training is required.
+    :return: StreamingAnomalyDetector
+    """
+    training_set = stream.read_next_from_stream(opts.stream_window)
+    X_train, y_train, ids = training_set.x, training_set.y, training_set.ids
+    model = prepare_aad_model(X_train, y_train, opts)  # initial model training
+    if pretrain:
+        # first window pre-trains the model as fully labeled set
+        sad = StreamingAnomalyDetector(stream, model,
+                                       labeled_x=X_train, labeled_y=y_train, labeled_ids=ids,
+                                       n_pretrain=n_pretrain, max_buffer=opts.stream_window, opts=opts)
+
+        # second window is treated as fully unlabeled
+        instances = sad.get_next_from_stream(sad.max_buffer,
+                                             transform=(not opts.allow_stream_update))
+        if instances is not None:
+            model_updated = False
+            if opts.allow_stream_update:
+                model_updated = sad.update_model_from_buffer(transform=True)
+            sad.move_buffer_to_unlabeled()
+            if model_updated:
+                sad.update_weights_with_no_feedback()
+            sad.feature_ranges = get_sample_feature_ranges(instances.x)
+        else:
+            sad.feature_ranges = get_sample_feature_ranges(X_train)
+        sad.init_query_state()
+    else:
+        # first window is treated as fully unlabeled
+        sad = StreamingAnomalyDetector(stream, model,
+                                       unlabeled_x=X_train, unlabeled_y=y_train, unlabeled_ids=ids,
+                                       max_buffer=opts.stream_window, opts=opts)
+        sad.feature_ranges = get_sample_feature_ranges(X_train)
+        sad.init_query_state()
+    return sad
+
+
 def aad_stream():
 
     logger = logging.getLogger(__name__)
@@ -617,8 +682,6 @@ def aad_stream():
     np.random.seed(opts.randseed)
 
     X_full, y_full = read_data_as_matrix(opts)
-    # X_train = X_train[0:10, :]
-    # labels = labels[0:10]
 
     logger.debug("loaded file: (%s) %s" % (str(X_full.shape), opts.datafile))
     logger.debug("results dir: %s" % opts.resultsdir)
@@ -630,37 +693,13 @@ def aad_stream():
     all_window = None
     all_window_baseline = None
 
-    aucs = None
-    scores = None
-    all_scores = None
-    all_y = None
-    compute_debug_metrics = False
-
-    if compute_debug_metrics:
-        aucs = np.zeros(0, dtype=float)
-
     opts.fid = 1
     for runidx in opts.get_runidxs():
         tm_run = Timer()
         opts.set_multi_run_options(opts.fid, runidx)
 
         stream = DataStream(X_full, y_full, IdServer(initial=0))
-        training_set = stream.read_next_from_stream(opts.stream_window)
-        X_train, y_train, ids = training_set.x, training_set.y, training_set.ids
-
-        model = prepare_aad_model(X_train, y_train, opts)  # initial model training
-        sad = StreamingAnomalyDetector(stream, model,
-                                       unlabeled_x=X_train, unlabeled_y=y_train, unlabeled_ids=ids,
-                                       max_buffer=opts.stream_window, opts=opts)
-        sad.feature_ranges = get_sample_feature_ranges(X_train)
-        sad.init_query_state()
-
-        if compute_debug_metrics:
-            all_scores = np.zeros(0)
-            all_y = np.zeros(0, dtype=int)
-            scores = sad.get_anomaly_scores(sad.unlabeled.x, sad.unlabeled.x_transformed)
-            all_scores = np.append(all_scores, scores)
-            all_y = np.append(all_y, y_train)
+        sad = prepare_stream_anomaly_detector(stream, opts, pretrain=False)
 
         iter = 0
         seen = np.zeros(0, dtype=int)
@@ -689,18 +728,12 @@ def aad_stream():
             # not transform while reading from stream. If however, the model is not
             # to be updated, then we transform the data while reading from stream
             instances = sad.get_next_from_stream(sad.max_buffer,
-                                                 transform=(not opts.allow_stream_update) or compute_debug_metrics)
+                                                 transform=(not opts.allow_stream_update))
             if instances is None or iter >= opts.max_windows or len(queried) >= opts.budget:
                 if iter >= opts.max_windows:
                     logger.debug("Exceeded %d iters; exiting stream read..." % opts.max_windows)
                 stop_iter = True
             else:
-                if compute_debug_metrics:
-                    # compute scores before updating the model
-                    scores = sad.get_anomaly_scores(instances.x, instances.x_transformed)
-                    all_scores = np.append(all_scores, scores)
-                    all_y = np.append(all_y, instances.y)
-
                 model_updated = False
                 if opts.allow_stream_update:
                     model_updated = sad.update_model_from_buffer(transform=True)
@@ -717,12 +750,6 @@ def aad_stream():
 
         # retained = int(np.sum(sad.unlabeled_y)) if sad.unlabeled_y is not None else 0
         # logger.debug("Final retained unlabeled anoms: %d" % retained)
-
-        if compute_debug_metrics:
-            # NOTE: The below AUC is only for DEBUG. It does not mean much...
-            auc = fn_auc(cbind(all_y, -all_scores))
-            # logger.debug("AUC: %f" % auc)
-            aucs = append(aucs, [auc])
 
         num_seen_tmp = np.cumsum(seen)
         # logger.debug("\nnum_seen    : %s" % (str(list(num_seen_tmp)),))
@@ -775,7 +802,7 @@ def aad_stream():
                                 # true_queried_indexes_baseline=all_queried_baseline,
                                 stream_window=all_window,
                                 stream_window_baseline=all_window_baseline,
-                                aucs=aucs)
+                                aucs=None)
     write_sequential_results_to_csv(results, opts)
 
 

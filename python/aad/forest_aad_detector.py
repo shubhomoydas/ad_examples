@@ -739,6 +739,9 @@ class AadForest(Aad, StreamingSupport):
         return list(all_regions)
 
     def get_node_sample_distributions(self, X, delta=1e-16):
+        if X is None:
+            logger.debug("WARNING: get_node_sample_distributions(): no instances found")
+            return None
         n = X.shape[0]
         delta_ = (delta * 1. / n)
         nodes = self.clf.get_node_ids(X, getleaves=self.add_leaf_nodes_only)
