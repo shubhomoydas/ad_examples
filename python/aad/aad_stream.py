@@ -64,8 +64,7 @@ class StreamingAnomalyDetector(object):
                          (str(list(self.kl_q_alpha)), self.kl_alpha, np.mean(kl_trees), str(list(kl_trees))))
 
         if self.labeled is not None and opts.pretrain and opts.n_pretrain > 0:
-            logger.debug("Labeled instances found. AUC before pretraining: %f. Pre-training %d rounds..." %
-                         (self.get_auc(self.labeled.x, self.labeled.y, self.labeled.x_transformed), opts.n_pretrain))
+            logger.debug("Labeled instances found. Pre-training %d rounds..." % opts.n_pretrain)
             self.update_weights_with_no_feedback(n_train=opts.n_pretrain, debug_auc=True)
 
     def _get_all_instances(self):
@@ -350,11 +349,15 @@ class StreamingAnomalyDetector(object):
     def update_weights_with_no_feedback(self, n_train=None, debug_auc=False):
         """Runs the weight update n times
 
-        This is useful when there has been a significant update to the model
-        because of (say) data drift and we want to iteratively estimate the
-        ensemble weights and the tau-quantile value a number of times
+        This is used when:
+          1. There has been a significant update to the model because
+             of (say) data drift and we want to iteratively estimate the
+             ensemble weights and the tau-quantile value a number of times.
+          2. We have an initial fully labeled set with which we want to
+             pretrain the model
         """
-        if self.opts.do_not_update_weights or self.opts.n_weight_updates_after_stream_window <= 0:
+        n = n_train if n_train is not None else self.opts.n_weight_updates_after_stream_window
+        if self.opts.do_not_update_weights or n <= 0:
             return
 
         tm = Timer()
@@ -362,11 +365,10 @@ class StreamingAnomalyDetector(object):
         x, y, ids, x_transformed = tmp.x, tmp.y, tmp.ids, tmp.x_transformed
         orig_tau = self.opts.tau
         self.opts.tau = self.reestimate_tau(orig_tau)
-        n = n_train if n_train is not None else self.opts.n_weight_updates_after_stream_window
+        if debug_auc: logger.debug("AUC[0]: %f" % (self.get_auc(x=x, y=y, x_transformed=x_transformed)))
         for i in range(n):
             self.model.update_weights(x_transformed, y, ha, hn, self.opts)
-            if debug_auc:
-                logger.debug("AUC[%d]: %f" % (i, self.get_auc(x=x, y=y, x_transformed=x_transformed)))
+            if debug_auc: logger.debug("AUC[%d]: %f" % (i+1, self.get_auc(x=x, y=y, x_transformed=x_transformed)))
         self.opts.tau = orig_tau
         logger.debug(tm.message("Updated weights %d times with no feedback " % n))
 
