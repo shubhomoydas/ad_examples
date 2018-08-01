@@ -363,6 +363,13 @@ def get_aad_option_list():
     parser.add_argument("--feature_partitions", action="store", type=str, default=None,
                         help="Feature partitions for multiview forest. " +
                              "Only applies when detector_type=" + str(AAD_MULTIVIEW_FOREST))
+
+    parser.add_argument("--pretrain", action="store_true", default=False,
+                        help="Whether to treat the first window of data in streaming setup as fully labeled.")
+    parser.add_argument("--n_pretrain", action="store", type=int, default=10,
+                        help="Number of times to run weight update on the first (labeled) window of data "
+                             "if pretrain is enabled. Applies to streaming setup with pretrain only.")
+
     return parser
 
 
@@ -504,6 +511,9 @@ class AadOpts(object):
 
         self.query_module_name = args.query_module_name
         self.query_class_name = args.query_class_name
+
+        self.pretrain = args.pretrain
+        self.n_pretrain = args.n_pretrain
 
         self.feature_partitions = None
         if args.feature_partitions is not None:

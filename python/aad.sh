@@ -486,6 +486,24 @@ if [[ "$CHECK_KL_IND" == "1" ]]; then
     CHECK_KL="--check_KL_divergence"
 fi
 
+# ==============================
+# PRETRAIN_IND:
+#   0: Treats the first window of data in streaming setup as fully *unlabeled*.
+#   1: Treats the first window of data in streaming setup as fully *labeled*.
+# N_PRETRAIN: Number of times to run weight update on the first (labeled)
+#   window of data if pretrain is enabled. Applies to streaming setup
+#   with pretrain only.
+# NOTE: Applies only to streaming mode for forest-based algorithms.
+# ------------------------------
+PRETRAIN_IND=0
+N_PRETRAIN=10
+PRETRAIN_SIG=""
+PRETRAIN=""
+if [[ "$PRETRAIN_IND" == "1" ]]; then
+    PRETRAIN_SIG="_p${N_PRETRAIN}"
+    PRETRAIN="--pretrain"
+fi
+
 DATASET_FOLDER=datasets
 #if [[ "$DATASET" == "covtype" || "$DATASET" == "kddcup" ]]; then
 if [[ "$DATASET" == "covtype" ]]; then
@@ -496,7 +514,7 @@ fi
 if [[ "$STREAMING_IND" == "1" ]]; then
     STREAMING="--streaming"
     STREAMING_SIG="_stream"
-    STREAMING_FLAGS="${STREAM_WINDOW}${ALLOW_STREAM_UPDATE_SIG}${CHECK_KL_SIG}_mw${MAX_WINDOWS}f${MIN_FEEDBACK_PER_WINDOW}_${MAX_FEEDBACK_PER_WINDOW}_ret${RETENTION_TYPE}${TILL_BUDGET_SIG}"
+    STREAMING_FLAGS="${STREAM_WINDOW}${ALLOW_STREAM_UPDATE_SIG}${CHECK_KL_SIG}${PRETRAIN_SIG}_mw${MAX_WINDOWS}f${MIN_FEEDBACK_PER_WINDOW}_${MAX_FEEDBACK_PER_WINDOW}_ret${RETENTION_TYPE}${TILL_BUDGET_SIG}"
     if [[ "${DETECTOR_TYPE}" == "7" && "${ALLOW_STREAM_UPDATE_IND}" == "1" && "${FOREST_REPLACE_FRAC}" != "0.2" && "$CHECK_KL_IND" != "1" ]]; then
         STREAMING_FLAGS="${STREAMING_FLAGS}_f${FOREST_REPLACE_FRAC}"
     fi
@@ -606,5 +624,6 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     --retention_type=${RETENTION_TYPE} ${TILL_BUDGET} \
     --forest_replace_frac=${FOREST_REPLACE_FRAC} ${FEATURE_PARTITIONS} \
     ${CHECK_KL} --kl_alpha=${KL_ALPHA} \
+    ${PRETRAIN} --n_pretrain=${N_PRETRAIN} \
     --n_weight_updates_after_stream_window=${N_WEIGHT_UPDATES_AFTER_STREAM} \
     ${PLOT2D} --debug
