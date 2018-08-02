@@ -306,8 +306,8 @@ The distribution of the angles between the normalized score vectors and the unif
   - Maria-Florina Balcan, Andrei Z. Broder, and Tong Zhang. *Margin based active learning.* In COLT, 2007.
 
 
-Timeseries Anomaly Detection with Forecasting
-----------------------------------------------
+Timeseries Anomaly Detection
+----------------------------
 We will use the [Airline dataset](datasets/AirlinePassengers) as the running example here. The dataset can be selected with the command line option `--dataset=<name>`. Datasets included with the codebase are:
   - `airline`: [Airline dataset](datasets/AirlinePassengers)
   - `aus_beer`: [Australian beer production](datasets/AustralianBeerProduction)
