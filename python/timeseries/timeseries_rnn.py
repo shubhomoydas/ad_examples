@@ -20,12 +20,14 @@ After modeling the timeseries, we predict values for new time points
 and flag the time points with the most deviating values as anomalies.
 
 To execute:
-pythonw -m timeseries.timeseries_rnn --dataset=airline --algo=lstm --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend
-pythonw -m timeseries.timeseries_rnn --dataset=shampoo --algo=lstm --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend
-pythonw -m timeseries.timeseries_rnn --dataset=lynx --algo=lstm --n_lags=20 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log
-pythonw -m timeseries.timeseries_rnn --dataset=aus_beer --algo=lstm --n_lags=10 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log
-pythonw -m timeseries.timeseries_rnn --dataset=us_accident --algo=lstm --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log
-pythonw -m timeseries.timeseries_rnn --dataset=wolf_sunspot --algo=lstm --n_lags=50 --n_epochs=20 --debug --log_file=temp/timeseries/timeseries_rnn.log
+pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=airline
+pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
+
+pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=5 --dataset=shampoo
+pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=4 --dataset=lynx
+pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=4 --dataset=aus_beer
+pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=us_accident
+pythonw -m timeseries.timeseries_rnn --n_epochs=20 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=50 --dataset=wolf_sunspot
 
 The below does not work well...need longer dependencies
 pythonw -m timeseries.timeseries_rnn --dataset=fisher_temp --algo=lstm --n_lags=200 --n_epochs=10 --debug --log_file=temp/timeseries/timeseries_rnn.log
@@ -147,12 +149,23 @@ if __name__ == "__main__":
     batch_size = 10
     n_neurons = 100  # number of nodes in hidden state
 
+    allowed_algos = {'custom': 'Custom implementation of the basic RNN cell',
+                     'basic': 'RNN using the basic cell',
+                     'lstm': 'RNN using LSTM Cell'}
+    if args.algo not in allowed_algos.keys():
+        print "Invalid algo: %s. Allowed algos:" % args.algo
+        for key, val in allowed_algos.iteritems():
+            print "  %s: %s" % (key, val)
+        exit(0)
+
     dataset = args.dataset
-    # dataset = "airline"
-    # dataset = "fisher_temp"
-    # dataset = "shampoo"
+    logger.debug("dataset: %s, algo: %s" % (dataset, args.algo))
+    if not univariate_timeseries_datasets.has_key(dataset):
+        print "Invalid dataset: %s. Supported datasets: %s" % \
+              (dataset, str(univariate_timeseries_datasets.keys()))
+        exit(0)
     df = get_univariate_timeseries_data(dataset)
-    # logger.debug(df)
+
     all_series = np.array(df.values, dtype=np.float32)  # training
 
     n = all_series.shape[0]

@@ -39,8 +39,11 @@ class DiffScale(object):
         return self.scaler.transform(series)
 
     def inverse_transform(self, series, initial=None):
+        # logger.debug("preds before inverse scale(%s):\n%s" % (str(series.shape), str(series[:, 0])))
         final_preds = self.scaler.inverse_transform(series)
         # logger.debug("final_preds after inverse scale(%s):\n%s" % (str(final_preds.shape), str(final_preds[:, 0])))
+        if initial is not None and False:
+            logger.debug("initial(%s):\n%s" % (str(initial.shape), str(initial)))
         if initial is not None:
             final_preds = invert_difference_series(final_preds, initial=initial)
         # logger.debug("final_preds.shape: %s\n%s" % (str(final_preds.shape), str(final_preds)))
@@ -49,17 +52,20 @@ class DiffScale(object):
 
 univariate_timeseries_datasets = {
     # "name": (path, use_cols, date_columns, index_column, ARIMA_order)
-    "airline": TsFileDef("AirlinePassengers/international-airline-passengers.csv", [1], False, None, (4, 1, 1)),
-    "aus_beer": TsFileDef("AustralianBeerProduction/quarterly-beer-production-in-aus.csv", [2], False, None, (4, 1, 0)),
-    "lynx": TsFileDef("CanadianLynx/lynx_trappings.csv", [1], False, None, (4, 1, 0)),
+    # ARIMA_order: (AR, differences, MA, seasonality)
+    "airline": TsFileDef("AirlinePassengers/international-airline-passengers.csv", [1], False, None, (4, 1, 1, 12)),
+    "aus_beer": TsFileDef("AustralianBeerProduction/quarterly-beer-production-in-aus.csv", [2], False, None, (3, 1, 0, 4)),
+    "lynx": TsFileDef("CanadianLynx/lynx_trappings.csv", [1], False, None, (4, 1, 1, 12)),
     "fisher_temp": TsFileDef("FisherRiver/mean-daily-temperature-fisher-ri.csv", [1], False, None, (4, 1, 0)),
     "shampoo": TsFileDef("ShampooSales/sales-of-shampoo-over-a-three-ye.csv", [1], [0], None, (5, 1, 0)),
-    "us_accident": TsFileDef("USAccidentalDeaths/accidental-deaths-in-usa-monthly.csv", [1], False, None, (4, 1, 0)),
-    "wolf_sunspot": TsFileDef("WolfSunSpot/wolfs-sunspot-numbers-1700-1988.csv", [1], False, None, (4, 1, 0))
+    "us_accident": TsFileDef("USAccidentalDeaths/accidental-deaths-in-usa-monthly.csv", [1], False, None, (4, 1, 0, 12)),
+    "wolf_sunspot": TsFileDef("WolfSunSpot/wolfs-sunspot-numbers-1700-1988.csv", [1], False, None, (4, 1, 1, 12))
 }
 
 
 def get_univariate_timeseries_data(dataset):
+    if not univariate_timeseries_datasets.has_key(dataset):
+        raise ValueError("Allowed datasets: %s" % str(univariate_timeseries_datasets.keys()))
     dataset_def = univariate_timeseries_datasets[dataset]
     data = pd.read_csv("../datasets/%s" % dataset_def.path,
                        header=0, sep=",", usecols=dataset_def.usecols,

@@ -38,6 +38,8 @@ def get_option_list():
                         help="Dataset name")
     parser.add_argument("--algo", type=str, default="", required=False,
                         help="Algorithm to apply")
+    parser.add_argument("--explore_only", action="store_true", default=False,
+                        help="Perform exploratory analysis only instead of more expensive model fitting.")
     parser.add_argument("--n_epochs", type=int, default=200, required=False,
                         help="Max training epochs")
     parser.add_argument("--n_lags", type=int, default=12, required=False,

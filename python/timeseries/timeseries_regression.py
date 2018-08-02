@@ -15,14 +15,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 """
 To execute:
-pythonw -m timeseries.timeseries_regression --dataset=airline --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend
-pythonw -m timeseries.timeseries_regression --dataset=shampoo --algo=nntf --n_lags=10 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend
-pythonw -m timeseries.timeseries_regression --dataset=lynx --algo=nntf --n_lags=20 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
-pythonw -m timeseries.timeseries_regression --dataset=aus_beer --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
-pythonw -m timeseries.timeseries_regression --dataset=us_accident --algo=nntf --n_lags=12 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
-pythonw -m timeseries.timeseries_regression --dataset=wolf_sunspot --algo=nnsk --n_lags=50 --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=12 --dataset=airline
+pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=5 --dataset=shampoo
+pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=lynx
+pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=aus_beer
+pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=us_accident
+pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=50 --dataset=wolf_sunspot
 
 pythonw -m timeseries.timeseries_regression --dataset=fisher_temp --algo=nntf --n_lags=20 --n_epochs=100 --debug --log_file=temp/timeseries/timeseries_regression.log
+
 """
 
 
@@ -67,6 +68,7 @@ def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_an
         return
 
     x = y = None
+    # read the entire timeseries in one batch (batch_size=-1)
     for x_, y_ in ts.get_batches(n_lags, batch_size=-1, single_output_only=True):
         x = np.reshape(x_, newshape=(x_.shape[0], -1))
         y = np.reshape(y_, newshape=(-1,))
@@ -137,14 +139,6 @@ def find_anomalies_with_regression(data, dataset, n_lags=5, reg_type="svr", n_an
     dp.close()
 
 
-def read_ts():
-    samples = pd.read_csv("../datasets/simulated_timeseries/samples_2000.csv",
-                          header=None, sep=",", usecols=[1]
-                          )
-    samples = np.asarray(samples, dtype=np.float32)
-    return TSeries(samples[:2000, :], y=None)
-
-
 if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
@@ -168,10 +162,23 @@ if __name__ == "__main__":
     normalize_trend = args.normalize_trend
     batch_size = 20
 
-    # datasets = univariate_timeseries_datasets.keys()
+    allowed_algos = {'nnsk': 'Multilayer Perceptron based Regression',
+                     'nntf': 'Linear Regression with TensorFlow Neural Net',
+                     'rfor': 'Random Forest Regression',
+                     'svr':  'Support Vector Regression'}
+    if args.algo not in allowed_algos.keys():
+        print "Invalid algo: %s. Allowed algos:" % args.algo
+        for key, val in allowed_algos.iteritems():
+            print "  %s: %s" % (key, val)
+        exit(0)
+
     dataset = args.dataset
     # dataset = "airline"
     logger.debug("dataset: %s, reg_type: %s" % (dataset, reg_type))
+    if not univariate_timeseries_datasets.has_key(dataset):
+        print "Invalid dataset: %s. Supported datasets: %s" % \
+              (dataset, str(univariate_timeseries_datasets.keys()))
+        exit(0)
     data = get_univariate_timeseries_data(dataset)
 
     find_anomalies_with_regression(np.array(data, dtype=float), dataset, n_lags=n_lags,

@@ -1,6 +1,7 @@
 import warnings
 from statsmodels.tsa import stattools
 from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from common.timeseries_datasets import *
 from common.data_plotter import *
 from common.utils import *
@@ -16,7 +17,7 @@ detects time points with largest forecasting errors on the last 1/3 data. Are th
 Some examples motivated by:
     https://machinelearningmastery.com/arima-for-time-train_series-forecasting-with-python/
 
-pythonw -m timeseries.timeseries_arima
+pythonw -m timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --dataset=airline
 '''
 
 
@@ -28,53 +29,82 @@ def time_lag_diff(series):
     return tmp
 
 
-def fit_ARIMA(series, order):
+def fit_ARIMA(series, dates=None, order=(0, 0, 1)):
+    """Fits either an ARIMA or a SARIMA model depending on whether order is 3 or 4 dimensional
+
+    :param series:
+    :param dates:
+    :param order: tuple
+        If this has 3 elements, an ARIMA model will be fit
+        If this has 4 elements, the fourth is the seasonal factor and SARIMA will be fit
+    :return: fitted model, array of residuals
+    """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         # hack the time index, else ARIMA will not run
-        model = ARIMA(series, dates=pd.to_datetime(np.arange(0, len(series))), order=order)
-        model_fit = model.fit(disp=0)
-        residuals = model_fit.resid
-    return residuals
+        if dates is None:
+            dates = pd.to_datetime(np.arange(1, len(series)+1))
+        if len(order) > 3:
+            seasonal_order = (0, 0, 0, order[3])
+            arima_order = (order[0], order[1], order[2])
+            model = SARIMAX(series, dates=dates, order=arima_order, seasonal_order=seasonal_order)
+            model_fit = model.fit(disp=0)
+            residuals = model_fit.resid
+        else:
+            model = ARIMA(series, dates=dates, order=order)
+            model_fit = model.fit(disp=0)
+            residuals = model_fit.resid
+    return model_fit, residuals
 
 
 def rolling_forecast_ARIMA(train, test, order, nsteps=1):
     tseries = [x for x in train]
     rets = []
     errors = []
-    tindex = pd.to_datetime(np.arange(0, len(train) + nsteps))
+    tindex = pd.to_datetime(np.arange(1, len(train) + nsteps + 1))
     for i in range(nsteps):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             # hack the time index, else ARIMA will not run
-            model = ARIMA(tseries, dates=tindex[0:len(tseries)], order=order)
-            model_fit = model.fit(disp=-1)
-            forecasts = model_fit.forecast()
-            val = forecasts[0][0]
+            model_fit, residuals = fit_ARIMA(tseries, dates=tindex[0:len(tseries)], order=order)
+            if len(order) == 3:
+                # ARIMA forecast
+                forecasts = model_fit.forecast()
+                val = forecasts[0]
+            else:
+                # SARIMA forecast
+                val = model_fit.forecast()
+            val = val[0]
             rets.append(val)
             errors.append(test[i] - val)
             tseries.append(test[i])
     return np.array(rets, dtype=float), np.array(errors, dtype=float)
 
 
-def plot_lag_difference():
-    dataset = "airline"
+def plot_lag_difference(args):
+    dataset = args.dataset
     data = get_univariate_timeseries_data(dataset)
     tseries = np.array(data.iloc[:, 0], dtype=float)
     diffs = time_lag_diff(tseries)
-    pdfpath = "temp/timeseries/timeseries_lag_diff_%s.pdf" % dataset
-    dp = DataPlotter(pdfpath=pdfpath, rows=3, cols=1)
+    if args.plot:
+        pdfpath = "temp/timeseries/timeseries_lag_diff_%s.pdf" % dataset
+        dp = DataPlotter(pdfpath=pdfpath, rows=3, cols=1)
 
-    pl = dp.get_next_plot()
-    plt.title("Time train_series %s" % dataset, fontsize=8)
-    pl.plot(np.arange(0, len(diffs)), diffs, 'b-')
-    dp.close()
+        pl = dp.get_next_plot()
+        plt.title("Time train_series %s" % dataset, fontsize=8)
+        pl.plot(np.arange(0, len(diffs)), diffs, 'b-')
+        dp.close()
 
 
-def forecast_and_report_anomalies():
+def forecast_and_report_anomalies(args):
 
-    # datasets = univariate_timeseries_datasets.keys()
-    datasets = ["airline"]
+    if not univariate_timeseries_datasets.has_key(args.dataset):
+        print "Invalid dataset: %s. Supported datasets: %s" % \
+              (args.dataset, str(univariate_timeseries_datasets.keys()))
+        return
+
+    datasets = [args.dataset]
+    n_anoms = 10
 
     for dataset in datasets:
         logger.debug("dataset: %s" % dataset)
@@ -82,56 +112,68 @@ def forecast_and_report_anomalies():
         tseries = np.array(data.iloc[:, 0], dtype=float)
         logger.debug("timeseries[%d]:\n%s" % (len(tseries), str(list(tseries))))
 
-        acf = stattools.acf(tseries, nlags=40)
+        tseries_diff = time_lag_diff(tseries)
+
+        acf = stattools.acf(tseries_diff, nlags=40)
         logger.debug("acf:\n%s" % str(list(acf)))
 
-        pacf = stattools.pacf(tseries, nlags=40)
+        pacf = stattools.pacf(tseries_diff, nlags=40)
         logger.debug("pacf:\n%s" % str(list(pacf)))
 
-        dataset_def = univariate_timeseries_datasets[dataset]
-        order = dataset_def.ARIMA_order
+        residuals = train_sz = forecasts = err_ordered = None
+        if not args.explore_only:
+            dataset_def = univariate_timeseries_datasets[dataset]
+            order = dataset_def.ARIMA_order
 
-        residuals = fit_ARIMA(tseries, order=order)
-        logger.debug("residuals[%d]:\n%s" % (len(residuals), str(list(residuals))))
+            model_fit, residuals = fit_ARIMA(tseries, order=order)
+            logger.debug("residuals[%d]:\n%s" % (len(residuals), str(list(residuals))))
 
-        train_sz = int(len(tseries) * 0.66)
-        train = tseries[0:train_sz]
-        test = tseries[train_sz:len(tseries)]
-        forecasts, errors = rolling_forecast_ARIMA(train, test, order=order, nsteps=len(tseries) - train_sz)
-        logger.debug("forecasts[%d]:\n%s" % (len(forecasts), str(list(forecasts))))
-        logger.debug("errors[%d]:\n%s" % (len(errors), str(list(errors))))
+            train_sz = int(len(tseries) * 0.66)
+            train = tseries[0:train_sz]
+            test = tseries[train_sz:len(tseries)]
+            forecasts, errors = rolling_forecast_ARIMA(train, test, order=order, nsteps=len(tseries) - train_sz)
+            logger.debug("forecasts[%d]:\n%s" % (len(forecasts), str(list(forecasts))))
+            logger.debug("errors[%d]:\n%s" % (len(errors), str(list(errors))))
 
-        # identify the times at which we had largest forecasting errors
-        err_ordered = np.argsort(-np.abs(errors))[0:5]
-        logger.debug("largest errors[%d]:\n%s" % (len(err_ordered), str(list(errors[err_ordered]))))
+            # identify the times at which we had largest forecasting errors
+            err_ordered = np.argsort(-np.abs(errors))[0:n_anoms]
+            logger.debug("largest errors[%d]:\n%s" % (len(err_ordered), str(list(errors[err_ordered]))))
 
-        if True:
+        if args.plot:
             pdfpath = "temp/timeseries/timeseries_plot_%s.pdf" % dataset
-            dp = DataPlotter(pdfpath=pdfpath, rows=3, cols=1)
+            dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=1)
+
+            plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
 
             pl = dp.get_next_plot()
-            plt.title("Time train_series %s" % dataset, fontsize=8)
+            plt.title("Time train_series %s" % dataset, fontsize=10)
             pl.plot(np.arange(0, len(tseries)), tseries, 'b-')
 
             pl = dp.get_next_plot()
-            plt.title("ACF %s" % dataset, fontsize=8)
+            plt.title("Difference(1) %s" % dataset, fontsize=10)
+            pl.plot(np.arange(0, len(tseries_diff)), tseries_diff, 'b-')
+
+            pl = dp.get_next_plot()
+            plt.title("ACF %s" % dataset, fontsize=10)
             pl.plot(np.arange(0, len(acf)), acf, 'b-')
 
             pl = dp.get_next_plot()
-            plt.title("PACF %s" % dataset, fontsize=8)
+            plt.title("PACF %s" % dataset, fontsize=10)
             pl.plot(np.arange(0, len(pacf)), pacf, 'b-')
 
-            pl = dp.get_next_plot()
-            plt.title("Residuals %s" % dataset, fontsize=8)
-            pl.plot(np.arange(0, len(residuals)), residuals, 'b-')
+            if not args.explore_only:
+                pl = dp.get_next_plot()
+                plt.title("Residuals %s" % dataset, fontsize=10)
+                pl.plot(np.arange(0, len(residuals)), residuals, 'b-')
 
-            pl = dp.get_next_plot()
-            plt.title("Forecast %s" % dataset, fontsize=8)
-            pl.plot(np.arange(0, len(tseries)), tseries, 'b-')
-            pl.plot(np.arange(train_sz, train_sz + len(forecasts)), forecasts, 'r-')
-            # mark anomalous time points
-            for x in err_ordered:
-                plt.axvline(x + train_sz, color='g')
+                pl = dp.get_next_plot()
+                plt.title("Forecast %s" % dataset, fontsize=10)
+                pl.plot(np.arange(0, len(tseries)), tseries, 'b-')
+                pl.plot(np.arange(train_sz, train_sz + len(forecasts)), forecasts, 'r-')
+                # mark anomalous time points
+                for x in err_ordered:
+                    plt.axvline(x + train_sz, color='g')
+
             dp.close()
 
 
@@ -139,14 +181,14 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
-    args = get_command_args(debug=True, debug_args=["--log_file=temp/timeseries/timeseries_explore.log", "--debug"])
+    args = get_command_args(debug=False,
+                            debug_args=["--dataset=airline", "--debug", "--plot", "--explore_only",
+                                        "--log_file=temp/timeseries/timeseries_arima.log"])
     configure_logger(args)
 
     dir_create("./temp/timeseries")  # for logging and plots
 
     np.random.seed(42)
 
-    if True:
-        forecast_and_report_anomalies()
-    else:
-        plot_lag_difference()
+    forecast_and_report_anomalies(args)
+    # plot_lag_difference(args)

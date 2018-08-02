@@ -14,11 +14,12 @@ class DataPlotter(object):
     then a new page is started.
     """
 
-    def __init__(self, pdfpath, rows, cols):
+    def __init__(self, pdfpath, rows, cols, bbox_inches='tight'):
         self.pdfpath = pdfpath
         self.pdf = None
         self.rows = rows
         self.cols = cols
+        self.bbox_inches = bbox_inches
         self.fig = None
         self.pidx = 0
         self.plotcount = 0
@@ -31,7 +32,7 @@ class DataPlotter(object):
         if self.pidx == 0 or self.pidx == self.rows * self.cols:
             # Start a new pdf page
             if self.fig is not None:
-                self.pdf.savefig(self.fig, bbox_inches='tight')
+                self.pdf.savefig(self.fig, bbox_inches=self.bbox_inches)
                 self.fig = None
             newfig = True
             self.pidx = 0
@@ -79,7 +80,7 @@ class DataPlotter(object):
 
     def save_fig(self):
         if self.fig is not None:
-            self.pdf.savefig(self.fig, bbox_inches='tight')
+            self.pdf.savefig(self.fig, bbox_inches=self.bbox_inches)
             plt.close(self.fig)
             self.fig = None
 

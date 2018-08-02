@@ -17,7 +17,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 Anomaly detection in time series by breaking the series into windows ('shingles')
 and then treating each window as i.i.d feature vector.
 
-pythonw -m timeseries.timeseries_shingles
+pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc
 """
 
 
@@ -87,9 +87,10 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
-    args = get_command_args(debug=True, debug_args=["--debug",
-                                                    "--plot",
-                                                    "--log_file=temp/timeseries/timeseries_shingles.log"])
+    args = get_command_args(debug=False,
+                            debug_args=["--debug",
+                                        "--plot", "--n_lags=20", "--algo=autoenc",
+                                        "--log_file=temp/timeseries/timeseries_shingles.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
 
@@ -98,8 +99,18 @@ if __name__ == "__main__":
     random.seed(42)
     rnd.seed(42)
 
-    ad_type = "autoenc"
-    window_size = 20
+    allowed_algos = {'autoenc': 'Auto-encoder',
+                     'ifor': 'Isolation Forest',
+                     'ocsvm': 'One-class SVM',
+                     'lof': 'Local Outlier Factor'}
+    if args.algo not in allowed_algos.keys():
+        print "Invalid algo: %s. Allowed algos:" % args.algo
+        for key, val in allowed_algos.iteritems():
+            print "  %s: %s" % (key, val)
+        exit(0)
+
+    ad_type = args.algo
+    window_size = args.n_lags
     skip_size = None
     n_anoms = 10
     i = 0

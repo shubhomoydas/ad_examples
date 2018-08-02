@@ -1,0 +1,34 @@
+\documentclass{article} % For LaTeX2e
+\usepackage[legalpaper, margin=0.16in]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts,dsfont}
+\usepackage{amssymb}
+\usepackage[ruled,vlined]{algorithm2e}
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{siunitx}
+
+\begin{document}
+
+\begin{figure}
+	\centering
+	\captionsetup{labelformat=empty}
+	\begin{subfigure}[b]{1.0\textwidth}
+		%% trim=left bottom right top
+		\includegraphics[width=\textwidth, clip=true, trim=0mm 0mm 0mm 0mm]{timeseries_regression_airline_12_nnsk}
+		\caption{Neural Network based Regression}
+		\label{fig:nnsk}
+	\end{subfigure} \\
+	\begin{subfigure}[b]{1.0\textwidth}
+		\includegraphics[width=\textwidth, clip=true, trim=0mm 0mm 0mm 0mm]{timeseries_regression_airline_12_rfor}
+		\caption{Random Forest Regression}
+		\label{fig:rfor}
+	\end{subfigure}
+	\caption{Airline regression forecast}
+	\label{fig:regression}
+\end{figure}
+
+\end{document}
