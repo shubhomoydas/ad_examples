@@ -10,6 +10,10 @@ Python libraries required:
     matplotlib (2.1.0)
     tensorflow (1.6.0)
 
+`python/requirements.txt` lists all these libraries. To install:
+
+    pip install -r requirements.txt
+
 Note: The code has been tested with **python 2.7**.
 
 
