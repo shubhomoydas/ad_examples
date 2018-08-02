@@ -32,6 +32,7 @@ class StreamingAnomalyDetector(object):
         self.max_buffer = max_buffer
         self.min_samples_for_update = min_samples_for_update
         self.opts = opts
+        self.n_pretrain_instances = 0
 
         self.buffer = None
 
@@ -65,6 +66,7 @@ class StreamingAnomalyDetector(object):
 
         if self.labeled is not None and opts.pretrain and opts.n_pretrain > 0:
             logger.debug("Labeled instances found. Pre-training %d rounds..." % opts.n_pretrain)
+            self.n_pretrain_instances = self.labeled.x.shape[0]
             self.update_weights_with_no_feedback(n_train=opts.n_pretrain, debug_auc=True)
 
     def _get_all_instances(self):
@@ -503,7 +505,7 @@ class StreamingAnomalyDetector(object):
         if self.stream_buffer_empty() and self.opts.till_budget:
             bk = get_budget_topK(self.unlabeled.x.shape[0], self.opts)
             n_labeled = 0 if self.labeled is None else len(self.labeled.y)
-            max_feedback = max(0, bk.budget - n_labeled)
+            max_feedback = max(0, bk.budget - (n_labeled - self.n_pretrain_instances))
             max_feedback = min(max_feedback, self.unlabeled.x.shape[0])
 
         if False:
