@@ -373,17 +373,15 @@ We show regression results with two algorithms: *Random Forest* and *Neural Netw
 
 **Timeseries modeling with RNNs/LSTMs**
 
-The timeseries can be modeled as sequential data with RNNs (basic cell or LSTM). To generate the below plot, use the following command:
+The timeseries can be modeled as sequential data with RNNs (basic cell or LSTM). The following command employs an RNN with the **basic cell**. The top row shows the original series. The blue section will be used for training, and the red section will be test. The middle section shows the scaled/normalized train and test sections. The bottom row shows that forecast after inverse normalization and the points with the highest 10 errors are indicated with the green bars.
 
-    pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=airline
-
-In this case we model the timeseries with an RNN with the basic cell. The top row shows the original series. The blue section will be used for training, and the red section will be test. The middle section shows the scaled/normalized train and test sections. The bottom row shows that forecast after inverse normalization and the points with the highest 10 errors are indicated with the green bars.
+    pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
 
 ![Airline RNN Basic Cell](figures/timeseries/airline_rnn_basic.png)
 
 A similar plot using an RNN with LSTM cells can be generated with the following command.
     
-    pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
+    pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=airline
 
 The generated plots are shown below. In general, ARIMA and regression methods are probably better suited to the *Airline* dataset than the RNN models.
 
