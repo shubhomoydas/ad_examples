@@ -28,7 +28,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - [Ensemble/Projection-based](python/loda/loda.py)
     - [A demonstration of outlier influence](python/ad/outlier_effect.py)
     - [Spectral-based](python/ad/spectral_outlier.py)
-  - timeseries (**Jump to** [illustrations](#timeseries-anomaly-detection-with-forecasting))
+  - timeseries (**Jump to** [illustrations](#timeseries-anomaly-detection))
     - Forecasting-based
       - [ARIMA](python/timeseries/timeseries_arima.py)
       - [Regression](python/timeseries/timeseries_regression.py) (SVM, Random Forest, Neural Network)
