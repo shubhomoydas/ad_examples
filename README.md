@@ -37,7 +37,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Exploratory Analysis](#exploratory-analysis)
       - [ARIMA](#arima-forecasting)
       - [Regression](#regression-forecasting) (SVM, Random Forest, Neural Network)
-      - [Recurrent Neural Networks](#timeseries-modeling-with-rnns-lstms) (RNN/LSTM)
+      - [Recurrent Neural Networks](#timeseries-modeling-with-rnnslstms) (RNN/LSTM)
     - i.i.d
       - [Windows/Shingle based](#timeseries-outliers-with-shingles) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - [human-in-the-loop (active learning)](#active-anomaly-discovery-aad)
