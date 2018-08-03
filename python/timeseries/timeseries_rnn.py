@@ -129,14 +129,14 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
+    dir_create("./temp/timeseries")  # for logging and plots
+
     args = get_command_args(debug=False,
                             debug_args=["--dataset=airline", "--algo=lstm", "--n_lags=12",
                                         "--n_anoms=10", "--debug", "--plot",
                                         "--log_file=temp/timeseries/timeseries_rnn.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
-
-    dir_create("./temp/timeseries")  # for logging and plots
 
     random.seed(42)
     rnd.seed(42)

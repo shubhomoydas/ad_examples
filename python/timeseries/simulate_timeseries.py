@@ -164,6 +164,8 @@ def read_activity_data():
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
 
+    dir_create("./temp/timeseries")  # for logging and plots
+
     args = get_command_args(debug=True, debug_args=["--debug",
                                                     "--plot",
                                                     "--log_file=temp/timeseries/timeseries_sim.log"])

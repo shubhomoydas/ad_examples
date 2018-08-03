@@ -58,6 +58,8 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
+    dir_create("./temp/timeseries")  # for logging and plots
+
     args = get_command_args(debug=False, debug_args=["--n_lags=20",
                                                      "--n_epochs=1",
                                                      "--debug",
@@ -65,8 +67,6 @@ if __name__ == "__main__":
                                                      "--log_file=temp/timeseries/activity_word2vec.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
-
-    dir_create("./temp/timeseries")  # for logging and plots
 
     random.seed(42)
     rnd.seed(42)

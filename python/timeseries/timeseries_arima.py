@@ -181,12 +181,12 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
+    dir_create("./temp/timeseries")  # for logging and plots
+
     args = get_command_args(debug=False,
                             debug_args=["--dataset=airline", "--debug", "--plot", "--explore_only",
                                         "--log_file=temp/timeseries/timeseries_arima.log"])
     configure_logger(args)
-
-    dir_create("./temp/timeseries")  # for logging and plots
 
     np.random.seed(42)
 
