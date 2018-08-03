@@ -18,7 +18,7 @@ Note: The code has been tested with **python 2.7**.
 
 
 Anomaly Detection Examples
---------------------------
+==========================
 This is a collection of anomaly detection examples for detection methods popular in academic literature and in practice. I will include more examples as and when I find time.
 
 Some techniques covered are listed below. These are a mere drop in the ocean of all anomaly detectors and are only meant to highlight some broad categories. Apologies if your favorite one is currently not included -- hopefully in time...
@@ -34,12 +34,13 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - [Spectral-based](python/ad/spectral_outlier.py)
   - timeseries (**Jump to** [illustrations](#timeseries-anomaly-detection))
     - Forecasting-based
-      - [ARIMA](python/timeseries/timeseries_arima.py)
-      - [Regression](python/timeseries/timeseries_regression.py) (SVM, Random Forest, Neural Network)
-      - [Recurrent Neural Networks](python/timeseries/timeseries_rnn.py)
+      - [Exploratory Analysis](#exploratory-analysis)
+      - [ARIMA](#arima-forecasting)
+      - [Regression](#regression-forecasting) (SVM, Random Forest, Neural Network)
+      - [Recurrent Neural Networks](#timeseries-modeling-with-rnns-lstms) (RNN/LSTM)
     - i.i.d
-      - [Windows/Shingle based](python/timeseries/timeseries_shingles.py) (Isolation Forest, One-class SVM, LOF, Autoencoder)
-  - human-in-the-loop (active learning)
+      - [Windows/Shingle based](#timeseries-outliers-with-shingles) (Isolation Forest, One-class SVM, LOF, Autoencoder)
+  - [human-in-the-loop (active learning)](#active-anomaly-discovery-aad)
     - Active Anomaly Discovery ([batch setup](python/aad/aad_batch.py), [streaming setup](python/aad/aad_stream.py)) -- **Includes plots and illustrations (see sections below)**
       - [High-level summary of the approach](#active-anomaly-discovery-aad)
       - **Jump right in:** [General instructions on running AAD](#running-aad)
@@ -68,7 +69,7 @@ To execute the code:
 
 
 Active Anomaly Discovery (AAD)
-------------------------------
+==============================
 This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies.
 
 The main idea that helps understand AAD can be summarized as follows:
@@ -155,12 +156,15 @@ example (with HSTrees streaming):
 
 
 **Note on Streaming:**
+
 Streaming currently supports two strategies for data retention:
   - Retention Type 0: Here the new instances from the stream completely overwrite the older *unlabeled instances* in memory.
   - Retention Type 1: Here the new instances are first merged with the older unlabeled instances and then the complete set is sorted in descending order on the distance from the margin. The top instances are retained; rest are discarded. **This is highly recommended.**
 
 
-**Note on Query Strategies:** See [below](#does-query-diversity-with-compact-descriptions-help) for query strategies currently supported. `QUERY_TYPE` variable in `aad.sh` determines the query strategy. One of the strategies discussed in detail below is to diversify queries using [descriptions](#query-diversity-with-compact-descriptions). This is invoked by `QUERY_TYPE=8` option. To actually see the benefits of this option, set the query batch size to greater than 1 (e.g., 3) (variable `N_BATCH` in `aad.sh`).
+**Note on Query Strategies:**
+
+See [below](#does-query-diversity-with-compact-descriptions-help) for query strategies currently supported. `QUERY_TYPE` variable in `aad.sh` determines the query strategy. One of the strategies discussed in detail below is to diversify queries using [descriptions](#query-diversity-with-compact-descriptions). This is invoked by `QUERY_TYPE=8` option. To actually see the benefits of this option, set the query batch size to greater than 1 (e.g., 3) (variable `N_BATCH` in `aad.sh`).
 
 
 Generating compact descriptions with AAD
@@ -179,7 +183,7 @@ To generate the below, use the command:
 
 
 Applications of compact descriptions
--------------------------------------------
+------------------------------------
 Compact descriptions have multiple uses including:
   - Discovery of diverse classes of anomalies very quickly by querying instances from different subspaces of the description
   - Improved interpretability and explainability of anomalous instances
@@ -188,7 +192,7 @@ We assume that in a practical setting, the analyst(s) will be presented with ins
 
 
 Query diversity with compact descriptions
--------------------------------------------
+-----------------------------------------
 The idea for querying a diverse set of instances without significantly affecting the anomaly detection efficiency is explained in [anomaly_description.pdf](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf).
 
 To generate the below, use the command:
@@ -199,7 +203,7 @@ To generate the below, use the command:
 
 
 Does Query diversity with compact descriptions help?
--------------------------------------------
+----------------------------------------------------
 We compare the following query strategies (variables `QUERY_TYPE, N_BATCH, N_EXPLORE` are set in `aad.sh`):
   - **Select the single-most anomalous instance per feedback iteration:** (`QUERY_TYPE=1, N_BATCH=1`) [Select](python/aad/query_model.py) the top-most instance ordered by anomaly score. (**BAL (Adaptive Prior)** in the plots below.)
   - **Select a set of the top-most anomalous instances per feedback iteration:** (`QUERY_TYPE=1, N_BATCH=3`) [Select](python/aad/query_model.py) a batch of three top-most instances ordered by anomaly score. (**ifor\_q1b3** in the plots below.)
@@ -234,7 +238,7 @@ To generate the below plots, perform the following steps (**remember to run the 
 
 
 Differences between Isolation Forest, HS Trees, RS Forest
--------------------------------------------
+---------------------------------------------------------
 This [document](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf) explains why Isolation Forest is more effective in incorporating feedback at the leaf level. This is illustrated in the figure below. The plots are generated in the files `query_candidate_regions_ntop5_*.pdf` and `query_compact_ntop5_*.pdf` under `temp/aad/toy2/*` when the following commands are executed:
 
     bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0 1 1
@@ -254,7 +258,7 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 
 
 Data Drift Detection
--------------------------------------------
+--------------------
 This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
   - First, randomly partition the current window of data into two equal parts (*A* and *B*).
   - For each tree in the forest, compute average KL-divergence as follows:
@@ -311,7 +315,7 @@ The distribution of the angles between the normalized score vectors and the unif
 
 
 Timeseries Anomaly Detection
-----------------------------
+============================
 The main motivation for writing these timeseries examples has been that while we can find each approach separately in other places on the web, we really should have most of them in one place to be able to compare head-to-head. **The parameter settings have been set to reasonable values, but should always be treated with a bit of skepticism since no formal model selection was employed**. The results look good with the *Airline* dataset as it was setup as the running example. However, they may be suboptimal with the other datasets (below) unless the parameters are tweaked a bit. The idea is to be able to play around with the basic timeseries modeling approaches and understand their strengths and weaknesses.
 
 We will use the [Airline dataset](datasets/AirlinePassengers) as the running example here. The dataset can be selected with the command line option `--dataset=<name>`. Datasets included with the codebase are:
@@ -330,8 +334,8 @@ Timeseries forecasting generally involves the following steps (in order):
   - Model the normalized (detrended and scaled) time series: ARIMA/SARIMA, RNN/LSTM, Regression etc.
   - Forecast: Predict values into the future. This actually involves first predicting the normalized value and then applying inverse normalization. We will employ **rolling forecast** in the examples we present. Here, we predict only one timestep into the future. Then we get the true value and compute the **forecasting error**. Next, we append the true value to the training set and **remodel** the timeseries. This is repeated as long as desired.
 
-**Exploratory analysis**
-
+Exploratory analysis
+--------------------
 The plots below are on the first page of the pdf generated by the command:
 
     pythonw -m timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --dataset=airline
@@ -344,8 +348,8 @@ The following plots are on the second page of the pdf generated by the same comm
 
 ![Airline ACF/PACF](figures/timeseries/airline_acf_pacf.png)
 
-**ARIMA Forecasting**
-
+ARIMA Forecasting
+-----------------
 Now that we have determined the parameters for the SARIMA model, we can use them to model the timeseries and forecast. We used the first two-thirds of the series as our training set and the last one-third as the test set. The red curve in the bottom row of the below figure shows the forecast values. The green lines indicate the 10 points at which the forecast error is the highest. The top row shows the residuals when we model the *entire* timeseries with the SARIMA model. *Whether we should treat the forecast errors as anomalies would depend on the application*. The ARIMA/SARIMA orders for the example datasets are defined in [timeseries_datasets.py](python/common/timeseries_datasets.py).
 
 ```python
@@ -364,8 +368,8 @@ univariate_timeseries_datasets = {
 
 ![Airline SARIMA](figures/timeseries/airline_residuals_forecast.png)
 
-**Regression Forecasting**
-
+Regression Forecasting
+----------------------
 The idea here is to generate feature vectors which can be fed to a regression model. Specifically, if we have a timeseries *y_1, y_2, ..., y_N*, then we train a model for *y_(t+1) = f(y_(t-1), y_(t-2), .., y_(t-lag+1))*, i.e., a model that predicts the value at a particular time as a function of the previous values (till a reasonable lag). The plots below were generated with the commands:
 
     pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=12 --dataset=airline
@@ -377,8 +381,8 @@ We show regression results with two algorithms: *Random Forest* and *Neural Netw
 ![Airline Regression](figures/timeseries/airline_regression.png)
 
 
-**Timeseries modeling with RNNs/LSTMs**
-
+Timeseries modeling with RNNs/LSTMs
+-----------------------------------
 The timeseries can be modeled as sequential data with RNNs (basic cell or LSTM). The following command employs an RNN with the **basic cell**. The top row shows the original series. The blue section will be used for training, and the red section will be test. The middle section shows the scaled/normalized train and test sections. The bottom row shows that forecast after inverse normalization and the points with the highest 10 errors are indicated with the green bars.
 
     pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
@@ -394,8 +398,8 @@ The generated plots are shown below. In general, ARIMA and regression methods ar
 ![Airline RNN LSTM Cell](figures/timeseries/airline_rnn_lstm.png)
 
 
-**Timeseries outliers with shingles**
-
+Timeseries outliers with shingles
+---------------------------------
 Here we illustrate the idea of anomaly detection in time series by breaking the series into windows ('shingles'), and then treating each window as i.i.d feature vector. We will use a [simulated timeseries](datasets/simulated_timeseries) here. The below command breaks the timeseries into non-overlapping windows of 20 timepoints and then applies an autoencoder as the anomaly detector. The red points show the top 10 most anomalous windows. Note that unlike the previous examples where we reported the anomalous time **points**, here we can only report the anomalous time **windows**.
 
     pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc
@@ -404,7 +408,7 @@ Here we illustrate the idea of anomaly detection in time series by breaking the 
 
 
 Note on Spectral Clustering by label diffusion
-----------------------------------------------
+==============================================
 Spectral clustering tries to first find a lower dimensional representation of the data where it is better clustered after taking into account the inherent manifold structures. Next, any standard anomaly detector can be applied on the new representation. Although the python code has the [implementation](python/ad/spectral_outlier.py), the last step requires non-metric MDS transform and the scikit-learn implementation is not as good as R. Hence, use the R code (R/manifold_learn.R) for generating the transformed features.
 
 For details, refer to:
@@ -412,7 +416,7 @@ Supervised and Semi-supervised Approaches Based on Locally-Weighted Logistic Reg
 
 
 Activity Modeling
------------------
+=================
 A simple application of word2vec for activity modeling can be found [here](python/timeseries/activity_word2vec.py). We try to infer relative sensor locations from sequence of sensor triggerings. The true [floor plan](http://ailab.wsu.edu/casas/hh/hh101/profile/page-6.html) and the inferred sensor locations (**for sensor ids starting with 'M' and 'MA'**) are shown below ([download the data here](http://casas.wsu.edu/datasets/hh101.zip)). This demonstrates a form of 'embedding' of the sensors in a latent space. The premise is that the **non-iid data such as activity sequences may be represented in the latent space as i.i.d data on which standard anomaly detectors may be employed**. We can be a bit more creative and try to apply **transfer learning** with this embedding.
 
 For example, imagine that we have a house (House-1) with labeled sensors (such as 'kitchen', 'living room', etc.) and another (House-2) with partially labeled sensors. Then, if we try to reduce the 'distance' between similarly labeled sensors in the latent space (by adding another loss-component to the word2vec embeddings), it can provide more information on which of the unlabeled sensors and activities in House-2 are similar to those in House-1. Moreover, the latent space allows representation of heterogeneous entities such as sensors, activities, locations, etc. in the same space which (in theory) helps detect similarities and associations in a more straightforward manner. In practice, the amount of data and the quality of the loss function matter a lot. Moreover, simpler methods of finding similarities/associations should not be overlooked. As an example, we might try to use embedding to figure out if a particular sensor is located in the bedroom. However, it might be simpler to just use the sensor's activation time to determine this information (assuming people sleep regular hours).
