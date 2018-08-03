@@ -32,15 +32,31 @@ class StreamingAnomalyDetector(object):
         self.max_buffer = max_buffer
         self.min_samples_for_update = min_samples_for_update
         self.opts = opts
-        self.n_pretrain_instances = 0
+        self.n_prelabeled_instances = 0
 
         self.buffer = None
 
+        self.initial_labeled = self.initial_anomalies = self.initial_nominals = None
         self.labeled = None
         if labeled_x is not None:
-            self.labeled = InstanceList(x=labeled_x, y=labeled_y, ids=labeled_ids)
+            self.initial_labeled = InstanceList(x=labeled_x, y=labeled_y, ids=labeled_ids)
             # transform the features and cache...
-            self.labeled.x_transformed = self.get_transformed(self.labeled.x)
+            self.initial_labeled.x_transformed = self.get_transformed(self.initial_labeled.x)
+            self.initial_anomalies, self.initial_nominals = self._separate_anomaly_nominal(self.initial_labeled)
+
+        if opts.pretrain and self.initial_anomalies is not None:
+            # We only retain the labeled anomalies when pre-train is requested.
+            # Retaining nominals might result in severe class imbalance when
+            # a large amount of labeled pre-training data is provided where most
+            # instances are nominals. There might be other ways to handle this
+            # situation, but ignoring nominals here seems easiest.
+            self.labeled = InstanceList(x=self.initial_anomalies.x, y=self.initial_anomalies.y,
+                                        ids=self.initial_anomalies.ids,
+                                        x_transformed=self.initial_anomalies.x_transformed)
+        elif self.initial_labeled is not None:
+            self.labeled = InstanceList(x=self.initial_labeled.x, y=self.initial_labeled.y,
+                                        ids=self.initial_labeled.ids,
+                                        x_transformed=self.initial_labeled.x_transformed)
 
         self.unlabeled = None
         if unlabeled_x is not None:
@@ -64,10 +80,60 @@ class StreamingAnomalyDetector(object):
             logger.debug("kl kl_q_alpha: %s (alpha=%0.2f), kl mean: %f, kl_trees:\n%s" %
                          (str(list(self.kl_q_alpha)), self.kl_alpha, np.mean(kl_trees), str(list(kl_trees))))
 
-        if self.labeled is not None and opts.pretrain and opts.n_pretrain > 0:
-            logger.debug("Labeled instances found. Pre-training %d rounds..." % opts.n_pretrain)
-            self.n_pretrain_instances = self.labeled.x.shape[0]
-            self.update_weights_with_no_feedback(n_train=opts.n_pretrain, debug_auc=True)
+        self._pre_train(debug_auc=True)
+        if self.labeled is not None:
+            self.n_prelabeled_instances = self.labeled.x.shape[0]
+
+    def _pre_train(self, debug_auc=False):
+        if not self.opts.pretrain or self.initial_labeled is None or self.opts.n_pretrain == 0:
+            return
+
+        ha = np.where(self.initial_labeled.y == 1)[0]
+        # set hn to empty array for pre-training. Since all instances are labeled,
+        # we just focus on getting the labeled anomalies ranked at the top
+        hn = np.zeros(0, dtype=int)
+
+        if len(ha) == 0 or len(ha) == len(self.initial_labeled.y):
+            logger.debug("At least one example from each class (anomaly, nominal) is required for pretraining.")
+            return
+
+        logger.debug("Pre-training %d rounds with anomalies: %d, nominals: %d..." %
+                     (self.opts.n_pretrain, len(ha), len(self.initial_labeled.y)-len(ha)))
+
+        tm = Timer()
+        x, y, ids, x_transformed = self.initial_labeled.x, self.initial_labeled.y, self.initial_labeled.ids, self.initial_labeled.x_transformed
+        orig_tau = self.opts.tau
+        self.opts.tau = len(ha)*1.0 / len(self.initial_labeled.y)
+        auc = self.get_auc(x=x, y=y, x_transformed=x_transformed)
+        if debug_auc: logger.debug("AUC[0]: %f" % (auc))
+        best_i = 0
+        best_auc = auc
+        best_w = self.model.w
+        for i in range(self.opts.n_pretrain):
+            self.model.update_weights(x_transformed, y, ha, hn, self.opts)
+            auc = self.get_auc(x=x, y=y, x_transformed=x_transformed)
+            if debug_auc: logger.debug("AUC[%d]: %f" % (i + 1, auc))
+            if best_auc < auc:
+                best_auc = auc
+                best_w = np.copy(self.model.w)
+                best_i = i+1
+        logger.debug("best_i: %d, best_auc: %f" % (best_i, best_auc))
+        self.model.w = best_w
+        self.opts.tau = orig_tau
+        logger.debug(tm.message("Updated weights %d times with no feedback " % self.opts.n_pretrain))
+
+    def _separate_anomaly_nominal(self, labeled):
+        anom_idxs = np.where(labeled.y == 1)[0]
+        noml_idxs = np.where(labeled.y == 0)[0]
+        anomalies = None
+        nominals = None
+        if len(anom_idxs) > 0:
+            anomalies = InstanceList(x=labeled.x[anom_idxs], y=labeled.y[anom_idxs], ids=labeled.ids[anom_idxs],
+                                     x_transformed=labeled.x_transformed[anom_idxs])
+        if len(noml_idxs) > 0:
+            nominals = InstanceList(x=labeled.x[noml_idxs], y=labeled.y[noml_idxs], ids=labeled.ids[noml_idxs],
+                                    x_transformed=labeled.x_transformed[noml_idxs])
+        return anomalies, nominals
 
     def _get_all_instances(self):
         if self.labeled is not None and self.unlabeled is not None:
@@ -505,7 +571,7 @@ class StreamingAnomalyDetector(object):
         if self.stream_buffer_empty() and self.opts.till_budget:
             bk = get_budget_topK(self.unlabeled.x.shape[0], self.opts)
             n_labeled = 0 if self.labeled is None else len(self.labeled.y)
-            max_feedback = max(0, bk.budget - (n_labeled - self.n_pretrain_instances))
+            max_feedback = max(0, bk.budget - (n_labeled - self.n_prelabeled_instances))
             max_feedback = min(max_feedback, self.unlabeled.x.shape[0])
 
         if False:
@@ -715,6 +781,9 @@ def aad_stream():
         opts.set_multi_run_options(opts.fid, runidx)
 
         stream = DataStream(X_full, y_full, IdServer(initial=0))
+        # from aad.malware_aad import MalwareDataStream
+        # stream = MalwareDataStream(X_full, y_full, IdServer(initial=0))
+
         sad = prepare_stream_anomaly_detector(stream, opts)
 
         iter = 0
