@@ -53,7 +53,7 @@ def find_anomalies_with_shingles(dataset, data, window_size=5, skip_size=None, a
         ad.fit(x)
         scores = -ad.decision_function(x).reshape((n,))
     elif ad_type == "ifor":
-        ad = IsolationForest(max_samples=256, contamination=outliers_fraction, random_state=None)
+        ad = IsolationForest(max_samples=min(256, x.shape[0]), contamination=outliers_fraction, random_state=None)
         ad.fit(x)
         scores = -ad.decision_function(x)
     elif ad_type == "lof":
