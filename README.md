@@ -408,7 +408,7 @@ Here we illustrate the idea of anomaly detection in time series by breaking the 
 
 A more appropriate example might be the [simulated timeseries](datasets/simulated_timeseries). The below command breaks the timeseries into non-overlapping windows of 20 timepoints and then applies an autoencoder as the anomaly detector. The red lines show the top 10 most anomalous windows.
 
-    pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc
+    pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc --dataset=synthetic
 
 ![Simulated timeseries](figures/timeseries/synthetic_shingles.png)
 
