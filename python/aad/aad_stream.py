@@ -8,6 +8,8 @@ from aad.aad_globals import *
 from aad.aad_support import *
 
 from aad.data_stream import *
+from aad_test_support import plot_score_contours
+from query_model_euclidean import *
 
 
 class StreamingAnomalyDetector(object):
@@ -22,6 +24,9 @@ class StreamingAnomalyDetector(object):
         unlabeled: InstanceList
         buffer: InstanceList
             test set from stream
+        initial_labeled: InstanceList
+        initial_anomalies: InstanceList
+        initial_nominals: InstanceList
         opts: AadOpts
     """
     def __init__(self, stream, model, labeled_x=None, labeled_y=None, labeled_ids=None,
@@ -36,27 +41,12 @@ class StreamingAnomalyDetector(object):
 
         self.buffer = None
 
-        self.initial_labeled = self.initial_anomalies = self.initial_nominals = None
-        self.labeled = None
-        if labeled_x is not None:
-            self.initial_labeled = InstanceList(x=labeled_x, y=labeled_y, ids=labeled_ids)
-            # transform the features and cache...
-            self.initial_labeled.x_transformed = self.get_transformed(self.initial_labeled.x)
-            self.initial_anomalies, self.initial_nominals = self._separate_anomaly_nominal(self.initial_labeled)
+        self.initial_labeled, self.initial_anomalies, self.initial_nominals = \
+            self.get_initial_labeled(labeled_x, labeled_y, labeled_ids)
 
-        if opts.pretrain and self.initial_anomalies is not None:
-            # We only retain the labeled anomalies when pre-train is requested.
-            # Retaining nominals might result in severe class imbalance when
-            # a large amount of labeled pre-training data is provided where most
-            # instances are nominals. There might be other ways to handle this
-            # situation, but ignoring nominals here seems easiest.
-            self.labeled = InstanceList(x=self.initial_anomalies.x, y=self.initial_anomalies.y,
-                                        ids=self.initial_anomalies.ids,
-                                        x_transformed=self.initial_anomalies.x_transformed)
-        elif self.initial_labeled is not None:
-            self.labeled = InstanceList(x=self.initial_labeled.x, y=self.initial_labeled.y,
-                                        ids=self.initial_labeled.ids,
-                                        x_transformed=self.initial_labeled.x_transformed)
+        self.labeled = self._get_pretrain_labeled(include_nominals=False)
+        if self.labeled is not None:
+            self.n_prelabeled_instances = self.labeled.x.shape[0]
 
         self.unlabeled = None
         if unlabeled_x is not None:
@@ -81,8 +71,6 @@ class StreamingAnomalyDetector(object):
                          (str(list(self.kl_q_alpha)), self.kl_alpha, np.mean(kl_trees), str(list(kl_trees))))
 
         self._pre_train(debug_auc=True)
-        if self.labeled is not None:
-            self.n_prelabeled_instances = self.labeled.x.shape[0]
 
     def _pre_train(self, debug_auc=False):
         if not self.opts.pretrain or self.initial_labeled is None or self.opts.n_pretrain == 0:
@@ -105,6 +93,9 @@ class StreamingAnomalyDetector(object):
         orig_tau = self.opts.tau
         self.opts.tau = len(ha)*1.0 / len(self.initial_labeled.y)
         auc = self.get_auc(x=x, y=y, x_transformed=x_transformed)
+        plot_score_contours(x, y, x_transformed, model=self.model,
+                            filename="baseline", outputdir=self.opts.resultsdir,
+                            opts=self.opts)
         if debug_auc: logger.debug("AUC[0]: %f" % (auc))
         best_i = 0
         best_auc = auc
@@ -120,7 +111,77 @@ class StreamingAnomalyDetector(object):
         logger.debug("best_i: %d, best_auc: %f" % (best_i, best_auc))
         self.model.w = best_w
         self.opts.tau = orig_tau
+
+        if self.opts.dataset in ['toy', 'toy2', 'toy_hard']:
+            # some DEBUG plots
+            selx = None
+            if self.labeled is not None:
+                idxs = np.where(self.labeled.y == 0)[0]
+                logger.debug("#selx: %d" % len(idxs))
+                selx = self.labeled.x[idxs]
+            plot_score_contours(x, y, x_transformed, selected_x=selx, model=self.model,
+                                filename="pre_train", outputdir=self.opts.resultsdir,
+                                opts=self.opts)
+
         logger.debug(tm.message("Updated weights %d times with no feedback " % self.opts.n_pretrain))
+
+    def get_initial_labeled(self, x, y, ids):
+        """Returns the labeled instances as InstanceLists
+
+        :param x: np.ndarray
+        :param y: np.array
+        :param ids: np.array
+        :return: InstanceList, InstanceList, InstanceList
+        """
+        initial_labeled = initial_anomalies = initial_nominals = None
+        if x is not None:
+            initial_labeled = InstanceList(x=x, y=y, ids=ids)
+            # transform the features and cache...
+            initial_labeled.x_transformed = self.get_transformed(initial_labeled.x)
+            initial_anomalies, initial_nominals = self._separate_anomaly_nominal(initial_labeled)
+        return initial_labeled, initial_anomalies, initial_nominals
+
+    def _get_pretrain_labeled(self, include_nominals=True):
+        """Returns a subset of the initial labeled data which will be utilized in future
+
+        First, we retain all labeled anomalies since these provide vital information.
+        Retaining all nominals might result in severe class imbalance if they are in
+        relatively larger number compared to anomalies. Therefore, we subsample the nominals.
+
+        We need to determine a reasonable informative set of nominals. For this, we utilize
+        Euclidean-diversity based strategy. We retain the nominals which have highest
+        average distance from the anomalies as well as other selected nominals.
+
+        :return: InstanceList
+        """
+        l = self.initial_labeled
+        if l is None:
+            return None
+        if not include_nominals:
+            # completely ignore nominals and only retain anomalies
+            labeled = InstanceList(x=self.initial_anomalies.x, y=self.initial_anomalies.y,
+                                   ids=self.initial_anomalies.ids,
+                                   x_transformed=self.initial_anomalies.x_transformed)
+        else:
+            # select a subset of nominals
+            tm = Timer()
+            anom_idxs = np.where(l.y == 1)[0]
+            noml_idxs = np.where(l.y == 0)[0]
+            # set number of nominals equal to number of  anomalies
+            n_nominals = len(anom_idxs)
+            if n_nominals > 0:
+                selected_indexes = filter_by_euclidean_distance(l.x,
+                                                                noml_idxs, init_selected=anom_idxs,
+                                                                n_select=n_nominals)
+            else:
+                selected_indexes = anom_idxs
+            selected_indexes = np.array(selected_indexes, dtype=int)
+            labeled = InstanceList(x=l.x[selected_indexes], y=l.y[selected_indexes],
+                                   x_transformed=l.x_transformed[selected_indexes],
+                                   ids=l.ids[selected_indexes])
+            logger.debug(tm.message("Total labeled: %d, anomalies: %d, nominals: %d" %
+                         (labeled.x.shape[0], len(anom_idxs), len(selected_indexes)-len(anom_idxs))))
+        return labeled
 
     def _separate_anomaly_nominal(self, labeled):
         anom_idxs = np.where(labeled.y == 1)[0]
@@ -785,6 +846,10 @@ def aad_stream():
         # stream = MalwareDataStream(X_full, y_full, IdServer(initial=0))
 
         sad = prepare_stream_anomaly_detector(stream, opts)
+
+        if sad.unlabeled is None:
+            logger.debug("No instances to label")
+            continue
 
         iter = 0
         seen = np.zeros(0, dtype=int)

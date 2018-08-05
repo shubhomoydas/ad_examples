@@ -219,6 +219,60 @@ def plot_aad_2D(x, y, x_transformed, xx, yy, model, metrics,
     logger.debug(tm.message("plotted feedback iterations"))
 
 
+def plot_score_contours(x, y, x_transformed, selected_x=None, model=None,
+                        filename=None, outputdir=None, opts=None):
+    # use this to plot the anomaly contours
+
+    data_2D = x.shape[1] == 2
+    can_plot = data_2D and opts.reruns == 1
+    if not can_plot:
+        return
+
+    pdfpath = "%s/%s.pdf" % (outputdir, filename)
+    logger.debug("Plotting contours to %s" % (pdfpath))
+
+    tm = Timer()
+    tm.start()
+
+    xx = None
+    yy = None
+
+    if data_2D:
+        # plot the line, the samples, and the nearest vectors to the plane
+        xx, yy = np.meshgrid(np.linspace(-4, 8, 50), np.linspace(-4, 8, 50))
+
+    # sidebar coordinates and dimensions for showing rank locations of true anomalies
+    dash_xy = (-4.0, -2.0)  # bottom-left (x,y) coordinates
+    dash_wh = (0.4, 8)  # width, height
+
+    x_test = np.c_[xx.ravel(), yy.ravel()]
+    x_if = model.transform_to_ensemble_features(x_test, dense=False, norm_unit=opts.norm_unit)
+
+    dp = DataPlotter(pdfpath=pdfpath, rows=1, cols=1)
+    pl = dp.get_next_plot()
+
+    w = model.w
+    Z = model.get_score(x_if, w)
+    Z = Z.reshape(xx.shape)
+    pl.contourf(xx, yy, Z, 20, cmap=plt.cm.get_cmap('jet'))
+
+    dp.plot_points(x, pl, labels=y, lbl_color_map={0: "grey", 1: "red"}, s=25)
+
+    if selected_x is not None and selected_x.shape[0] > 0:
+        dp.plot_points(selected_x, pl, defaultcol='green', s=40)
+
+    # plot the sidebar
+    anom_scores = model.get_score(x_transformed, w)
+    anom_order = np.argsort(-anom_scores)
+    anom_idxs = np.where(y[anom_order] == 1)[0]
+    dash = 1 - (anom_idxs * 1.0 / x.shape[0])
+    plot_sidebar(dash, dash_xy, dash_wh, pl)
+
+    dp.close()
+
+    logger.debug(tm.message("plotted score contours"))
+
+
 def evaluate_forest_original(x, y, budget, forest, x_new=None):
     original_scores = 0.5 - forest.decision_function(x)
     queried = np.argsort(-original_scores)
