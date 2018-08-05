@@ -496,7 +496,7 @@ fi
 # NOTE: Applies only to streaming mode for forest-based algorithms.
 # ------------------------------
 PRETRAIN_IND=0
-N_PRETRAIN=10
+N_PRETRAIN=50
 PRETRAIN_SIG=""
 PRETRAIN=""
 if [[ "$PRETRAIN_IND" == "1" ]]; then
