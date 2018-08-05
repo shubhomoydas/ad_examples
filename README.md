@@ -400,11 +400,17 @@ The generated plots are shown below. In general, ARIMA and regression methods ar
 
 Timeseries outliers with shingles
 ---------------------------------
-Here we illustrate the idea of anomaly detection in time series by breaking the series into windows ('shingles'), and then treating each window as i.i.d feature vector. We will use a [simulated timeseries](datasets/simulated_timeseries) here. The below command breaks the timeseries into non-overlapping windows of 20 timepoints and then applies an autoencoder as the anomaly detector. The red points show the top 10 most anomalous windows. Note that unlike the previous examples where we reported the anomalous time **points**, here we can only report the anomalous time **windows**.
+Here we illustrate the idea of anomaly detection in time series by breaking the series into windows ('shingles'), and then treating each window as i.i.d feature vector. Since we have been using the *Airline* dataset we will show the results on it here as well. However, keep in mind that this approach might **not** be the best for this dataset. Also, we do not require separate train/test sets; all the windows can be input to an unsupervised anomaly/outlier detector as a single dataset. For *Airline*, we set the window size to 6 and employ an Isolation Forest anomaly detectore. Since there is a clear trend, it is important to remove the trend before breaking up the timeseries into the smaller windows. The below command will output the plots below. The red lines in the plots show the top 10 most anomalous windows. Note that unlike the previous examples where we reported the anomalous time **points**, here we can only report the anomalous time **windows**.
+
+    pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=6 --algo=ifor --normalize_trend --dataset=airline
+
+![Airlines Shingles](figures/timeseries/airline_shingles.png)
+
+A more appropriate example might be the [simulated timeseries](datasets/simulated_timeseries). The below command breaks the timeseries into non-overlapping windows of 20 timepoints and then applies an autoencoder as the anomaly detector. The red lines show the top 10 most anomalous windows.
 
     pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc
 
-![Simulated timeseries](figures/timeseries/simulated_timeseries_autoenc.png)
+![Simulated timeseries](figures/timeseries/synthetic_shingles.png)
 
 
 Note on Spectral Clustering by label diffusion
