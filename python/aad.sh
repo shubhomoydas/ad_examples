@@ -493,14 +493,24 @@ fi
 # N_PRETRAIN: Number of times to run weight update on the first (labeled)
 #   window of data if pretrain is enabled. Applies to streaming setup
 #   with pretrain only.
+# N_PRETRAIN_NOMINALS: Number of initial labeled nominal instances to retain
+#   after pretraining when pretrain is enabled. We should avoid including too
+#   many nominals since it would result in class imbalance. Internally, if
+#   N_PRETRAIN_NOMINALS > 0, then the algorithm will retain N_PRETRAIN_NOMINALS
+#   number of nominal instances which are most distinct from the *initial* labeled
+#   anomalies from the initial labeled set.
 # NOTE: Applies only to streaming mode for forest-based algorithms.
 # ------------------------------
 PRETRAIN_IND=0
 N_PRETRAIN=50
+N_PRETRAIN_NOMINALS=10
 PRETRAIN_SIG=""
 PRETRAIN=""
 if [[ "$PRETRAIN_IND" == "1" ]]; then
     PRETRAIN_SIG="_p${N_PRETRAIN}"
+    if [[ "$N_PRETRAIN_NOMINALS" -gt "0" ]]; then
+        PRETRAIN_SIG="${PRETRAIN_SIG}n${N_PRETRAIN_NOMINALS}"
+    fi
     PRETRAIN="--pretrain"
 fi
 
@@ -624,6 +634,6 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     --retention_type=${RETENTION_TYPE} ${TILL_BUDGET} \
     --forest_replace_frac=${FOREST_REPLACE_FRAC} ${FEATURE_PARTITIONS} \
     ${CHECK_KL} --kl_alpha=${KL_ALPHA} \
-    ${PRETRAIN} --n_pretrain=${N_PRETRAIN} \
+    ${PRETRAIN} --n_pretrain=${N_PRETRAIN} --n_pretrain_nominals=${N_PRETRAIN_NOMINALS} \
     --n_weight_updates_after_stream_window=${N_WEIGHT_UPDATES_AFTER_STREAM} \
     ${PLOT2D} --debug

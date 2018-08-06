@@ -44,7 +44,7 @@ class StreamingAnomalyDetector(object):
         self.initial_labeled, self.initial_anomalies, self.initial_nominals = \
             self.get_initial_labeled(labeled_x, labeled_y, labeled_ids)
 
-        self.labeled = self._get_pretrain_labeled(include_nominals=False)
+        self.labeled = self._get_pretrain_labeled()
         if self.labeled is not None:
             self.n_prelabeled_instances = self.labeled.x.shape[0]
 
@@ -141,7 +141,7 @@ class StreamingAnomalyDetector(object):
             initial_anomalies, initial_nominals = self._separate_anomaly_nominal(initial_labeled)
         return initial_labeled, initial_anomalies, initial_nominals
 
-    def _get_pretrain_labeled(self, include_nominals=True):
+    def _get_pretrain_labeled(self):
         """Returns a subset of the initial labeled data which will be utilized in future
 
         First, we retain all labeled anomalies since these provide vital information.
@@ -157,7 +157,7 @@ class StreamingAnomalyDetector(object):
         l = self.initial_labeled
         if l is None:
             return None
-        if not include_nominals:
+        if self.opts.n_pretrain_nominals == 0:
             # completely ignore nominals and only retain anomalies
             labeled = InstanceList(x=self.initial_anomalies.x, y=self.initial_anomalies.y,
                                    ids=self.initial_anomalies.ids,
@@ -167,8 +167,9 @@ class StreamingAnomalyDetector(object):
             tm = Timer()
             anom_idxs = np.where(l.y == 1)[0]
             noml_idxs = np.where(l.y == 0)[0]
-            # set number of nominals equal to number of  anomalies
-            n_nominals = len(anom_idxs)
+
+            # set number of nominals...
+            n_nominals = min(self.opts.n_pretrain_nominals, len(anom_idxs))
             if n_nominals > 0:
                 selected_indexes = filter_by_euclidean_distance(l.x,
                                                                 noml_idxs, init_selected=anom_idxs,
