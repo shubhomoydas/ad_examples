@@ -46,6 +46,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - **Jump right in:** [General instructions on running AAD](#running-aad)
       - **Explanations and Interpretability:** [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
       - **Query strategies:** [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
+      - **Aside:** [With a lot of labeled data (both anomalies and nominals), should be employ a classifier instead of an anomaly detector?](#anomaly-detector-vs-classifier)
       - [Some properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
       - [Data drift detection and model update with streaming data](#data-drift-detection)
