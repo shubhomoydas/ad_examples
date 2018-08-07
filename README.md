@@ -271,6 +271,7 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 No-frills AAD Interactive Cycle
 -------------------------------
 The below code (in [demo_aad.py](aad/demo_aad.py)) shows the simpest AAD implementation that can be used by other developers. To execute:
+
     pythonw -m aad.demo_aad
 
 ```python
