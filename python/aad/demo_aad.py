@@ -23,6 +23,10 @@ def get_debug_args(budget=30, detector_type=AAD_IFOREST):
              else HST_LOG_SCORE_TYPE if detector_type == AAD_HSTREES
              else RSF_SCORE_TYPE if detector_type == AAD_RSFOREST else 0),
             "--init=%d" % INIT_UNIF,  # initial weights
+            "--withprior", "--unifprior",  # use an (adaptive) uniform prior
+            # ensure that scores of labeled anomalies are higher than tau-ranked instance,
+            # while scores of nominals are lower
+            "--constrainttype=%d" % AAD_CONSTRAINT_TAU_INSTANCE,
             "--querytype=%d" % QUERY_DETERMINISIC,  # query strategy
             "--num_query_batch=1",  # number of queries per iteration
             "--budget=%d" % budget,  # total number of queries
