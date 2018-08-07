@@ -92,6 +92,8 @@ def get_sample_defs(stype=1):
         ns = [  0,   0,  0,  0,  0, 150,  1,   0,   0]
     elif stype == 4:
         ns = [  0,   0,  1,  1,  0,   0,  0, 100,  30]
+    elif stype == 5:
+        ns = [  0, 200, 10,  0,  0,   0,  0,   0,   0]
     else:
         raise ValueError("Incorrect sample type %d" % stype)
 

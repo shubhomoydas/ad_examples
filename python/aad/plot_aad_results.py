@@ -54,7 +54,7 @@ def get_result_names(result_type):
         return ['ifor', 'ifor_baseline', 'loda', 'ifor_noprior_unif', 'ifor_noprior_rand']
     elif result_type == "stream":
         # return ['ifor', 'ifor_baseline', 'ifor_stream_02', 'ifor_stream_q8b3', 'hstrees', 'hstrees_orig', 'rsforest_orig']
-        return ['ifor', 'ifor_baseline', 'ifor_stream_02', 'ifor_stream_KL', 'hstrees', 'hstrees_orig', 'rsforest_orig']
+        return ['ifor', 'ifor_baseline', 'ifor_stream_KL', 'ifor_stream_q8b3', 'hstrees', 'hstrees_orig', 'rsforest_orig']
     elif result_type == "diversity":
         return ['ifor', 'ifor_q8b3']
     elif result_type == "stream_diff":

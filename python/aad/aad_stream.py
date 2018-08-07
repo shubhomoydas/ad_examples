@@ -77,6 +77,7 @@ class StreamingAnomalyDetector(object):
             return
 
         ha = np.where(self.initial_labeled.y == 1)[0]
+        # hn = np.where(self.initial_labeled.y == 0)[0]
         # set hn to empty array for pre-training. Since all instances are labeled,
         # we just focus on getting the labeled anomalies ranked at the top
         hn = np.zeros(0, dtype=int)
@@ -93,9 +94,10 @@ class StreamingAnomalyDetector(object):
         orig_tau = self.opts.tau
         self.opts.tau = len(ha)*1.0 / len(self.initial_labeled.y)
         auc = self.get_auc(x=x, y=y, x_transformed=x_transformed)
-        plot_score_contours(x, y, x_transformed, model=self.model,
-                            filename="baseline", outputdir=self.opts.resultsdir,
-                            opts=self.opts)
+        if self.opts.dataset in ['toy', 'toy2', 'toy_hard']:
+            plot_score_contours(x, y, x_transformed, model=self.model,
+                                filename="baseline", outputdir=self.opts.resultsdir,
+                                opts=self.opts)
         if debug_auc: logger.debug("AUC[0]: %f" % (auc))
         best_i = 0
         best_auc = auc
@@ -157,7 +159,12 @@ class StreamingAnomalyDetector(object):
         l = self.initial_labeled
         if l is None:
             return None
-        if self.opts.n_pretrain_nominals == 0:
+        if self.opts.n_pretrain_nominals < 0:
+            # include all nominal instances
+            labeled = InstanceList(x=self.initial_labeled.x, y=self.initial_labeled.y,
+                                   ids=self.initial_labeled.ids,
+                                   x_transformed=self.initial_labeled.x_transformed)
+        elif self.opts.n_pretrain_nominals == 0:
             # completely ignore nominals and only retain anomalies
             labeled = InstanceList(x=self.initial_anomalies.x, y=self.initial_anomalies.y,
                                    ids=self.initial_anomalies.ids,
