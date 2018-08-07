@@ -155,9 +155,6 @@ if __name__ == "__main__":
 
     np.random.seed(opts.randseed)
 
-    resultsdir = "./temp"
-    logger.debug("results dir: %s" % resultsdir)
-
     x, y = get_synthetic_samples(stype=5)
     test_points = np.array([-3., 7.], dtype=np.float32).reshape((1,2))
 
