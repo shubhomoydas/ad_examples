@@ -281,6 +281,7 @@ from common.data_plotter import *
 from common.gen_samples import *
 
 from aad.aad_support import *
+from aad.forest_description import *
 
 """
 A simple no-frills demo of how to use AAD in an interactive loop.
@@ -323,7 +324,42 @@ def get_debug_args(budget=30, detector_type=AAD_IFOREST):
             "--debug"]
 
 
-def detect_anomalies(x, y, opts):
+def describe_instances(x, instance_indexes, model, opts):
+    """ Generates compact descriptions for the input instances
+
+    :param x: np.ndarray
+        The instance matrix with ALL instances
+    :param instance_indexes: np.array(dtype=int)
+        Indexes for the instances which need to be described
+    :param model: Aad
+        Trained Aad model
+    :param opts: AadOpts
+    :return: np.array(dtype=int)
+        Indexes of regions that describe the instances requested
+    """
+    if not is_forest_detector(opts.detector_type):
+        raise ValueError("Descriptions only supported by forest-based detectors")
+
+    # get feature ranges which will be used to compute volumes
+    feature_ranges = get_sample_feature_ranges(x)
+
+    # get top region indexes which will be candidates for description
+    reg_idxs = get_regions_for_description(x, instance_indexes=instance_indexes,
+                                           model=model, n_top=opts.describe_n_top)
+
+    # get volume of each candidate region
+    volumes = get_region_volumes(model, reg_idxs, feature_ranges)
+
+    # get the smallest set of smallest regions that together cover all instances
+    selected_region_idxs = get_compact_regions(x, model=model,
+                                               instance_indexes=instance_indexes,
+                                               region_indexes=reg_idxs,
+                                               volumes=volumes, p=opts.describe_volume_p)
+    desc_regions = [model.all_regions[ridx].region for ridx in selected_region_idxs]
+    return selected_region_idxs, desc_regions
+
+
+def detect_anomalies_and_describe(x, y, opts):
     rng = np.random.RandomState(opts.randseed)
 
     # prepare the AAD model
@@ -371,6 +407,13 @@ def detect_anomalies(x, y, opts):
     found = np.cumsum(y[queried])
     print("AAD found:\n%s" % (str(list(found))))
 
+    # generate compact descriptions for the detected anomalies
+    if len(ha) > 0:
+        ridxs, region_extents = describe_instances(x, np.array(ha), model=model, opts=opts)
+        logger.debug("selected_region_idxs:\n%s" % (str(list(ridxs))))
+        logger.debug("region_extents: these are of the form [{feature_index: (feature range), ...}, ...]\n%s" %
+                     (str(region_extents)))
+
 
 if __name__ == "__main__":
 
@@ -388,7 +431,7 @@ if __name__ == "__main__":
     x, y = get_synthetic_samples(stype=2)
 
     # run interactive anomaly detection loop
-    detect_anomalies(x, y, opts)
+    detect_anomalies_and_describe(x, y, opts)
 
 ```
 
