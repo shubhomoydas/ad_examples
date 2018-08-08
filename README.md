@@ -334,8 +334,10 @@ def describe_instances(x, instance_indexes, model, opts):
     :param model: Aad
         Trained Aad model
     :param opts: AadOpts
-    :return: np.array(dtype=int)
-        Indexes of regions that describe the instances requested
+    :return: tuple, list(map)
+        tuple: (region indexes, #instances among instance_indexes that fall in the region)
+        list(map): list of region extents where each region extent is a
+            map {feature index: feature range}
     """
     if not is_forest_detector(opts.detector_type):
         raise ValueError("Descriptions only supported by forest-based detectors")
@@ -356,7 +358,13 @@ def describe_instances(x, instance_indexes, model, opts):
                                                region_indexes=reg_idxs,
                                                volumes=volumes, p=opts.describe_volume_p)
     desc_regions = [model.all_regions[ridx].region for ridx in selected_region_idxs]
-    return selected_region_idxs, desc_regions
+    _, memberships = get_region_memberships(x, model, instance_indexes, selected_region_idxs)
+    instances_in_each_region = np.sum(memberships, axis=0)
+    if len(instance_indexes) < np.sum(instances_in_each_region):
+        logger.debug("\nNote: len instance_indexes (%d) < sum of instances_in_each_region (%d)\n"
+                     "because some regions overlap and cover the same instance(s)." %
+                     (len(instance_indexes), np.sum(instances_in_each_region)))
+    return zip(selected_region_idxs, instances_in_each_region), desc_regions
 
 
 def detect_anomalies_and_describe(x, y, opts):
@@ -409,8 +417,9 @@ def detect_anomalies_and_describe(x, y, opts):
 
     # generate compact descriptions for the detected anomalies
     if len(ha) > 0:
-        ridxs, region_extents = describe_instances(x, np.array(ha), model=model, opts=opts)
-        logger.debug("selected_region_idxs:\n%s" % (str(list(ridxs))))
+        ridxs_counts, region_extents = describe_instances(x, np.array(ha), model=model, opts=opts)
+        logger.debug("selected region indexes and corresponding instance counts (among %d):\n%s" %
+                     (len(ha), str(list(ridxs_counts))))
         logger.debug("region_extents: these are of the form [{feature_index: (feature range), ...}, ...]\n%s" %
                      (str(region_extents)))
 
