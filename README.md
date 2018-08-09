@@ -270,7 +270,7 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 
 No-frills AAD Interactive Cycle
 -------------------------------
-The below code (in [demo_aad.py](python/aad/demo_aad.py)) shows the simpest AAD implementation that can be used as a template by other developers. Check the log file `python/temp/demo_aad.log` for details such as anomaly descriptions. To load a different dataset, replace `get_synthetic_samples(stype=2)` (below) with the appropriate one. To execute:
+The below code (in [demo_aad.py](python/aad/demo_aad.py)) shows the simpest AAD implementation that can be used as a template by other developers. To load a different dataset, replace `get_synthetic_samples(stype=2)` (below) with the appropriate function(s). The following command executes the code; check the generated log file `python/temp/demo_aad.log` for details such as anomaly descriptions.
 
     pythonw -m aad.demo_aad
 
@@ -475,6 +475,8 @@ Following shows the results of integrating drift detection along with label feed
     bash ./aad.sh covtype 3000 10 0.03 7 1 0 1 4096 1 1 1
 
 ![Integrated Data Drift Detection and Label Feedback](figures/streaming_results.png)
+
+**Why actively detect data drift?** This is a valid question: *why employ active drift detection if there is reason to believe that a less expensive passive approach such as always replacing a fraction of the model will work just as well?* The reason is that, in practice, analysts want to be alerted when there is a drift (maybe because other algorithms downstream have to be retrained). Only the active [drift detection] algorithms offer this ability, not the passive ones. Active drift detection algorithms also need to be robust (low false positives/negatives) in order to be useful.
 
 The idea of partitioning the dataset to compute the KL-divergence threshold is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
 
