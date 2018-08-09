@@ -49,7 +49,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - **Aside:** [With a lot of labeled data (both anomalies and nominals), should be employ a classifier instead of an anomaly detector?](#anomaly-detector-vs-classifier)
       - [Some properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
-      - **API Usage:** [How to use AAD for your own data](#no-frills-aad-interactive-cycle)
+      - **API Usage:** [How to employ AAD in your own application](#no-frills-aad-interactive-cycle)
       - [Data drift detection and model update with streaming data](#data-drift-detection)
       - [A bit of theoretical intuition](#intuition-behind-active-anomaly-discovery)
   - [Reducing activity sequences to i.i.d](#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
