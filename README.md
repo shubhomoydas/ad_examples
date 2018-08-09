@@ -49,7 +49,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - **Aside:** [With a lot of labeled data (both anomalies and nominals), should be employ a classifier instead of an anomaly detector?](#anomaly-detector-vs-classifier)
       - [Some properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
-      - **API Usage:** [How to employ AAD in your own application](#no-frills-aad-interactive-cycle)
+      - **API Usage:** [How to employ AAD in your own application](#how-to-employ-aad-in-your-own-application)
       - [Data drift detection and model update with streaming data](#data-drift-detection)
       - [A bit of theoretical intuition](#intuition-behind-active-anomaly-discovery)
   - [Reducing activity sequences to i.i.d](#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
@@ -115,7 +115,7 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 
 Running AAD
 -----------
-This codebase is my **research** platform. The main `bash` script `aad.sh` makes it easier to run all AAD experiments multiple times (in the spirit of scientific inquiry) so that final results can be averaged. I try to output results for different parameter settings into different folders (under `python/temp/aad`) so that results can be easily compared without conflicts. I also output to files the instance indexes (as 1-indexed and **not** 0-indexed) in the order they were queried for fine-grained analysis and visualization. If you want to introduce a new dataset with the least effort, then put its files under `datasets/anomaly` folder in the same format and structure as those of the `toy2` dataset and follow the same naming conventions. Else, a little effort would be needed to invoke the necessary data load APIs. You might also want to have a look at the [simplified API usage example](#no-frills-aad-interactive-cycle) (`python/aad/demo_aad.py`) below.
+This codebase is my **research** platform. The main `bash` script `aad.sh` makes it easier to run all AAD experiments multiple times (in the spirit of scientific inquiry) so that final results can be averaged. I try to output results for different parameter settings into different folders (under `python/temp/aad`) so that results can be easily compared without conflicts. I also output to files the instance indexes (as 1-indexed and **not** 0-indexed) in the order they were queried for fine-grained analysis and visualization. If you want to introduce a new dataset with the least effort, then put its files under `datasets/anomaly` folder in the same format and structure as those of the `toy2` dataset and follow the same naming conventions. Else, a little effort would be needed to invoke the necessary data load APIs. You might also want to have a look at the [simplified API usage example](#how-to-employ-aad-in-your-own-application) (`python/aad/demo_aad.py`) below.
 
 **Note:** It might seem that the script `aad.sh` requires an intimidating number of parameters, but bear in mind that the simplest settings (or automatic configuration from cross-validation etc.) are preferred for any formal publication. **The reason we allow so many parameters to be configurable is to support ablation studies and general curiosity.**
 
@@ -268,8 +268,8 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 **Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (`--init=1`) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
 
 
-No-frills AAD Interactive Cycle
--------------------------------
+How to employ AAD in your own application
+-----------------------------------------
 The below code (in [demo_aad.py](python/aad/demo_aad.py)) shows the simpest AAD implementation that can be used as a template by other developers. To load a different dataset, replace `get_synthetic_samples(stype=2)` (below) with the appropriate function(s). The following command executes the code; check the generated log file `python/temp/demo_aad.log` for details such as anomaly descriptions.
 
     pythonw -m aad.demo_aad
