@@ -119,7 +119,7 @@ This codebase is my **research** platform. The main `bash` script `aad.sh` makes
 
 **Note:** It might seem that the script `aad.sh` requires an intimidating number of parameters, but bear in mind that the simplest settings (or automatic configuration from cross-validation etc.) are preferred for any formal publication. **The reason we allow so many parameters to be configurable is to support ablation studies and general curiosity.**
 
-This codebase supports five different anomaly detection algorithms:
+This codebase supports the following five different anomaly detection algorithms. If pre-computed anomaly scores are available from another ensemble-based algorithm, then jump to the [below section on pre-computed scores](#running-aad-with-precomputed-anomaly-scores).
   - The [LODA based AAD](python/aad/loda_aad.py) (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
   - The [Isolation Forest based AAD](python/aad/random_split_trees.py) (**streaming support with model update**)
     - For streaming update, we support two modes:
