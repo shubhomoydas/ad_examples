@@ -19,6 +19,12 @@ def get_debug_args(detector_type=AAD_IFOREST):
              else HST_LOG_SCORE_TYPE if detector_type == AAD_HSTREES
              else RSF_SCORE_TYPE if detector_type == AAD_RSFOREST else 0),
             "--init=%d" % INIT_UNIF,
+            "--withprior", "--unifprior",  # use an (adaptive) uniform prior
+            # ensure that scores of labeled anomalies are higher than tau-ranked instance,
+            # while scores of nominals are lower
+            "--constrainttype=%d" % AAD_CONSTRAINT_TAU_INSTANCE,
+            # normalize is NOT required in general.
+            # Especially, NEVER normalize if detector_type is anything other than AAD_IFOREST
             # "--norm_unit",
             "--forest_n_trees=100", "--forest_n_samples=256",
             "--forest_max_depth=%d" % (100 if detector_type == AAD_IFOREST else 7),
@@ -61,7 +67,7 @@ def train_anomaly_detector(x, y, opts, test_points):
         model.update_weights(x_transformed, y, ha, hn, opts)
         auc = get_auc(model, x=x, y=y, x_transformed=x_transformed)
         logger.debug("AUC[%d]: %f" % (i + 1, auc))
-        if best_auc < auc:
+        if best_auc <= auc:
             best_auc = auc
             best_w = np.copy(model.w)
             best_i = i + 1
