@@ -156,7 +156,7 @@ def train_classifier(x, y, opts, test_points, name, explain=False):
 
     if explain:
         # generate compact descriptions from the Random Forest classifier
-        rfre = RandomForestRegionExtractor(x, y, classifier.clf)
+        rfre = RandomForestAadWrapper(x, y, classifier.clf)
         ha = np.where(y == 1)[0]
         ridxs_counts, region_extents = describe_instances(x, ha, model=rfre, opts=opts)
         logger.debug("selected random forest region indexes and corresponding instance counts (among %d):\n%s" %
@@ -170,7 +170,7 @@ def plot_decision_tree_descriptions(x, y, name):
     ha = np.where(y == 1)[0]
     # generate compact descriptions from the Decision Tree classifier;
     # these just correspond to the rules extracted from the tree structure
-    dt = DecisionTreeRegionExtractor(x, y)
+    dt = DecisionTreeAadWrapper(x, y)
     ridxs_counts, region_extents = describe_instances(x, ha, model=dt, opts=opts)
     logger.debug("selected decision tree region indexes and corresponding instance counts (among %d):\n%s" %
                  (len(ha), str(list(ridxs_counts))))

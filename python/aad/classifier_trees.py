@@ -1,12 +1,22 @@
 from aad.aad_support import *
 
 
-class DTForest(object):
-    def __init__(self, tree):
-        self.estimators_ = [tree]
+class ClassifierForest(object):
+    def __init__(self, trees):
+        self.estimators_ = trees
+        self.n_estimators = len(trees)
+
+    def get_node_ids(self, X, getleaves=True):
+        if not getleaves:
+            raise ValueError("Operation supported for leaf level only")
+        forest_nodes = list()
+        for estimator in self.estimators_:
+            tree_nodes = estimator.apply(X)
+            forest_nodes.append(tree_nodes)
+        return forest_nodes
 
 
-class DecisionTreeRegionExtractor(AadForest):
+class DecisionTreeAadWrapper(AadForest):
     """ Extracts regions from a decision tree classifier which cover selected instances
 
     Since much of the functionality is already in AadForest, we merely initialize the
@@ -48,7 +58,7 @@ class DecisionTreeRegionExtractor(AadForest):
         self.d = None
 
         self.decision_tree = DTClassifier.fit(x, y, self.max_depth)
-        self.clf = DTForest(self.decision_tree.clf)
+        self.clf = ClassifierForest([self.decision_tree.clf])
         self._init_structures()
         self.init_weights(init_type=INIT_UNIF)
 
@@ -76,7 +86,7 @@ class DecisionTreeRegionExtractor(AadForest):
         raise NotImplementedError("fit() not implemented for DecisionTreeRegionExtractor")
 
 
-class RandomForestRegionExtractor(DecisionTreeRegionExtractor):
+class RandomForestAadWrapper(DecisionTreeAadWrapper):
 
     def __init__(self, x, y, clf, score_type=IFOR_SCORE_TYPE_CONST,
                  ensemble_score=ENSEMBLE_SCORE_LINEAR,
@@ -85,7 +95,7 @@ class RandomForestRegionExtractor(DecisionTreeRegionExtractor):
         Aad.__init__(self, detector_type, ensemble_score, random_state)
 
         self.max_depth = clf.max_depth
-        self.n_estimators = 1
+        self.n_estimators = len(clf.estimators_)
         self.max_samples = x.shape[0]
         self.tree_update_type = TREE_UPD_OVERWRITE
         self.tree_incremental_update_weight = None
@@ -108,7 +118,7 @@ class RandomForestRegionExtractor(DecisionTreeRegionExtractor):
         # scores for each region
         self.d = None
 
-        self.clf = clf
+        self.clf = ClassifierForest(clf.estimators_)
         self._init_structures()
         self.init_weights(init_type=INIT_UNIF)
 
