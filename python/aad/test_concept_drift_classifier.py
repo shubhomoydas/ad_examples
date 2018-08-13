@@ -36,7 +36,7 @@ def test_kl_data_drift_classifier():
     # get first window of data
     training_set = stream.read_next_from_stream(stream_window)
     x, y, ids = training_set.x, training_set.y, training_set.ids
-    logger.debug("Full dataset loaded (%s): %d" % (args.dataset, X_full.shape[0]))
+    logger.debug("First window loaded (%s): %d" % (args.dataset, x.shape[0]))
 
     # train classifier with the window of data
     rf = RFClassifier.fit(x, y, n_estimators=n_trees)
