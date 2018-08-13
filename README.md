@@ -51,6 +51,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
       - **API Usage:** [How to employ AAD in your own application](#how-to-employ-aad-in-your-own-application)
       - [Data drift detection and model update with streaming data](#data-drift-detection)
+      - **Aside:** [Applying drift detection to tree-based classifiers](#applying-drift-detection-to-tree-based-classifiers)
       - [A bit of theoretical intuition](#intuition-behind-active-anomaly-discovery)
   - [Reducing activity sequences to i.i.d](#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
@@ -478,9 +479,13 @@ Following shows the results of integrating drift detection along with label feed
 
 **Why actively detect data drift?** This is a valid question: *why employ active drift detection if there is reason to believe that a less expensive passive approach such as always replacing a fraction of the model will work just as well?* The reason is that, in practice, analysts want to be alerted when there is a drift (maybe because other algorithms downstream have to be retrained). Only the active [drift detection] algorithms (such as *SAL (KL Adaptive)* in the plots above) offer this ability, not the passive ones (such as *SAL (Replace 20% Trees)* and *SAL (No Tree Replace)*). Active drift detection algorithms also need to be robust (low false positives/negatives) in order to be useful.
 
-**Drift detection with tree-based classifiers:** The above KL-divergence based method can be applied to detect drift with tree-based classifiers such as Random Forest as well. An example is shown in [python/aad/test_concept_drift_classifier.py](python/aad/test_concept_drift_classifier.py).
 
 The idea of partitioning the dataset to compute the KL-divergence threshold is motivated by: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
+
+
+Applying drift detection to tree-based classifiers
+--------------------------------------------------
+The above KL-divergence based method can be applied to detect drift with tree-based classifiers such as Random Forest as well. The example [python/aad/test_concept_drift_classifier.py](python/aad/test_concept_drift_classifier.py)uses the wrapper class [RandomForestAadWrapper](python/aad/classifier_trees.py)) to detect the drift with trees created by `sklearn.ensemble.RandomForestClassifier`.
 
 
 Intuition behind Active Anomaly Discovery
