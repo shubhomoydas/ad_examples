@@ -485,7 +485,7 @@ The idea of partitioning the dataset to compute the KL-divergence threshold is m
 
 Applying drift detection to tree-based classifiers
 --------------------------------------------------
-The above KL-divergence based method can be applied to detect drift with tree-based classifiers such as Random Forest as well. The example [python/aad/test_concept_drift_classifier.py](python/aad/test_concept_drift_classifier.py)uses the wrapper class [RandomForestAadWrapper](python/aad/classifier_trees.py)) to detect the drift with trees created by `sklearn.ensemble.RandomForestClassifier`.
+The above KL-divergence based method can be applied to detect drift with tree-based classifiers such as Random Forest as well. The example [python/aad/test_concept_drift_classifier.py](python/aad/test_concept_drift_classifier.py) uses the wrapper class [RandomForestAadWrapper](python/aad/classifier_trees.py) to detect the drift with trees created by `sklearn.ensemble.RandomForestClassifier`.
 
 
 Intuition behind Active Anomaly Discovery
