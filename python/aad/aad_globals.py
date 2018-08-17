@@ -118,6 +118,20 @@ query_type_names = ["", "top", "toprandom", "quantile", "random", "sequential", 
 
 
 # ==============================
+# Euclidean distance-based diversity:
+#   QUERY_EUCLIDEAN_DIST_MEAN - Selected instances in a query batch will
+#       be diversified by maximizing average distance to other instances
+#       in the same query batch.
+#   QUERY_EUCLIDEAN_DIST_MIN - Selected instances in a query batch will
+#       be diversified by maximizing the minimum distance to other instances
+#       in the same query batch.
+# ------------------------------
+QUERY_EUCLIDEAN_DIST_MEAN = 0
+QUERY_EUCLIDEAN_DIST_MIN = 1
+query_euclidean_dist_names = ["mean", "min"]
+
+
+# ==============================
 # Stream Retention types determine
 # which instances are retained in
 # memory when a new window of data
@@ -225,6 +239,9 @@ def get_aad_option_list():
                         help="Number of search candidates to use in each search state (when query_type=5)")
     parser.add_argument("--query_search_depth", action="store", type=int, default=1,
                         help="Depth of search tree (when query_type=5)")
+    parser.add_argument("--query_euclidean_dist_type", action="store", type=int, default=QUERY_EUCLIDEAN_DIST_MEAN,
+                        help="Type of euclidean diversity to employ for a query batch when querytype %d is selected" %
+                             QUERY_EUCLIDEAN)
     parser.add_argument("--debug", action="store_true", default=False,
                         help="Whether to enable output of debug statements")
     parser.add_argument("--log_file", type=str, default="", required=False,
@@ -444,6 +461,7 @@ class AadOpts(object):
         self.num_query_batch = args.num_query_batch
         self.query_search_candidates = args.query_search_candidates
         self.query_search_depth = args.query_search_depth
+        self.query_euclidean_dist_type = args.query_euclidean_dist_type
         self.optimlib = args.optimlib
         self.exclude = None
         self.keep = args.keep

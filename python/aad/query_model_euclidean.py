@@ -34,8 +34,8 @@ class DistanceCache(object):
         return self.size
 
 
-def get_average_euclidean_distance(all_instances, compare_to_indexes, ref_index, cached_distances=None):
-    """ Return the average euclidean distance from instance at ref_index to instances in compare_to_inedxes
+def get_mean_euclidean_distance(all_instances, compare_to_indexes, ref_index, cached_distances=None):
+    """ Return the average euclidean distance from instance at ref_index to instances in compare_to_indexes
 
     :param all_instances: np.ndarray(float)
         All instances in *original* feature space
@@ -62,7 +62,35 @@ def get_average_euclidean_distance(all_instances, compare_to_indexes, ref_index,
     return mean_dist
 
 
-def filter_by_euclidean_distance(x, instance_ids, init_selected=None, n_select=3):
+def get_min_euclidean_distance(all_instances, compare_to_indexes, ref_index, cached_distances=None):
+    """ Return the minimum euclidean distance from instance at ref_index to instances in compare_to_indexes
+
+    :param all_instances: np.ndarray(float)
+        All instances in *original* feature space
+    :param compare_to_indexes: list(int)
+        Instance indexes for instances to which mean euclidean distance needs to be computed
+    :param ref_index: int
+        Index of instance from which the euclidean distance will be computed
+    :returns float
+    """
+    if len(compare_to_indexes) == 0:
+        return 0.
+    min_dist = np.Inf
+    inst = all_instances[ref_index]
+    for i in compare_to_indexes:
+        if cached_distances is not None and cached_distances.has_dist(ref_index, i):
+            dist = cached_distances.get_dist(ref_index, i)
+        else:
+            diff = all_instances[i] - inst
+            dist = np.sum(diff ** 2)
+            if cached_distances is not None:
+                cached_distances.add_dist(ref_index, i, dist)
+        min_dist = min(min_dist, dist)
+    return min_dist
+
+
+def filter_by_euclidean_distance(x, instance_ids, init_selected=None, n_select=3,
+                                 dist_type=QUERY_EUCLIDEAN_DIST_MIN):
     """ Return the n most diverse instances based on euclidean distances
     :param x: np.ndarray(float)
         All instances in *original* feature space
@@ -70,6 +98,8 @@ def filter_by_euclidean_distance(x, instance_ids, init_selected=None, n_select=3
         The indexes to instances in the order of anomaly scores
     :param n_select: int
         Maximum number of instances to output
+    :param dist_type: int
+        The distance type to use {QUERY_EUCLIDEAN_DIST_MEAN | QUERY_EUCLIDEAN_DIST_MIN}
     """
     selected_instances = list()
     n_init_selected = 0
@@ -82,7 +112,14 @@ def filter_by_euclidean_distance(x, instance_ids, init_selected=None, n_select=3
         # find average distance to all other selected instances
         dists = np.zeros(len(candidates), dtype=np.float32)
         for i, inst in enumerate(candidates):
-            dists[i] = get_average_euclidean_distance(x, selected_instances, inst, cached_distances=cached_distances)
+            if dist_type == QUERY_EUCLIDEAN_DIST_MEAN:
+                dists[i] = get_mean_euclidean_distance(x, selected_instances, inst,
+                                                       cached_distances=cached_distances)
+            elif dist_type == QUERY_EUCLIDEAN_DIST_MIN:
+                dists[i] = get_min_euclidean_distance(x, selected_instances, inst,
+                                                      cached_distances=cached_distances)
+            else:
+                raise ValueError("invalid dist_type %d" % dist_type)
         # sort in descending order and retain input order in case of equal values
         # so that most anomalous are preferred
         sorted_inst_indexes = np.argsort(-dists, kind='mergesort')
@@ -118,7 +155,8 @@ class QueryTopDiverseByEuclideanDistance(Query):
             return None
 
         filtered_items = filter_by_euclidean_distance(ensemble.samples, items,
-                                                      n_select=min(remaining_budget, self.opts.num_query_batch))
+                                                      n_select=min(remaining_budget, self.opts.num_query_batch),
+                                                      dist_type=self.opts.query_euclidean_dist_type)
 
         return filtered_items
 

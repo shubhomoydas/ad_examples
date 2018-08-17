@@ -145,6 +145,18 @@ if [[ "${N_BATCH}" != "1" ]]; then
     N_BATCH_SIG="b${N_BATCH}"
 fi
 
+
+# =====================================================
+# QUERY_EUCLIDEAN_DIST_TYPE: Distance type to use when
+#    QUERY_TYPE==9.
+#   0 - Selected instances in a query batch will be diversified
+#       by maximizing average distance to other instances in the
+#       same query batch.
+#   1 - Selected instances in a query batch will be diversified
+#       by maximizing the minimum distance to other instances
+#       in the same query batch.
+QUERY_EUCLIDEAN_DIST_TYPE=0
+
 QUERY_SIG="q${QUERY_TYPE}${N_BATCH_SIG}"
 if [[ "${QUERY_TYPE}" == "2" || "${QUERY_TYPE}" == "8" || "${QUERY_TYPE}" == "9" ]]; then
     QUERY_SIG="q${QUERY_TYPE}n${N_EXPLORE}b${N_BATCH}"
@@ -628,6 +640,7 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     ${DO_NOT_UPDATE_WEIGHTS} ${TREE_UPDATE_TYPE} \
     ${MAX_LABELED_FOR_STREAM} ${LABELED_TO_WINDOW_RATIO} \
     ${QUERY_CONFIDENT} --max_windows=${MAX_WINDOWS} \
+    --query_euclidean_dist_type=${QUERY_EUCLIDEAN_DIST_TYPE} \
     --min_feedback_per_window=${MIN_FEEDBACK_PER_WINDOW} \
     --max_feedback_per_window=${MAX_FEEDBACK_PER_WINDOW} \
     ${STREAMING} ${ALLOW_STREAM_UPDATE} --stream_window=${STREAM_WINDOW} \
