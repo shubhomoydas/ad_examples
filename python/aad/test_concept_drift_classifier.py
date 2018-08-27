@@ -1,3 +1,4 @@
+from sklearn.ensemble import RandomForestClassifier as RF
 from aad.data_stream import *
 from common.gen_samples import read_anomaly_dataset
 from aad.anomaly_dataset_support import *
@@ -39,12 +40,13 @@ def test_kl_data_drift_classifier():
     logger.debug("First window loaded (%s): %d" % (args.dataset, x.shape[0]))
 
     # train classifier with the window of data
-    rf = RFClassifier.fit(x, y, n_estimators=n_trees)
-    logger.debug("Random Forest classifier created with %d trees" % rf.clf.n_estimators)
+    clf = RF(n_estimators=n_trees)
+    clf.fit(x, y)
+    logger.debug("Random Forest classifier created with %d trees" % clf.n_estimators)
 
     # prepare wrapper over the classifier which will compute KL-divergences
     # NOTE: rf.clf is the scikit-learn Random Forest classifier instance
-    model = RandomForestAadWrapper(x=x, y=y, clf=rf.clf)
+    model = RandomForestAadWrapper(x=x, y=y, clf=clf)
     logger.debug("Wrapper model created with %d nodes" % len(model.w))
 
     # compute KL replacement threshold *without* p

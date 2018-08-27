@@ -429,7 +429,7 @@ class RFClassifier(SKLClassifier):
         SKLClassifier.__init__(self)
 
     @staticmethod
-    def fit(x, y, n_estimators=10, max_depth=5):
+    def fit(x, y, n_estimators=10, max_depth=None):
         classifier = RFClassifier()
         classifier.clf = RF(n_estimators=n_estimators, max_depth=max_depth)
         classifier.clf.fit(x, y)
