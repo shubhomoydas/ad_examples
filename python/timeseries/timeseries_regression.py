@@ -167,17 +167,17 @@ if __name__ == "__main__":
                      'rfor': 'Random Forest Regression',
                      'svr':  'Support Vector Regression'}
     if args.algo not in allowed_algos.keys():
-        print "Invalid algo: %s. Allowed algos:" % args.algo
+        print ("Invalid algo: %s. Allowed algos:" % args.algo)
         for key, val in allowed_algos.iteritems():
-            print "  %s: %s" % (key, val)
+            print ("  %s: %s" % (key, val))
         exit(0)
 
     dataset = args.dataset
     # dataset = "airline"
     logger.debug("dataset: %s, reg_type: %s" % (dataset, reg_type))
     if not univariate_timeseries_datasets.has_key(dataset):
-        print "Invalid dataset: %s. Supported datasets: %s" % \
-              (dataset, str(univariate_timeseries_datasets.keys()))
+        print ("Invalid dataset: %s. Supported datasets: %s" %
+              (dataset, str(univariate_timeseries_datasets.keys())))
         exit(0)
     data = get_univariate_timeseries_data(dataset)
 

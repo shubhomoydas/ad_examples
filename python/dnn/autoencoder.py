@@ -86,4 +86,4 @@ if __name__ == "__main__":
 
     # autoencoder_visualize(x, args)
     auc = autoencoder_ad(x, y, args)
-    print "AUC for dataset %s: %f" % (args.dataset, auc)
+    print ("AUC for dataset %s: %f" % (args.dataset, auc))

@@ -100,8 +100,8 @@ def read_ts(dataset):
     if not (dataset == 'synthetic' or univariate_timeseries_datasets.has_key(dataset)):
         datasets = univariate_timeseries_datasets.keys()
         datasets.append('synthetic')
-        print "Invalid dataset: %s. Supported datasets: %s" % \
-              (dataset, datasets)
+        print ("Invalid dataset: %s. Supported datasets: %s" %
+              (dataset, datasets))
         return None
     if dataset == 'synthetic':
         samples = pd.read_csv("../datasets/simulated_timeseries/samples_2000.csv",
@@ -136,9 +136,9 @@ if __name__ == "__main__":
                      'ocsvm': 'One-class SVM',
                      'lof': 'Local Outlier Factor'}
     if args.algo not in allowed_algos.keys():
-        print "Invalid algo: %s. Allowed algos:" % args.algo
+        print ("Invalid algo: %s. Allowed algos:" % args.algo)
         for key, val in allowed_algos.iteritems():
-            print "  %s: %s" % (key, val)
+            print ("  %s: %s" % (key, val))
         exit(0)
 
     skip_size = None

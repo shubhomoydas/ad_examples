@@ -99,8 +99,8 @@ def plot_lag_difference(args):
 def forecast_and_report_anomalies(args):
 
     if not univariate_timeseries_datasets.has_key(args.dataset):
-        print "Invalid dataset: %s. Supported datasets: %s" % \
-              (args.dataset, str(univariate_timeseries_datasets.keys()))
+        print ("Invalid dataset: %s. Supported datasets: %s" %
+              (args.dataset, str(univariate_timeseries_datasets.keys())))
         return
 
     datasets = [args.dataset]
