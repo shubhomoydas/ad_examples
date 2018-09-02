@@ -158,7 +158,7 @@ fi
 QUERY_EUCLIDEAN_DIST_TYPE=0
 
 QUERY_SIG="q${QUERY_TYPE}${N_BATCH_SIG}"
-if [[ "${QUERY_TYPE}" == "2" || "${QUERY_TYPE}" == "8" || "${QUERY_TYPE}" == "9" ]]; then
+if [[ "${QUERY_TYPE}" == "2" || "${QUERY_TYPE}" == "8" || "${QUERY_TYPE}" == "9" || "${QUERY_TYPE}" == "10" ]]; then
     QUERY_SIG="q${QUERY_TYPE}n${N_EXPLORE}b${N_BATCH}"
 fi
 

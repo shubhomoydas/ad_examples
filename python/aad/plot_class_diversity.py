@@ -105,6 +105,14 @@ def get_result_names(result_type, stream_sig=""):
         return ['ifor_top_random', 'ifor_q8b3']
     elif result_type == "diverse - top":
         return ['ifor%s_q1b3' % stream_sig, 'ifor%s_q8b3' % stream_sig]
+    elif result_type == "diverse_euc - top_random":
+        return ['ifor_top_random', 'ifor%s_q10b3' % stream_sig]
+    elif result_type == "diverse_euc - top":
+        return ['ifor%s_q1b3' % stream_sig, 'ifor%s_q10b3' % stream_sig]
+    elif result_type == "diverse_euc - euclidean":
+        return ['ifor%s_q9b3' % stream_sig, 'ifor%s_q10b3' % stream_sig]
+    elif result_type == "diverse_euc - diverse":
+        return ['ifor%s_q8b3' % stream_sig, 'ifor%s_q10b3' % stream_sig]
     elif result_type == "diverse - euclidean":
         return ['ifor%s_q9b3' % stream_sig, 'ifor%s_q8b3' % stream_sig]
     else:
@@ -194,10 +202,14 @@ if __name__ == "__main__":
     # datasets = ['electricity']
     datasets = ['toy2']
     line_types = {"diverse - top": "-", "diverse - top_random": "--", "diverse - euclidean": "-."}
+    # line_types = {"diverse_euc - top": "-", "diverse_euc - top_random": "..",
+    #               "diverse_euc - euclidean": "-.", "diverse_euc - diverse": "--"}
 
     # diversity_comparisons = ["diverse - top", "diverse - top_random"]
     # diversity_comparisons = ["diverse - top", "diverse - euclidean"]
     diversity_comparisons = ["diverse - top", "diverse - top_random", "diverse - euclidean"]
+    # diversity_comparisons = ["diverse_euc - top", "diverse_euc - diverse"]
+    # diversity_comparisons = ["diverse_euc - top", "diverse_euc - euclidean", "diverse_euc - diverse"]
 
     class_diffs = []
     min_diff = np.Inf

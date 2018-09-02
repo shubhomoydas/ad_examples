@@ -344,6 +344,6 @@ def load_aad_metrics(opts):
         # print "Loading metrics" + fpath
         metrics = load(fpath)
     else:
-        print "Cannot load " + fpath
+        print ("Cannot load %s" % fpath)
     return metrics
 

@@ -1,4 +1,5 @@
 from aad.query_model import *
+from aad.query_model_euclidean import filter_by_euclidean_distance
 from aad.forest_aad_detector import *
 from aad.forest_description import *
 
@@ -13,6 +14,7 @@ class QueryTopDiverseSubspace(Query):
 
     def __init__(self, opts=None, **kwargs):
         Query.__init__(self, opts)
+        self.order_by_euclidean_diversity = False
 
     def update_query_state(self, **kwargs):
         pass
@@ -121,7 +123,18 @@ class QueryTopDiverseSubspace(Query):
                                                                       instance_indexes=instance_ids,
                                                                       region_indexes=compact_reg_idxs,
                                                                       model=model)
-            filtered_items = self.filter_by_diversity(instance_ids, region_memberships,
+
+            if self.order_by_euclidean_diversity:
+                # arrange instance_ids by euclidean diversity first
+                # logger.debug("ordering by euclidean diversity")
+                init_ordered_items = filter_by_euclidean_distance(ensemble.samples, instance_ids,
+                                                                  n_select=len(instance_ids),
+                                                                  dist_type=QUERY_EUCLIDEAN_DIST_MIN)
+                logger.debug("\ninstance_ids:\n%s\ninit_ordered_items:\n%s" % (str(instance_ids), str(init_ordered_items)))
+            else:
+                init_ordered_items = instance_ids
+
+            filtered_items = self.filter_by_diversity(init_ordered_items, region_memberships,
                                                       queried=queried_items,
                                                       n_select=min(remaining_budget, self.opts.num_query_batch))
             # logger.debug("\nitems:\n%s\nfiltered_items:\n%s\ninstance_ids:\n%s" % (str(items), str(filtered_items), str(instance_ids)))

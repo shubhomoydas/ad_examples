@@ -127,7 +127,7 @@ def filter_by_euclidean_distance(x, instance_ids, init_selected=None, n_select=3
         selected = candidates[selected_index]
         selected_instances.append(selected)
         candidates = np.delete(candidates, selected_index)
-    logger.debug("Euclidean selected:\n%s\namong\n%s" % (str(list(selected_instances)), str(instance_ids)))
+    # logger.debug("Euclidean selected:\n%s\namong\n%s" % (str(list(selected_instances)), str(instance_ids)))
     return selected_instances
 
 

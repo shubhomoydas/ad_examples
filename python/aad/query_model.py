@@ -38,6 +38,10 @@ class Query(object):
             module = importlib.import_module("aad.query_model_euclidean")
             class_ = getattr(module, "QueryTopDiverseByEuclideanDistance")
             return class_(opts, **kwargs)
+        elif querytype == QUERY_SUBSPACE_EUCLIDEAN:
+            obj = Query.get_custom_query_model(opts, **kwargs)
+            obj.order_by_euclidean_diversity = True
+            return obj
         else:
             raise ValueError("Invalid/unsupported query type %d" % (querytype,))
 

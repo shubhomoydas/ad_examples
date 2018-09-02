@@ -133,6 +133,9 @@ def get_result_defs(args):
     ifor_q9b3_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-euclidean-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
     ifor_q9b3_d = "if_aad_trees{trees}_samples256_i7_q9n10b3_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma1000_mn1000_d100_norm"
 
+    ifor_q10b3_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-diverse_euc-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
+    ifor_q10b3_d = "if_aad_trees{trees}_samples256_i7_q10n10b3_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma1000_mn1000_d100_norm"
+
     ifor_q2b3_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-toprandomb3-unifprior_adapt-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-{type}.csv"
     ifor_q2b3_d = "if_aad_trees{trees}_samples256_i7_q2n10b3_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_adapt_init1_ca1_cx1_ma1000_mn1000_d100_norm"
 
@@ -205,7 +208,7 @@ def get_result_defs(args):
                    filename=loda_f.format(dataset=args.dataset, budget=budget, type="baseline"),
                    subdir=loda_d.format(dataset=args.dataset, budget=budget),
                    queried=loda_f.format(dataset=args.dataset, budget=budget, type="queried")),
-        ResultDefs(name="ifor", display_name="BAL (Adaptive Prior)", dataset=args.dataset, num_anoms=num_anoms,
+        ResultDefs(name="ifor", display_name="BAL", dataset=args.dataset, num_anoms=num_anoms,
                    filename=ifor_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen"),
                    subdir=ifor_d.format(dataset=args.dataset, budget=budget, trees=100),
                    queried=ifor_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried")),
@@ -257,6 +260,10 @@ def get_result_defs(args):
                    filename=ifor_q9b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
                    subdir=ifor_q9b3_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
                    queried=ifor_q9b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried", window_size=window_size, max_windows=max_windows)),
+        ResultDefs(name="ifor_q10b3", display_name="BAL-DE", dataset=args.dataset, num_anoms=num_anoms,
+                   filename=ifor_q10b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
+                   subdir=ifor_q10b3_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),
+                   queried=ifor_q10b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="queried", window_size=window_size, max_windows=max_windows)),
         ResultDefs(name="ifor_stream_q8b3", display_name="SAL-D", dataset=args.dataset, num_anoms=num_anoms,
                    filename=ifor_stream_q8b3_f.format(dataset=args.dataset, budget=budget, trees=100, type="num_seen", window_size=window_size, max_windows=max_windows),
                    subdir=ifor_stream_q8b3_d.format(dataset=args.dataset, budget=budget, trees=100, window_size=window_size, max_windows=max_windows),

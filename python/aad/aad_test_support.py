@@ -92,18 +92,17 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
         plot_dataset_2D(X_train, labels, model, plot_rectangular_regions, regcols, outputdir)
 
     if plot_anomalous_regions:
-        print "plotting most anomalous regions after feedback to folder %s" % outputdir
+        print ("plotting most anomalous regions after feedback to folder %s" % outputdir)
         plot_anomalous_2D(X_train, labels, model, metrics, outputdir,
                           n_top=opts.describe_n_top, p=opts.describe_volume_p)
 
     if plot_some_regions:
-        print "plotting most anomalous regions (baseline) to folder %s" % outputdir
+        print ("plotting most anomalous regions (baseline) to folder %s" % outputdir)
         plot_top_regions(X_train, labels, model, pdf_folder=outputdir, n=50)
 
     if illustrate_query_diversity:
-        print "plotting query diversity to folder %s" % outputdir
-        plot_query_diversity(X_train, labels, X_train_new, model, metrics, outputdir,
-                             n_top=opts.describe_n_top, p=opts.describe_volume_p)
+        print ("plotting query diversity to folder %s" % outputdir)
+        plot_query_diversity(X_train, labels, X_train_new, model, metrics, outputdir, opts)
 
     if output_forest_original:
         n_found = evaluate_forest_original(X_train, labels, opts.budget, model, x_new=X_train_new)
@@ -111,7 +110,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
                    n_found, fmt='%3.2f', delimiter=",")
 
     if plot_forest_contours:
-        print "plotting contours to file %s" % pdfpath_orig_if_contours
+        print ("plotting contours to file %s" % pdfpath_orig_if_contours)
         plot_forest_contours_2D(X_train, labels, xx, yy, opts.budget, model,
                                 pdfpath_orig_if_contours, dash_xy, dash_wh)
 
@@ -127,7 +126,7 @@ def aad_unit_tests_battery(X_train, labels, model, metrics, opts,
                                         pdfpath_baseline, dash_xy, dash_wh, opts)
 
     if plot_aad and metrics is not None:
-        print "plotting feedback iterations in folder %s" % outputdir
+        print ("plotting feedback iterations in folder %s" % outputdir)
         plot_aad_2D(X_train, labels, X_train_new, xx, yy, model,
                     metrics, outputdir, dash_xy, dash_wh, opts)
 
@@ -304,7 +303,7 @@ def plot_model_baseline_contours_2D(x, y, x_transformed, xx, yy, budget, model,
     queried = np.argsort(-baseline_scores)
 
     n_found = np.cumsum(y[queried[np.arange(budget)]])
-    print n_found
+    print (n_found)
 
     dp = DataPlotter(pdfpath=pdfpath_contours, rows=1, cols=1)
     pl = dp.get_next_plot()
@@ -485,13 +484,16 @@ def plot_anomalous_2D(x, y, model, metrics, pdf_folder, n_top=-1, p=1):
     logger.debug(tm.message("plotted anomalous regions"))
 
 
-def plot_query_diversity(x, y, x_transformed, model, metrics, pdf_folder, n_top=-1, p=1):
+def plot_query_diversity(x, y, x_transformed, model, metrics, pdf_folder, opts):
     tm = Timer()
     tm.start()
     if is_forest_detector(model.detector_type):
         treesig = "_%d_trees" % model.n_estimators
     else:
         raise RuntimeError("Operation supported for only tree-based detectors...")
+
+    n_top = opts.describe_n_top
+    p = opts.describe_volume_p
 
     # logger.debug("queried:\n%s" % metrics.queried)
     # baseline_scores = model.get_score(x_transformed, model.get_uniform_weights())
@@ -540,11 +542,17 @@ def plot_query_diversity(x, y, x_transformed, model, metrics, pdf_folder, n_top=
                                                               model=model)
     # logger.debug("instance_ids:%s" % str(list(instance_ids)))
     # logger.debug("region_memberships:\n%s" % str(region_memberships))
-    query_model = QueryTopDiverseSubspace()
-    # now get a diverse subset of the top anomalous instances
-    filtered_items = query_model.filter_by_diversity(instance_ids, region_memberships,
-                                                     queried=None,
-                                                     n_select=n_selected_queries)
+    if opts.qtype == QUERY_EUCLIDEAN:
+        # get a diverse subset of the top anomalous instances
+        filtered_items = filter_by_euclidean_distance(x, instance_ids, n_select=n_selected_queries,
+                                                      dist_type=opts.query_euclidean_dist_type)
+    else:
+        # get a diverse subset of the top anomalous instances
+        query_model = QueryTopDiverseSubspace()
+        query_model.order_by_euclidean_diversity = opts.qtype == QUERY_SUBSPACE_EUCLIDEAN
+        filtered_items = query_model.filter_by_diversity(instance_ids, region_memberships,
+                                                         queried=None,
+                                                         n_select=n_selected_queries)
     # logger.debug("filtered_items: %s" % (str(list(filtered_items))))
 
     logger.debug("#candidate_region_indexes: %d" % len(candidate_region_indexes))
@@ -584,6 +592,6 @@ def test_ilp():
     G = cvxopt.matrix([[-1, 1], [3, 2], [2, 3], [-1, 0], [0, -1]], tc='d')
     h = cvxopt.matrix([1, 12, 12, 0, 0], tc='d')
     (status, x) = cvxopt.glpk.ilp(c, G.T, h, I=set([0, 1]))
-    print status
-    print x[0], x[1]
-    print sum(c.T * x)
+    print (status)
+    print ("%s, %s" % (str(x[0]), str(x[1])))
+    print (sum(c.T * x))
