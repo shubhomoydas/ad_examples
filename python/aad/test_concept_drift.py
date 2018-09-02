@@ -121,8 +121,8 @@ def test_kl_data_drift():
         pl = dp.get_next_plot()
         plt.xlim(xlim)
         plt.ylim(ylim)
-        plt.xlabel('window')
-        plt.ylabel('KL-divergence')
+        plt.xlabel('window', fontsize=12)
+        plt.ylabel('KL-divergence', fontsize=12)
         for i in range(window):
             ref_label = com_label = threshold_label = replaced_label = None
             ref_kls = all_reference_kls[i]
@@ -141,8 +141,8 @@ def test_kl_data_drift():
             pl.scatter([x_coord], [all_kl_q_alpha[i]], color="red", marker="+", s=30, label=threshold_label)
             pl.scatter(np.ones(len(ref_kls), dtype=np.float32)*x_coord + 0.1, com_kls,
                        color="green", marker="*", s=8, label=com_label)
-            pl.text(x_coord-0.2, replaced_y_coord, "(%d)"%trees_replaced[i], fontsize=8, label=replaced_label)
-        pl.legend(loc='upper left', prop={'size': 6})
+            pl.text(x_coord-0.2, replaced_y_coord, "(%d)"%trees_replaced[i], fontsize=10, label=replaced_label)
+        pl.legend(loc='upper right', prop={'size': 12})
         dp.close()
 
 

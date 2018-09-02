@@ -26,7 +26,7 @@ def get_n_intermediate(x, n=10):
 
 
 def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
-                 plot_sd=False, legend_loc='lower right', legend_datasets=None, axis_fontsize=20):
+                 plot_sd=False, legend_loc='lower right', legend_datasets=None, axis_fontsize=20, legend_size=14):
     dataset = results[0][0]
     dp = DataPlotter(pdfpath=pdffile, rows=1, cols=1)
     pl = dp.get_next_plot()
@@ -45,7 +45,7 @@ def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
             pts = get_n_intermediate(np.arange(len(num_found_avg) + i*5, dtype=int))
             pl.errorbar(pts, num_found_avg[pts], yerr=1.96*num_found_sd[pts], fmt='.', color=cols[i])
     if legend_datasets is None or dataset in legend_datasets:
-        pl.legend(loc=legend_loc, prop={'size': 14})
+        pl.legend(loc=legend_loc, prop={'size': legend_size})
     dp.close()
 
 
@@ -87,7 +87,7 @@ def get_result_names(result_type):
 
 
 def process_results(args, result_type="batch", plot=True, plot_sd=False,
-                    legend_loc='lower right', legend_datasets=None):
+                    legend_loc='lower right', legend_datasets=None, legend_size=14):
     result_names = get_result_names(result_type)
 
     cols = ["red", "green", "blue", "orange", "brown", "pink", "magenta", "black"]
@@ -109,7 +109,7 @@ def process_results(args, result_type="batch", plot=True, plot_sd=False,
         dir_create("./temp/aad_plots/%s" % result_type)
         plot_results(all_results, cols, "./temp/aad_plots/%s/num_seen-%s.pdf" % (result_type, args.dataset),
                      num_seen=num_seen, num_anoms=num_anoms, plot_sd=plot_sd,
-                     legend_loc=legend_loc, legend_datasets=legend_datasets)
+                     legend_loc=legend_loc, legend_datasets=legend_datasets, legend_size=legend_size)
     return all_results, num_anoms
 
 
@@ -170,6 +170,7 @@ if __name__ == "__main__":
     plot_sd = False
     legend_loc = 'lower right'
     legend_datasets = None
+    legend_size = 14
     if result_type == "batch":
         plot_sd = True
         legend_datasets = ["abalone"]
@@ -182,6 +183,8 @@ if __name__ == "__main__":
     if result_type == "diversity":
         datasets = ['ann_thyroid_1v3', 'mammography', 'shuttle_1v23567']
     elif result_type == "stream_diff":
+        legend_size = 20
+        legend_datasets = ["electricity"]
         datasets = ['covtype', 'electricity', 'weather']
         # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'covtype', 'kddcup', 'mammography', 'shuttle_1v23567', 'electricity', 'weather']
     elif result_type == "stream_diff08":
@@ -204,7 +207,7 @@ if __name__ == "__main__":
         args.dataset = dataset
         plot = (result_type != "diversity")
         all_results.append(process_results(args, result_type=result_type, plot=plot, plot_sd=plot_sd,
-                                           legend_loc=legend_loc, legend_datasets=legend_datasets))
+                                           legend_loc=legend_loc, legend_datasets=legend_datasets, legend_size=legend_size))
 
     if result_type == "diversity":
         plot_diversity_all(all_results, result_type)
