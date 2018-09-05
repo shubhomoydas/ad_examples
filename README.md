@@ -43,6 +43,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
   - [human-in-the-loop (active learning)](#active-anomaly-discovery-aad)
     - Active Anomaly Discovery ([batch setup](python/aad/aad_batch.py), [streaming setup](python/aad/aad_stream.py)) -- **Includes plots and illustrations (see sections below)**
       - [High-level summary of the approach](#active-anomaly-discovery-aad)
+      - [Cite this work](#cite-this-work-in-publications)
       - **Jump right in:** [General instructions on running AAD](#running-aad)
       - **Explanations and Interpretability:** [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
       - **Query strategies:** [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
@@ -114,8 +115,8 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
   - Das, S. (2017). *Incorporating User Feedback into Machine Learning Systems*, [PhD Thesis](http://ir.library.oregonstate.edu/concern/graduate_thesis_or_dissertations/9019s7533) [(pdf)](https://ir.library.oregonstate.edu/downloads/m900p057t) -- Much of the work on AAD in this repository originated during my PhD research.
 
 
-Citing this Work
-----------------
+Cite this work in publications
+------------------------------
 In case you find this **repository** useful or use in your own work, please cite it as:
 ```
 @misc{github:shubhomoydas:ad_examples,
