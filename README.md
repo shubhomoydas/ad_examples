@@ -114,6 +114,38 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
   - Das, S. (2017). *Incorporating User Feedback into Machine Learning Systems*, [PhD Thesis](http://ir.library.oregonstate.edu/concern/graduate_thesis_or_dissertations/9019s7533) [(pdf)](https://ir.library.oregonstate.edu/downloads/m900p057t) -- Much of the work on AAD in this repository originated during my PhD research.
 
 
+Citing this Work
+----------------
+In case you find this **repository** useful or use in your own work, please cite it as:
+```
+@misc{github:shubhomoydas:ad_examples,
+    author = "Shubhomoy Das",
+    title = "Active Anomaly Discovery",
+    year = "2018",
+    url = "\url{https://github.com/shubhomoydas/ad_examples}",
+    note = "[Online; accessed 05-Sep-2018]"
+}
+```
+
+The **publications** may be cited as:
+```
+@inproceedings{das:2016,
+    author={Shubhomoy Das and Weng-Keen Wong and Thomas G. Dietterich and Alan Fern and Andrew Emmott},
+    title={Incorporating Expert Feedback into Active Anomaly Discovery},
+    booktitle={IEEE ICDM},
+    year={2016}
+}
+
+@inproceedings{das:2017,
+    author={Shubhomoy Das and Weng-Keen Wong and Alan Fern and Thomas G. Dietterich and Md Amran Siddiqui},
+    title={Incorporating Expert Feedback into Tree-based Anomaly Detection},
+    booktitle={KDD IDEA Workshop},
+    year={2017}
+}
+
+```
+
+
 Running AAD
 -----------
 This codebase is my **research** platform. The main `bash` script `aad.sh` makes it easier to run all AAD experiments multiple times (in the spirit of scientific inquiry) so that final results can be averaged. I try to output results for different parameter settings into different folders (under `python/temp/aad`) so that results can be easily compared without conflicts. I also output to files the instance indexes (as 1-indexed and **not** 0-indexed) in the order they were queried for fine-grained analysis and visualization. If you want to introduce a new dataset with the least effort, then put its files under `datasets/anomaly` folder in the same format and structure as those of the `toy2` dataset and follow the same naming conventions. Else, a little effort would be needed to invoke the necessary data load APIs. You might also want to have a look at the [simplified API usage example](#how-to-employ-aad-in-your-own-application) (`python/aad/demo_aad.py`) below.
