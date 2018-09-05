@@ -80,7 +80,7 @@ def plot_learning(x, y, q, queried, aad, u_theta, dp, title=None,
         u = interpolate_2D_line_by_point_and_vec(np.array([0., 1.]), [0., 0.],
                                                  [np.cos(u_theta), np.sin(u_theta)])
         lines.append(u)
-        line_labels.append(r"True weights ${\bf u}$")
+        line_labels.append(r"True weights ${\bf w}^*$")
 
     # w0*x + w1*y = (1-aad.tau)
     if aad.fixed_tau:
@@ -173,13 +173,19 @@ if __name__ == "__main__":
 
     dp = DataPlotter(pdfpath=pdfpath, rows=1, cols=1)
 
+    plot_initial_only = True
     # logger.debug("Oracle: %s" % str(oracle.y))
     u = np.array([np.cos(u_theta), np.sin(u_theta)])
+    if plot_initial_only:
+        budget = 0
+        title = None
+    else:
+        budget = 30
+        title = r"initial (${\theta}$: %1.2f)" % (np.arccos(u.dot(aad.w)) * 180. / np.pi)
     plot_learning(x, y, None, queried, aad, u_theta, dp,
-                  title=r"initial (${\theta}$: %1.2f)" % (np.arccos(u.dot(aad.w)) * 180. / np.pi)
-                  # title=None, plot_xtau=False, plot_theta=True, plot_legends=True
+                  title=title,
+                  plot_xtau=False, plot_theta=plot_initial_only, plot_legends=plot_initial_only
                   )
-    budget = 30
     for iter in range(budget):
         # active learning step
         q = aad.get_query(x, queried)

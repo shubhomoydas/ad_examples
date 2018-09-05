@@ -114,6 +114,8 @@ def test_kl_data_drift():
             trees_replaced.append(0)
 
     if args.plot:
+        legend_datasets = None
+        # legend_datasets = ['ann_thyroid_1v3', 'weather']
         xlim = [0, window+1]
         ylim = [0, max_kl+3]
         dp = DataPlotter(pdfpath="./temp/test_concept_drift_%s.pdf" % args.dataset,
@@ -121,8 +123,8 @@ def test_kl_data_drift():
         pl = dp.get_next_plot()
         plt.xlim(xlim)
         plt.ylim(ylim)
-        plt.xlabel('window', fontsize=12)
-        plt.ylabel('KL-divergence', fontsize=12)
+        plt.xlabel('window', fontsize=18)
+        plt.ylabel('KL-divergence', fontsize=18)
         for i in range(window):
             ref_label = com_label = threshold_label = replaced_label = None
             ref_kls = all_reference_kls[i]
@@ -142,7 +144,8 @@ def test_kl_data_drift():
             pl.scatter(np.ones(len(ref_kls), dtype=np.float32)*x_coord + 0.1, com_kls,
                        color="green", marker="*", s=8, label=com_label)
             pl.text(x_coord-0.2, replaced_y_coord, "(%d)"%trees_replaced[i], fontsize=10, label=replaced_label)
-        pl.legend(loc='upper right', prop={'size': 12})
+        if legend_datasets is None or args.dataset in legend_datasets:
+            pl.legend(loc='upper left', prop={'size': 14})
         dp.close()
 
 
