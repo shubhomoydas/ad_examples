@@ -120,11 +120,11 @@ Cite this work in publications
 In case you find this **repository** useful or use in your own work, please cite it as:
 ```
 @misc{github:shubhomoydas:ad_examples,
-    author = "Shubhomoy Das",
-    title = "Active Anomaly Discovery",
-    year = "2018",
-    url = "\url{https://github.com/shubhomoydas/ad_examples}",
-    note = "[Online; accessed 05-Sep-2018]"
+    author = {Shubhomoy Das},
+    title = {Active Anomaly Discovery},
+    year = {2018},
+    howpublished = {\url{https://github.com/shubhomoydas/ad_examples}},
+    note = {[Online; accessed 05-Sep-2018]}
 }
 ```
 
