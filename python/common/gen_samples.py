@@ -56,8 +56,8 @@ def generate_dependent_normal_samples(n, mu, mcorr, dvar):
     np.fill_diagonal(mvar, 1.)
     # logger.debug("mvar:\n%s" % str(mvar))
     if d > 1:
-        for i in xrange(0, d-1):
-            for j in xrange(i+1, d):
+        for i in range(0, d-1):
+            for j in range(i+1, d):
                 mvar[j, i] = mvar[i, j]
         p = np.diag(np.sqrt(dvar))
         mvar = p.dot(mvar).dot(p)
@@ -173,7 +173,7 @@ def get_synthetic_samples(sampledefs=None, label_order=None, ns=None, stype=1):
         sampledefs, label_order, ns = get_sample_defs(stype=stype)
 
     s = np.zeros(shape=(0,2))
-    for i in xrange(0, len(sampledefs)):
+    for i in range(0, len(sampledefs)):
       n = ns[i]
       if n > 0:
           sampledef = sampledefs[i]
@@ -182,7 +182,7 @@ def get_synthetic_samples(sampledefs=None, label_order=None, ns=None, stype=1):
 
     label_cls = []
     anomaly_dataset = False
-    for i in xrange(len(ns)):
+    for i in range(len(ns)):
         if ns[i] > 0:
             if type(label_order[i]) == str and (label_order[i] == "anomaly" or
                                                 label_order[i] == "nominal"):

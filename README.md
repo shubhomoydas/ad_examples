@@ -14,7 +14,7 @@ Python libraries required:
 
     pip install -r requirements.txt
 
-Note: The code has been tested with **python 2.7**.
+Note: The code has been tested with **python 2.7** and **python 3.6.1**.
 
 
 Anomaly Detection Examples
@@ -63,7 +63,7 @@ There are multiple datasets (synthetic/real) supported. Change the code to work 
 
 To execute the code:
 
-1. **Run code from 'python' folder**. The outputs will be generated under 'temp' folder. The `pythonw` command is used on OSX, but `python` should be used on Linux.
+1. **Run code from 'python' folder**. The outputs will be generated under 'temp' folder. The `pythonw` command is used on OSX with python 2.7, but `python` should be used with Python 3.6 on OSX, or on Linux.
 
 2. To avoid import errors, make sure that `PYTHONPATH` is configured correctly to include the current dir: `.:/usr/local/lib/python`
 

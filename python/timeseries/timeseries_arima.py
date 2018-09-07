@@ -24,7 +24,7 @@ pythonw -m timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries
 def time_lag_diff(series):
     tmp = np.zeros(series.shape, dtype=series.dtype)
     n = len(tmp)
-    for i in xrange(1, n):
+    for i in range(1, n):
         tmp[i] = series[i] - series[i-1]
     return tmp
 
@@ -98,7 +98,7 @@ def plot_lag_difference(args):
 
 def forecast_and_report_anomalies(args):
 
-    if not univariate_timeseries_datasets.has_key(args.dataset):
+    if not args.dataset in univariate_timeseries_datasets:
         print ("Invalid dataset: %s. Supported datasets: %s" %
               (args.dataset, str(univariate_timeseries_datasets.keys())))
         return

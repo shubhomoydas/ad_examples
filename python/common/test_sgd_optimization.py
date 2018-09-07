@@ -26,7 +26,7 @@ def generate_data(p=11, n=400):
     x = np.sort(np.random.uniform(low=-1.0, high=1.0, size=n))
     X = np.zeros(shape=(n, p+1), dtype=float)
     X[:, 0] = 1.
-    for i in xrange(p):
+    for i in range(p):
         X[:, i+1] = x ** (i+1)
     # logger.debug("X:\n%s" % str(list(X)))
     e = np.random.normal(loc=0.0, scale=0.2, size=n)

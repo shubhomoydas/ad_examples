@@ -97,7 +97,7 @@ def find_anomalies_with_shingles(dataset, data, window_size=5, skip_size=None, a
 
 
 def read_ts(dataset):
-    if not (dataset == 'synthetic' or univariate_timeseries_datasets.has_key(dataset)):
+    if not (dataset == 'synthetic' or dataset in univariate_timeseries_datasets):
         datasets = univariate_timeseries_datasets.keys()
         datasets.append('synthetic')
         print ("Invalid dataset: %s. Supported datasets: %s" %

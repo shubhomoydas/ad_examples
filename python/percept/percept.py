@@ -46,7 +46,8 @@ def plot_learning(x, y, q, queried, aad, u_theta, dp, title=None,
     if ylim is not None:
         plt.ylim(ylim)
 
-    qidxs = np.array(queried.keys())
+    # print([int(v) for v in queried.keys()])
+    qidxs = np.array([int(v) for v in queried.keys()], dtype=int)
 
     nomls = np.where(y==0)[0]
     anoms = np.where(y==1)[0]
@@ -173,7 +174,7 @@ if __name__ == "__main__":
 
     dp = DataPlotter(pdfpath=pdfpath, rows=1, cols=1)
 
-    plot_initial_only = True
+    plot_initial_only = False
     # logger.debug("Oracle: %s" % str(oracle.y))
     u = np.array([np.cos(u_theta), np.sin(u_theta)])
     if plot_initial_only:

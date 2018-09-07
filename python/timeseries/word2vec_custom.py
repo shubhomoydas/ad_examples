@@ -127,7 +127,7 @@ class CustomWord2vec(object):
                         valid_word = self.code2sensor[valid_examples[j]]
                         nearest = (-sim_valid[j, :]).argsort()[1:top_k + 1]
                         log_str = 'Nearest to %s:' % valid_word
-                        for k in xrange(top_k):
+                        for k in range(top_k):
                             close_word = self.code2sensor[nearest[k]]
                             log_str = '%s %s,' % (log_str, close_word)
                         logger.debug(log_str)

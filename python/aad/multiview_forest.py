@@ -3,7 +3,7 @@ from __future__ import division
 import logging
 from sklearn.ensemble import IsolationForest
 
-from random_split_trees import *
+from aad.random_split_trees import *
 from common.utils import *
 
 

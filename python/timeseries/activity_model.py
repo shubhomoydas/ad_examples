@@ -213,13 +213,17 @@ if __name__ == "__main__":
     rnn.fit(acts_sub)
 
     x, y, states = rnn.transform(acts_sub)
-    logger.debug("states: %s, x: %s, y: %s" % (str(states.shape), str(x.shape), str(y.shape)))
+    # logger.debug("states: %s, x: %s, y: %s" % (str(states.shape), str(x.shape), str(y.shape)))
+    logger.debug("x: %s, y: %s" % (str(x.shape), str(y.shape)))
     y = np.reshape(y, newshape=(y.shape[0], -1))
     y_tr = y[:, -1]  # only the final activity label
-    logger.debug("states: %s, x: %s, y: %s" % (str(states.shape), str(x.shape), str(y_tr.shape)))
+    logger.debug("x: %s, y: %s" % (str(x.shape), str(y_tr.shape)))
 
     label_encodings = rnn.get_label_encodings()
     logger.debug("Encodings: %s\n%s" % (str(label_encodings.shape), str(label_encodings)))
+
+    if use_lstm:
+        exit(0)  # TODO: extract the state
 
     states_a = np.vstack([states, label_encodings])
     y_tr_a = np.asarray(np.hstack([y_tr, np.arange(n_classes, dtype=np.int32)]), dtype=int)

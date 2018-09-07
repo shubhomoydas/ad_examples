@@ -3,7 +3,7 @@ from common.gen_samples import *
 
 from aad.aad_support import *
 from aad.demo_aad import describe_instances
-from classifier_trees import *
+from aad.classifier_trees import *
 
 """
 pythonw -m aad.anomaly_vs_classifier --dataset=5 --algo=explain

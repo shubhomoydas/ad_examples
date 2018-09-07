@@ -64,7 +64,7 @@ univariate_timeseries_datasets = {
 
 
 def get_univariate_timeseries_data(dataset):
-    if not univariate_timeseries_datasets.has_key(dataset):
+    if not dataset in univariate_timeseries_datasets:
         raise ValueError("Allowed datasets: %s" % str(univariate_timeseries_datasets.keys()))
     dataset_def = univariate_timeseries_datasets[dataset]
     data = pd.read_csv("../datasets/%s" % dataset_def.path,
@@ -145,7 +145,7 @@ class TSeries(object):
         d_in = self.samples.shape[1]
         d_out = 0 if self.y is None else self.y.shape[1]
         batch_size = n if batch_size < 0 else batch_size
-        for i in xrange(0, n, batch_size):
+        for i in range(0, n, batch_size):
             x = np.zeros(shape=(batch_size, n_lags, d_in), dtype=np.float32)
             y = None
             if self.y is not None and not single_output_only:
@@ -188,7 +188,7 @@ class TSeries(object):
         y = None
         if self.y is not None: y = np.zeros(batch_size, dtype=np.int)
         l = 0
-        for i in xrange(0, n, skip_size):
+        for i in range(0, n, skip_size):
             et = min(n - i, window_size)
             x[l, 0:et, :] = self.samples[i:(i+et), :]
             w[l] = i

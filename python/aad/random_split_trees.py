@@ -858,7 +858,7 @@ class HSSplitter(object):
         self.n_samples = 0
         self.weighted_n_samples = None
         self.split_context = None
-        if random_state is None: print "No random state"
+        if random_state is None: print("No random state")
         self.random_state = check_random_state(random_state)
 
     def get_feature_ranges(self, X, rnd=None):

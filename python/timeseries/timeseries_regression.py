@@ -175,7 +175,7 @@ if __name__ == "__main__":
     dataset = args.dataset
     # dataset = "airline"
     logger.debug("dataset: %s, reg_type: %s" % (dataset, reg_type))
-    if not univariate_timeseries_datasets.has_key(dataset):
+    if not dataset in univariate_timeseries_datasets:
         print ("Invalid dataset: %s. Supported datasets: %s" %
               (dataset, str(univariate_timeseries_datasets.keys())))
         exit(0)

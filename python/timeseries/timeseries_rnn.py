@@ -6,7 +6,7 @@ import tensorflow as tf
 from common.utils import *
 from common.timeseries_datasets import *
 from common.data_plotter import *
-from timeseries_customRNN import TsRNNCustom
+from timeseries.timeseries_customRNN import TsRNNCustom
 
 # Just disables the warning, doesn't enable AVX/FMA
 import os
@@ -160,7 +160,7 @@ if __name__ == "__main__":
 
     dataset = args.dataset
     logger.debug("dataset: %s, algo: %s" % (dataset, args.algo))
-    if not univariate_timeseries_datasets.has_key(dataset):
+    if not dataset in univariate_timeseries_datasets:
         print ("Invalid dataset: %s. Supported datasets: %s" %
               (dataset, str(univariate_timeseries_datasets.keys())))
         exit(0)

@@ -319,7 +319,7 @@ class AadForest(Aad, StreamingSupport):
 
         n = x.shape[0]
         all_path_nodes = []
-        for i in xrange(n):
+        for i in range(n):
             path_nodes = []
             path_recurse(x[i, :], left, right, features, threshold, 0, path_nodes)
             all_path_nodes.append(path_nodes)
@@ -665,7 +665,7 @@ class AadForest(Aad, StreamingSupport):
                 n_tmp = x_tmp.shape[0]
                 node_regions = self.all_node_regions[i]
                 tree_paths = self.get_decision_path(x_tmp, tree)
-                for j in xrange(n_tmp):
+                for j in range(n_tmp):
                     k = len(tree_paths[j])
                     for node_idx in tree_paths[j]:
                         region_id = node_regions[node_idx]

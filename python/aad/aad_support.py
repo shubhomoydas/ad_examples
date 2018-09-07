@@ -1,4 +1,3 @@
-import cPickle
 import gzip
 
 from common.utils import *
@@ -9,7 +8,7 @@ from aad.aad_loss import *
 
 from aad.forest_aad_detector import *
 from aad.loda_aad import *
-from precomputed_aad import *
+from aad.precomputed_aad import *
 
 
 def get_aad_model(x, opts, random_state=None):
@@ -318,12 +317,14 @@ def write_sparsemat_to_file(fname, X, fmt='%.18e', delimiter=','):
 
 
 def save_aad_model(filepath, model):
+    import cPickle
     f = gzip.open(filepath, 'wb')
     cPickle.dump(model, f, protocol=cPickle.HIGHEST_PROTOCOL)
     f.close()
 
 
 def load_aad_model(filepath):
+    import cPickle
     f = gzip.open(filepath, 'rb')
     model = cPickle.load(f)
     f.close()
