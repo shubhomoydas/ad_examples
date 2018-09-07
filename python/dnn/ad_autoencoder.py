@@ -16,13 +16,13 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
+    dir_create("./temp/dnn")  # for logging and plots
+
     args = get_command_args(debug=True, debug_args=["--debug",
                                                     "--plot",
                                                     "--log_file=temp/dnn/ad_autoencoder.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
-
-    dir_create("./temp/dnn")  # for logging and plots
 
     ad_type = "pca"  # autoenc, pca
 

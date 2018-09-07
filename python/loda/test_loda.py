@@ -2,7 +2,7 @@ import numpy as np
 import numpy.random as rnd
 from aad.aad_globals import *
 from common.gen_samples import *
-from loda import *
+from loda.loda import *
 
 
 """
@@ -14,14 +14,14 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
+    dir_create("./temp/loda")  # for logging and plots
+
     args = get_aad_command_args(debug=False,
                                 debug_args=["--dataset=mammography",
                                             "--debug",
                                             "--log_file=temp/loda/test_loda.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
-
-    dir_create("./temp/loda")  # for logging and plots
 
     random.seed(args.randseed)
     rnd.seed(args.randseed)

@@ -305,14 +305,14 @@ class PairwiseLinearSVMClassifier(Classifier):
         self.set_classes(y)
         d = x.shape[1]
         M = len(self.index2cls_)
-        pairs = (M*(M-1))/2
+        pairs = int((M*(M-1))/2)
         # logger.debug("M: %d" % M)
 
         self.svms = []
         self.w_ = np.zeros(shape=(d, pairs), dtype=float)
         self.b_ = np.zeros(pairs, dtype=float)
         self.w_names = []
-        cls = self.cls2index_.keys()
+        cls = list(self.cls2index_.keys())
         pi = 0
         for i in range(len(cls)-1):
             k1 = cls[i]
