@@ -26,7 +26,7 @@ class DistanceCache(object):
         return self.dists[i][j]
 
     def has_dist(self, i, j):
-        if self.dists[i] is None or not j in self.dists[i]:
+        if self.dists[i] is None or not (j in self.dists[i]):
             return False
         return True
 
