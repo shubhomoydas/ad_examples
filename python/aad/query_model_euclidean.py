@@ -18,7 +18,7 @@ class DistanceCache(object):
     def add_dist(self, i, j, dist):
         if self.dists[i] is None:
             self.dists[i] = {}
-        if not j in self.dists[i]:
+        if j not in self.dists[i]:
             self.n_dists += 1
         self.dists[i][j] = dist
 
@@ -26,7 +26,7 @@ class DistanceCache(object):
         return self.dists[i][j]
 
     def has_dist(self, i, j):
-        if self.dists[i] is None or not (j in self.dists[i]):
+        if self.dists[i] is None or (j not in self.dists[i]):
             return False
         return True
 
