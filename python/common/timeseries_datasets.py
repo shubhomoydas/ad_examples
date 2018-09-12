@@ -75,6 +75,28 @@ def get_univariate_timeseries_data(dataset):
     return data
 
 
+def log_transform_series(series, eps=1.0):
+    """ Transform a series by element-wise log
+    transformed_series = log(series + eps)
+    :param series: np.ndarray
+    :param eps: real
+    :return: np.ndarray
+    """
+    new_series = np.log(series + eps)
+    return new_series
+
+
+def inverse_log_transform_series(series, eps=1.0):
+    """ Invert a previous element-wise log-transform
+    inverted_series = exp(series) - eps
+    :param series: np.ndarray
+    :param eps: real
+    :return: np.ndarray
+    """
+    new_series = np.exp(series) - eps
+    return new_series
+
+
 def difference_series(series):
     n, m = series.shape
     diffs = np.zeros((n, m), dtype=series.dtype)

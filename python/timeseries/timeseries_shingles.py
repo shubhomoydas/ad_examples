@@ -18,12 +18,12 @@ Anomaly detection in time series by breaking the series into windows ('shingles'
 and then treating each window as i.i.d feature vector.
 
 pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc --dataset=synthetic
-pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=6 --algo=ifor --normalize_trend --dataset=airline
+pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=6 --algo=ifor --normalize_trend --log_transform --dataset=airline
 """
 
 
 def find_anomalies_with_shingles(dataset, data, window_size=5, skip_size=None, ad_type="ifor",
-                                 normalize_trend=False, n_top=10, outliers_fraction=0.1):
+                                 normalize_trend=False, n_top=10, outliers_fraction=0.1, log_transform=False):
     """ Finds anomalous regions in time series using standard unsupervised detectors
 
     First the time series is chopped up into windows ('shingles').
@@ -31,11 +31,18 @@ def find_anomalies_with_shingles(dataset, data, window_size=5, skip_size=None, a
     """
     x = w = None
     n = 0
+    ts_data = data
+
+    if log_transform:
+        # log-transform now since the values are positive (in context of
+        # many real-world datasets line airline); otherwise, values become
+        # negative after de-trending
+        ts_data = log_transform_series(ts_data, eps=1.0)
+
     if normalize_trend:
         # remove trend from series
-        ts_data = difference_series(data)
-    else:
-        ts_data = data
+        ts_data = difference_series(ts_data)
+
     ts = TSeries(ts_data, y=None)
     for x_, _, w in ts.get_shingles(window_size, skip_size=skip_size, batch_size=-1):
         x = np.reshape(x_, newshape=(x_.shape[0], -1))
@@ -71,7 +78,8 @@ def find_anomalies_with_shingles(dataset, data, window_size=5, skip_size=None, a
     top_anoms = np.argsort(-scores)[0:n_top]
     logger.debug("top scores (%s):\n%s\n%s" % (ad_type, str(top_anoms), str(scores[top_anoms])))
 
-    pdfpath = "temp/timeseries/timeseries_shingles_%s_w%d_%s.pdf" % (dataset, window_size, ad_type)
+    pdfpath = "temp/timeseries/timeseries_shingles_%s_w%d%s_%s.pdf" % \
+              (dataset, window_size, "" if not log_transform else "_log", ad_type)
     dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=1)
 
     # plot the timeseries anomalies with the detrended series
@@ -155,4 +163,4 @@ if __name__ == "__main__":
 
     find_anomalies_with_shingles(args.dataset, data, window_size=args.n_lags, skip_size=None,
                                  ad_type=args.algo, normalize_trend=args.normalize_trend,
-                                 n_top=n_anoms, outliers_fraction=0.1)
+                                 n_top=n_anoms, outliers_fraction=0.1, log_transform=args.log_transform)

@@ -46,6 +46,8 @@ def get_option_list():
                         help="Number of time lags for timeseries models")
     parser.add_argument("--normalize_trend", action="store_true", default=False,
                         help="Whether to remove trend in timeseries by successive difference")
+    parser.add_argument("--log_transform", action="store_true", default=False,
+                        help="Whether to apply element-wise log transform to the timeseries")
     parser.add_argument("--n_anoms", type=int, default=10, required=False,
                         help="Number of top anomalies to report")
     parser.add_argument("--debug", action="store_true", default=False,

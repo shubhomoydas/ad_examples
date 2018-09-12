@@ -16,12 +16,19 @@
 \begin{figure}
 	\centering
 	\captionsetup{labelformat=empty}
-	\begin{subfigure}[b]{1.0\textwidth}
+	\begin{subfigure}[b]{0.45\textwidth}
 		%% trim=left bottom right top
 		\includegraphics[width=\textwidth, clip=true, trim=0mm 0mm 0mm 0mm]{timeseries_shingles_airline_w6_ifor}
 		\label{fig:airline}
+		\caption{Original data}
 	\end{subfigure}
-	\caption{Airline dataset: Shingle-based time-series outlier detection. The window size was set to $6$ and the anomaly detector employed was \textit{Isolation Forest}. Since a clear trend is present, we first de-trend the series by differencing with lag $1$. The \textbf{top row} shows the outlier windows detected in the de-trended series. The \textbf{bottom row} shows the corresponding outliers in the original series. In both plots, the outlier windows are shown in \textcolor{red}{red}. \textbf{Note:} There is no separate train or test set in this shingle-based approach.}
+	\begin{subfigure}[b]{0.45\textwidth}
+		%% trim=left bottom right top
+		\includegraphics[width=\textwidth, clip=true, trim=0mm 0mm 0mm 0mm]{timeseries_shingles_airline_w6_log_ifor}
+		\label{fig:airline_log}
+		\caption{Log-transformed data}
+	\end{subfigure}
+	\caption{Airline dataset: Shingle-based time-series outlier detection. The window size was set to $6$ and the anomaly detector employed was \textit{Isolation Forest}. Since a clear trend is present, we first de-trend the series by differencing with lag $1$. The \textbf{top rows} show the outlier windows detected in the de-trended series. The \textbf{bottom rows} show the corresponding outliers in the original series. In all plots, the outlier windows are shown in \textcolor{red}{red}. {\bf (a)} simply de-trending the original series does not stabilize the variance. {\bf (b)} log-transforming the original data is reasonable. This transformation is done {\em before} de-trending because the original data is positive. \textbf{Note:} There is no separate train or test set in this shingle-based approach.}
 	\label{fig:shingles_airline}
 \end{figure}
 
