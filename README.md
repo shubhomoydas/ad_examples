@@ -108,6 +108,8 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 
 
 **Reference(s)**:
+  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
+
   - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2016). *Incorporating Expert Feedback into Active Anomaly Discovery* in the Proceedings of the IEEE International Conference on Data Mining. [(pdf)](http://web.engr.oregonstate.edu/~wongwe/papers/pdf/ICDM2016.AAD.pdf)[(presentation)](https://github.com/shubhomoydas/aad/blob/master/overview/ICDM2016-AAD.pptx)
 
   - Das, S., Wong, W-K., Fern, A., Dietterich, T. and Siddiqui, A. (2017). *Incorporating Feedback into Tree-based Anomaly Detection*, KDD Interactive Data Exploration and Analytics (IDEA) Workshop. [(pdf)](https://arxiv.org/pdf/1708.09441)[(presentation)](https://github.com/shubhomoydas/pyaad/blob/master/presentations/IDEA17_slides.pptx)
@@ -117,18 +119,26 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 
 Cite this work in publications
 ------------------------------
-In case you find this **repository** useful or use in your own work, please cite it as:
+In case you find this **repository** useful or use in your own work, please cite it with the following BibTeX references:
 ```
+@article{das:2018,
+    author = {Shubhomoy Das and Md Rakibul Islam and Nitthilan Kannappan Jayakodi and Janardhan Rao Doppa},
+    title = {Active Anomaly Detection via Ensembles},
+    year = {2018},
+    howpublished = {\url{https://arxiv.org/abs/1809.06477}},
+    note = {[Online; accessed 19-Sep-2018]}
+}
+
 @misc{github:shubhomoydas:ad_examples,
     author = {Shubhomoy Das},
     title = {Active Anomaly Discovery},
     year = {2018},
     howpublished = {\url{https://github.com/shubhomoydas/ad_examples}},
-    note = {[Online; accessed 05-Sep-2018]}
+    note = {[Online; accessed 19-Sep-2018]}
 }
 ```
 
-The **publications** may be cited as:
+Other **publications** may be cited as:
 ```
 @inproceedings{das:2016,
     author={Shubhomoy Das and Weng-Keen Wong and Thomas G. Dietterich and Alan Fern and Andrew Emmott},
