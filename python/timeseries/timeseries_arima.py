@@ -17,7 +17,7 @@ detects time points with largest forecasting errors on the last 1/3 data. Are th
 Some examples motivated by:
     https://machinelearningmastery.com/arima-for-time-train_series-forecasting-with-python/
 
-pythonw -m timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --dataset=airline
+pythonw -m timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --log_transform --dataset=airline
 '''
 
 
@@ -112,6 +112,13 @@ def forecast_and_report_anomalies(args):
         tseries = np.array(data.iloc[:, 0], dtype=float)
         logger.debug("timeseries[%d]:\n%s" % (len(tseries), str(list(tseries))))
 
+        if args.log_transform:
+            # log-transform now since the values are positive (in context of
+            # many real-world datasets line airline); otherwise, values become
+            # negative after de-trending
+            tseries = log_transform_series(tseries, eps=1.0)
+            logger.debug("log transformed timeseries[%d]:\n%s" % (len(tseries), str(list(tseries))))
+
         tseries_diff = time_lag_diff(tseries)
 
         acf = stattools.acf(tseries_diff, nlags=40)
@@ -140,34 +147,34 @@ def forecast_and_report_anomalies(args):
             logger.debug("largest errors[%d]:\n%s" % (len(err_ordered), str(list(errors[err_ordered]))))
 
         if args.plot:
-            pdfpath = "temp/timeseries/timeseries_plot_%s.pdf" % dataset
+            pdfpath = "temp/timeseries/timeseries_plot_%s%s.pdf" % ("log_" if args.log_transform else "", dataset)
             dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=1)
 
             plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.5)
 
             pl = dp.get_next_plot()
-            plt.title("Time train_series %s" % dataset, fontsize=10)
+            plt.title("Time train_series %s%s" % ("log " if args.log_transform else "", dataset), fontsize=10)
             pl.plot(np.arange(0, len(tseries)), tseries, 'b-')
 
             pl = dp.get_next_plot()
-            plt.title("Difference(1) %s" % dataset, fontsize=10)
+            plt.title("Difference(1) %s%s" % ("log " if args.log_transform else "", dataset), fontsize=10)
             pl.plot(np.arange(0, len(tseries_diff)), tseries_diff, 'b-')
 
             pl = dp.get_next_plot()
-            plt.title("ACF %s" % dataset, fontsize=10)
+            plt.title("ACF %s%s" % ("log " if args.log_transform else "", dataset), fontsize=10)
             pl.plot(np.arange(0, len(acf)), acf, 'b-')
 
             pl = dp.get_next_plot()
-            plt.title("PACF %s" % dataset, fontsize=10)
+            plt.title("PACF %s%s" % ("log " if args.log_transform else "", dataset), fontsize=10)
             pl.plot(np.arange(0, len(pacf)), pacf, 'b-')
 
             if not args.explore_only:
                 pl = dp.get_next_plot()
-                plt.title("Residuals %s" % dataset, fontsize=10)
+                plt.title("Residuals %s%s" % ("log " if args.log_transform else "", dataset), fontsize=10)
                 pl.plot(np.arange(0, len(residuals)), residuals, 'b-')
 
                 pl = dp.get_next_plot()
-                plt.title("Forecast %s" % dataset, fontsize=10)
+                plt.title("Forecast %s%s" % ("log " if args.log_transform else "", dataset), fontsize=10)
                 pl.plot(np.arange(0, len(tseries)), tseries, 'b-')
                 pl.plot(np.arange(train_sz, train_sz + len(forecasts)), forecasts, 'r-')
                 # mark anomalous time points

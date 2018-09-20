@@ -53,7 +53,7 @@ class DiffScale(object):
 univariate_timeseries_datasets = {
     # "name": (path, use_cols, date_columns, index_column, ARIMA_order)
     # ARIMA_order: (AR, differences, MA, seasonality)
-    "airline": TsFileDef("AirlinePassengers/international-airline-passengers.csv", [1], False, None, (4, 1, 1, 12)),
+    "airline": TsFileDef("AirlinePassengers/international-airline-passengers.csv", [1], False, None, (3, 1, 1, 12)),
     "aus_beer": TsFileDef("AustralianBeerProduction/quarterly-beer-production-in-aus.csv", [2], False, None, (3, 1, 0, 4)),
     "lynx": TsFileDef("CanadianLynx/lynx_trappings.csv", [1], False, None, (4, 1, 1, 12)),
     "fisher_temp": TsFileDef("FisherRiver/mean-daily-temperature-fisher-ri.csv", [1], False, None, (4, 1, 0)),
