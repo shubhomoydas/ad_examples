@@ -547,9 +547,13 @@ With this setup, active learning can help discover the true anomaly region on th
 
 ![General Setup for Active Learning](figures/geometric_intuition_rect.png)
 
-The distribution of the angles between the normalized score vectors and the uniform weight vector can be checked with aad.test_hyperplane_angles. As a recommendation: the IForest leaf-based scores may be normalized (though, not required), but LODA based scores should **not** be normalized to unit length.
+The distribution of the angles between the normalized score vectors and the uniform weight vector can be checked with `aad.test_hyperplane_angles`. As a recommendation: the IForest leaf-based scores may be normalized (though, not required), but LODA based scores should **not** be normalized to unit length. The following command will generate the angle distribution plot for a dataset (e.g. *Abalone*), as shown in (Das et al. 2018) under the folder `python/temp/angles`.
+
+    bash ./aad.sh abalone 35 1 0.03 7 1 0 2 512 0 1 1
+
 
 **Reference(s)**:
+  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
   - David Cohn, Les Atlas, and Richard Ladner. *Improving generalization with active learning.* Machine Learning, 15(2):201–221, May 1994.
   - Maria-Florina Balcan, Andrei Z. Broder, and Tong Zhang. *Margin based active learning.* In COLT, 2007.
 
