@@ -556,6 +556,7 @@ The distribution of the angles between the normalized score vectors and the unif
   - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
   - David Cohn, Les Atlas, and Richard Ladner. *Improving generalization with active learning.* Machine Learning, 15(2):201–221, May 1994.
   - Maria-Florina Balcan, Andrei Z. Broder, and Tong Zhang. *Margin based active learning.* In COLT, 2007.
+  - Wu, K., Zhang, K., Fan, W., Edwards, A., and Philip, S. Y. *Rs-forest: A rapid density estimator for streaming anomaly detection.* In IEEE ICDM, 2014.
 
 
 ![Evidence of Angular Distribution in Read Data](figures/aad/angles.png)
