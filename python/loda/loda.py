@@ -430,12 +430,21 @@ class Loda(object):
         self.loda_model = loda(x, self.sparsity, mink=self.mink, maxk=self.maxk, verbose=self.verbose)
         self.m = self.loda_model.pvh.pvh.w.shape[1]
 
-    def decision_function(self, x):
+    def get_projection_scores(self, x):
         """ Smaller values mean more anomalous """
         if self.loda_model is None:
             raise RuntimeError("Loda model not initialized")
         hpdfs = get_all_hist_pdfs(x, self.loda_model.pvh.pvh.w, self.loda_model.pvh.pvh.hists)
         nlls = np.log(hpdfs)
+        return nlls
+
+    def decision_function(self, x):
+        """ Smaller values mean more anomalous """
+        if self.loda_model is None:
+            raise RuntimeError("Loda model not initialized")
+        # hpdfs = get_all_hist_pdfs(x, self.loda_model.pvh.pvh.w, self.loda_model.pvh.pvh.hists)
+        # nlls = np.log(hpdfs)
+        nlls = self.get_projection_scores(x)
         scores = np.sum(nlls, axis=1)
         return scores
 
