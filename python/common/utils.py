@@ -44,6 +44,8 @@ def get_option_list():
                         help="Budget for feedback")
     parser.add_argument("--n_epochs", type=int, default=200, required=False,
                         help="Max training epochs")
+    parser.add_argument("--train_batch_size", type=int, default=25, required=False,
+                        help="Batch size for stochastic gradient descent based training methods")
     parser.add_argument("--n_lags", type=int, default=12, required=False,
                         help="Number of time lags for timeseries models")
     parser.add_argument("--normalize_trend", action="store_true", default=False,
