@@ -56,6 +56,8 @@ def get_option_list():
                         help="Number of top anomalies to report")
     parser.add_argument("--afss_nodes", type=int, default=50, required=False,
                         help="Number of nodes in first layer of AFSS")
+    parser.add_argument("--afss_max_reps", type=int, default=1, required=False,
+                        help="Number of times the labeled instances may be repeated when performing SGD for AFSS")
     parser.add_argument("--afss_c_tau", type=float, default=1.0, required=False,
                         help="Penalty factor for aad loss with AFSS")
     parser.add_argument("--afss_bias_prob", type=float, default=0.50, required=False,
