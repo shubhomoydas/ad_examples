@@ -298,19 +298,21 @@ def load_donut_data(with_diffusion=False):
 
 
 class AnomalyDataOpts(object):
-    def __init__(self, dataset):
+    def __init__(self, dataset, datafile=None):
         """ Reads one of the standard anomaly detection datasets included with the codebase
 
         :param dataset: string
             name of one of the standard anomaly datasets included with the codebase
         """
-        self.datafile = "../datasets/anomaly/%s/fullsamples/%s_1.csv" % (dataset, dataset)
+        self.datafile = datafile
+        if self.datafile is None or self.datafile == "":
+            self.datafile = "../datasets/anomaly/%s/fullsamples/%s_1.csv" % (dataset, dataset)
         self.labelindex = 1 # Note: this is 1-indexed (*not* 0-indexed)
         self.startcol = 2 # Note: this is 1-indexed (*not* 0-indexed)
         self.header = 0
 
 
-def read_anomaly_dataset(dataset):
+def read_anomaly_dataset(dataset, datafile=None):
     """ Returns a standard dataset included with the codebase
 
     Supported datasets:
@@ -333,7 +335,7 @@ def read_anomaly_dataset(dataset):
     :param dataset: string
     :return: numpy.ndarray, numpy.array
     """
-    opts = AnomalyDataOpts(dataset)
+    opts = AnomalyDataOpts(dataset, datafile=datafile)
     x, y = read_data_as_matrix(opts)
     # logger.debug("x: %s" % str(x.shape))
     # logger.debug("x:\n%s" % str(x[0:2, :]))
