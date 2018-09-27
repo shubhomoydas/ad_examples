@@ -30,14 +30,28 @@ def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
     dataset = results[0][0]
     dp = DataPlotter(pdfpath=pdffile, rows=1, cols=1)
     pl = dp.get_next_plot()
-    plt.xlabel('# instances labeled', fontsize=axis_fontsize)
-    plt.ylabel('% of total anomalies seen', fontsize=axis_fontsize)
+
     plt.xlim([0, num_seen])
-    plt.ylim([0., 100.])
+    if num_anoms < 0:
+        # plot actual number of anomalies discovered instead of the fraction
+        ylabel = '# of anomalies seen'
+        ylim = 0.0
+        for result in results:
+            ylim = max(ylim, np.max(result[2]))
+        plt.ylim([0., ylim+2])
+    else:
+        ylabel = '% of total anomalies seen'
+        plt.ylim([0., 100.])
+
+    plt.xlabel('# instances labeled', fontsize=axis_fontsize)
+    plt.ylabel(ylabel, fontsize=axis_fontsize)
+
     for i, result in enumerate(results):
         num_found_avg = result[2]
-        num_found_avg = num_found_avg * 100. / num_anoms
-        num_found_sd = result[3] * 100. / num_anoms
+        num_found_sd = result[3]
+        if num_anoms > 0:
+            num_found_avg = num_found_avg * 100. / num_anoms
+            num_found_sd = num_found_sd * 100. / num_anoms
         logger.debug("label: %s" % result[1])
         pl.plot(np.arange(len(num_found_avg)), num_found_avg, '-',
                 color=cols[i], linewidth=1, label=result[1])
