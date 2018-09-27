@@ -43,6 +43,7 @@ def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
                 color=cols[i], linewidth=1, label=result[1])
         if plot_sd:
             pts = get_n_intermediate(np.arange(len(num_found_avg) + i*5, dtype=int))
+            pts = np.minimum(len(num_found_avg)-1, pts)
             pl.errorbar(pts, num_found_avg[pts], yerr=1.96*num_found_sd[pts], fmt='.', color=cols[i])
     if legend_datasets is None or dataset in legend_datasets:
         pl.legend(loc=legend_loc, prop={'size': legend_size})
