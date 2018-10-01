@@ -54,14 +54,6 @@ def get_option_list():
                         help="Whether to apply element-wise log transform to the timeseries")
     parser.add_argument("--n_anoms", type=int, default=10, required=False,
                         help="Number of top anomalies to report")
-    parser.add_argument("--afss_nodes", type=int, default=50, required=False,
-                        help="Number of nodes in first layer of AFSS")
-    parser.add_argument("--afss_max_reps", type=int, default=1, required=False,
-                        help="Number of times the labeled instances may be repeated when performing SGD for AFSS")
-    parser.add_argument("--afss_c_tau", type=float, default=1.0, required=False,
-                        help="Penalty factor for aad loss with AFSS")
-    parser.add_argument("--afss_bias_prob", type=float, default=0.50, required=False,
-                        help="Bias probability for AFSS")
     parser.add_argument("--debug", action="store_true", default=False,
                         help="Whether to enable output of debug statements")
     parser.add_argument("--plot", action="store_true", default=False,
