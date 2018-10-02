@@ -17,7 +17,7 @@ Python libraries required:
 Note: The code has been tested with **python 2.7** and **python 3.6.1**.
 
 The most important and **original work** in this repository pertains to active learning and demonstrates the power of *simplicity*:
-  - [Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work-in-publications))
+  - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work-in-publications))
   - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite](#cite-this-work-in-publications))
 
 
@@ -310,9 +310,11 @@ End-users find it easier to trust algorithms they understand and are familiar wi
 
 While the approach (outlined below) uses dynamic weighted ensembles, the most important aspect is the uniform prior over the *input space*. This approach of combining ensembles can potentially be applied for combining ensembles other than just for anomaly detection, and also in explore-exploit situations.
 
-**The usage of priors cannot be overstated in human-in-the-loop algorithms.** Any person who has to inspect the data one-by-one, usually does so (or **wants to do so**) in a *systematic* manner. It is therefore an imperative for the machine learning algorithms that they be predictable and let the user follow their system. **Priors** help setup this system in a principled manner. Optimization algorithms that ignore this aspect, clearly miss this point. GLAD places a prior on the input space such that analysts can expect that they will be presented instances (somewhat) in accordance with the baseline anomaly scores while also providing feedback. Without the prior, the order in which instances are presented could vary a lot.
-
 ![GLAD Approach](figures/glad/approach.png)
+
+**The usage of priors cannot be overstated in human-in-the-loop algorithms.** Any person who has to inspect the data one-by-one, usually does so (or **wants to do so**) in a *systematic* manner. It is therefore an imperative for the machine learning algorithms that they be predictable and let the user follow their system. **Priors** help setup this system in a principled manner. GLAD places a prior on the input space such that analysts can expect that they will be presented instances (somewhat) in accordance with the baseline anomaly scores while also providing feedback. Without the prior, the order in which instances are presented could vary a lot.
+
+We might consider GLAD as very similar to the tree-based AAD (Tree-AAD). Tree-AAD chops up the feature space into discrete subspaces and then puts an uniform prior on the subspaces. Now, if we take this view to an extreme and imagine that each point represents a subspace, we can see the connection to GLAD. While Tree-AAD assigned the discrete subspace scores to the instances, the scores assigned by GLAD are continuous, defined by the ensemble members.
 
 The architecture of GLAD is shown below.
 
