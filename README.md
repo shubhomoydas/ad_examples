@@ -16,9 +16,10 @@ Python libraries required:
 
 Note: The code has been tested with **python 2.7** and **python 3.6.1**.
 
-The most important and **original work** in this repository pertains to active learning and demonstrates the power of *simplicity*:
+This repository includes, among other examples, my own original research in active learning and data drift detection:
   - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work-in-publications))
   - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite](#cite-this-work-in-publications))
+  - [Data drift detection](#data-drift-detection)
 
 
 Anomaly Detection Examples
