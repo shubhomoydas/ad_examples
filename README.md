@@ -16,6 +16,10 @@ Python libraries required:
 
 Note: The code has been tested with **python 2.7** and **python 3.6.1**.
 
+The most important and **original work** in this repository pertains to active learning and demonstrates the power of *simplicity*:
+  - [Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite][#cite-this-work-in-publications])
+  - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite](#cite-this-work-in-publications))
+
 
 Anomaly Detection Examples
 ==========================
@@ -47,6 +51,8 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - **Jump right in:** [General instructions on running AAD](#running-aad)
       - **Explanations and Interpretability:** [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
       - **Query strategies:** [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
+      - **GLAD: GLocalized Anomaly Detection** ([glad_batch.py](python/glad/glad_batch.py))
+        - [Approach and architecture](#glocalized-anomaly-detection)
       - **Aside:** [When we have a lot of labeled data (both anomalies and nominals), should we employ a classifier instead of an anomaly detector?](#anomaly-detector-vs-classifier)
       - [Some properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
@@ -108,12 +114,14 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 
 
 **Reference(s)**:
-  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
+  - Das, S. and Doppa, J.R. (2018). *GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression*. *soon on arXiv*
 
-  - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2016). *Incorporating Expert Feedback into Active Anomaly Discovery* in the Proceedings of the IEEE International Conference on Data Mining. [(pdf)](http://web.engr.oregonstate.edu/~wongwe/papers/pdf/ICDM2016.AAD.pdf)[(presentation)](https://github.com/shubhomoydas/aad/blob/master/overview/ICDM2016-AAD.pptx)
+  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
 
   - Das, S., Wong, W-K., Fern, A., Dietterich, T. and Siddiqui, A. (2017). *Incorporating Feedback into Tree-based Anomaly Detection*, KDD Interactive Data Exploration and Analytics (IDEA) Workshop. [(pdf)](https://arxiv.org/pdf/1708.09441)[(presentation)](https://github.com/shubhomoydas/pyaad/blob/master/presentations/IDEA17_slides.pptx)
   
+  - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2016). *Incorporating Expert Feedback into Active Anomaly Discovery* in the Proceedings of the IEEE International Conference on Data Mining. [(pdf)](http://web.engr.oregonstate.edu/~wongwe/papers/pdf/ICDM2016.AAD.pdf)[(presentation)](https://github.com/shubhomoydas/aad/blob/master/overview/ICDM2016-AAD.pptx)
+
   - Das, S. (2017). *Incorporating User Feedback into Machine Learning Systems*, [PhD Thesis](http://ir.library.oregonstate.edu/concern/graduate_thesis_or_dissertations/9019s7533) [(pdf)](https://ir.library.oregonstate.edu/downloads/m900p057t) -- The work on AAD in this repository was developed during my PhD and Post-doctoral research.
 
 
@@ -122,9 +130,19 @@ Cite this work in publications
 In case you find this **repository** useful or use in your own work, please cite it with the following BibTeX references:
 ```
 @article{das:2018,
+    author = {Shubhomoy Das and Janardhan Rao Doppa},
+    title = {GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression},
+    year = {2018},
+    journal = {arXiv:tbd},
+    howpublished = {\url{https://arxiv.org/abs/tbd}},
+    note = {[Online; accessed 03-Oct-2018]}
+}
+
+@article{das:2018,
     author = {Shubhomoy Das and Md Rakibul Islam and Nitthilan Kannappan Jayakodi and Janardhan Rao Doppa},
     title = {Active Anomaly Detection via Ensembles},
     year = {2018},
+    journal = {arXiv:1809.06477},
     howpublished = {\url{https://arxiv.org/abs/1809.06477}},
     note = {[Online; accessed 19-Sep-2018]}
 }
@@ -133,6 +151,7 @@ In case you find this **repository** useful or use in your own work, please cite
     author = {Shubhomoy Das},
     title = {Active Anomaly Discovery},
     year = {2018},
+    journal = {arXiv:1708.09441},
     howpublished = {\url{https://github.com/shubhomoydas/ad_examples}},
     note = {[Online; accessed 19-Sep-2018]}
 }
@@ -283,6 +302,37 @@ To generate the below plots, perform the following steps (**remember to run the 
 ![Diversity Effect](figures/aad/diversity_effect.png)
 
 
+GLocalized Anomaly Detection
+------------------------------
+**Glocal** ([according to Wikipedia](https://en.wikipedia.org/wiki/Glocal)): *reflecting or characterized by both local and global considerations*.
+
+End-users find it easier to trust algorithms they understand and are familiar with. Such algorithms are typically built on broadly general and simplifying assumptions over the entire feature space (i.e., *global* behavior), which might not be applicable universally (i.e., not relevant *locally* in some parts of the feature space) in an application domain. This observation is true of most machine learning algorithms including those for anomaly detection. **GL**ocalized **A**nomaly **D**etection (GLAD) was designed to allow a human analyst to continue using anomaly detection ensembles with global behavior by learning their local relevance in different parts of the feature space via label feedback.
+
+The approach is outlined below. The while the approach uses dynamic weighted ensembles, the most important aspect is the uniform prior over the *input space*. This approach of combining ensembles can potentially be applied for combining ensembles other than just for anomaly detection, and also in explore-exploit situations.
+
+**The usage of priors cannot be overstated in human-in-the-loop algorithms.** Any person who has to inspect data, usually does so (or **wants to do so**) in a *systematic* manner. It is therefore an imperative for the machine learning algorithms that they be predictable and let the user follow their system. **Priors** help setup this system in a principled manner. Optimization algorithms that ignore this aspect, clearly miss this point.
+
+GLAD places a prior on the input space such that analysts can expect that they will be presented instances (somewhat) in accordance with the baseline anomaly scores while also providing feedback. Without the prior, the order in which instances are presented could vary a lot.
+
+![GLAD Approach](figures/glad/approach.png)
+
+The architecture of GLAD is shown below.
+
+![GLAD Architecture](figures/glad/architecture.png)
+
+The results on the *Toy2* dataset are shown below. In order to generate these figures, run the following commands (replace `python` with `pythonw` if facing problems with python 2.7):
+    
+    python -m glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --n_anoms=60 --loda_debug --plot --op=unit
+    
+    python -m glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --budget=60 --loda_debug --plot
+
+
+![GLAD Toy2](figures/glad/glad_toy2.png)
+
+**Reference(s)**:
+  - Das, S. and Doppa, J.R. (2018). *GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression*. *soon on arXiv*
+  
+
 Anomaly Detector vs Classifier
 ------------------------------
 A question that comes up often is: *if we have a lot of labeled anomaly and nominal instances, then could we employ a classifier instead of an anomaly detector?* The answer is: **it depends on the dataset and the application**. We illustrate the difference between the behavior of an anomaly detector (AAD) and a classifier (Random Forest) in the figure below. The compact description strategy of AAD is also applicable to tree-based classifiers (such as decision trees and random forests) as demonstrated in the plots. These figures were generated by the following command.
@@ -314,179 +364,9 @@ In case scores from anomaly detector ensembles are available in a CSV file, then
 
 How to employ AAD in your own application
 -----------------------------------------
-The below code (in [demo_aad.py](python/aad/demo_aad.py)) shows the simpest AAD implementation that can be used as a template by other developers. To load a different dataset, replace `get_synthetic_samples(stype=2)` (below) with the appropriate function(s). The following command executes the code; check the generated log file `python/temp/demo_aad.log` for details such as anomaly descriptions.
+The [demo_aad.py](python/aad/demo_aad.py) shows the simpest AAD implementation that can be used as a template by other developers. To load a different dataset, replace `get_synthetic_samples(stype=2)` (in the code) with the appropriate function(s). The following command executes the code; check the generated log file `python/temp/demo_aad.log` for details such as anomaly descriptions.
 
     pythonw -m aad.demo_aad
-
-
-```python
-
-from common.data_plotter import *
-from common.gen_samples import *
-
-from aad.aad_support import *
-from aad.forest_description import *
-
-"""
-A simple no-frills demo of how to use AAD in an interactive loop.
-
-To execute:
-pythonw -m aad.demo_aad
-"""
-
-logger = logging.getLogger(__name__)
-
-
-def get_debug_args(budget=30, detector_type=AAD_IFOREST):
-    # return the AAD parameters what will be parsed later
-    return ["--resultsdir=./temp", "--randseed=42",
-            "--reruns=1",
-            "--detector_type=%d" % detector_type,
-            "--forest_score_type=%d" %
-            (IFOR_SCORE_TYPE_NEG_PATH_LEN if detector_type == AAD_IFOREST
-             else HST_LOG_SCORE_TYPE if detector_type == AAD_HSTREES
-             else RSF_SCORE_TYPE if detector_type == AAD_RSFOREST else 0),
-            "--init=%d" % INIT_UNIF,  # initial weights
-            "--withprior", "--unifprior",  # use an (adaptive) uniform prior
-            # ensure that scores of labeled anomalies are higher than tau-ranked instance,
-            # while scores of nominals are lower
-            "--constrainttype=%d" % AAD_CONSTRAINT_TAU_INSTANCE,
-            "--querytype=%d" % QUERY_DETERMINISIC,  # query strategy
-            "--num_query_batch=1",  # number of queries per iteration
-            "--budget=%d" % budget,  # total number of queries
-            "--tau=0.03",
-            # normalize is NOT required in general.
-            # Especially, NEVER normalize if detector_type is anything other than AAD_IFOREST
-            # "--norm_unit",
-            "--forest_n_trees=100", "--forest_n_samples=256",
-            "--forest_max_depth=%d" % (100 if detector_type == AAD_IFOREST else 7),
-            # leaf-only is preferable, else computationally and memory expensive
-            "--forest_add_leaf_nodes_only",
-            "--ensemble_score=%d" % ENSEMBLE_SCORE_LINEAR,
-            "--resultsdir=./temp",
-            "--log_file=./temp/demo_aad.log",
-            "--debug"]
-
-
-def describe_instances(x, instance_indexes, model, opts):
-    """ Generates compact descriptions for the input instances
-
-    :param x: np.ndarray
-        The instance matrix with ALL instances
-    :param instance_indexes: np.array(dtype=int)
-        Indexes for the instances which need to be described
-    :param model: Aad
-        Trained Aad model
-    :param opts: AadOpts
-    :return: tuple, list(map)
-        tuple: (region indexes, #instances among instance_indexes that fall in the region)
-        list(map): list of region extents where each region extent is a
-            map {feature index: feature range}
-    """
-    if not is_forest_detector(opts.detector_type):
-        raise ValueError("Descriptions only supported by forest-based detectors")
-
-    # get feature ranges which will be used to compute volumes
-    feature_ranges = get_sample_feature_ranges(x)
-
-    # get top region indexes which will be candidates for description
-    reg_idxs = get_regions_for_description(x, instance_indexes=instance_indexes,
-                                           model=model, n_top=opts.describe_n_top)
-
-    # get volume of each candidate region
-    volumes = get_region_volumes(model, reg_idxs, feature_ranges)
-
-    # get the smallest set of smallest regions that together cover all instances
-    selected_region_idxs = get_compact_regions(x, model=model,
-                                               instance_indexes=instance_indexes,
-                                               region_indexes=reg_idxs,
-                                               volumes=volumes, p=opts.describe_volume_p)
-    desc_regions = [model.all_regions[ridx].region for ridx in selected_region_idxs]
-    _, memberships = get_region_memberships(x, model, instance_indexes, selected_region_idxs)
-    instances_in_each_region = np.sum(memberships, axis=0)
-    if len(instance_indexes) < np.sum(instances_in_each_region):
-        logger.debug("\nNote: len instance_indexes (%d) < sum of instances_in_each_region (%d)\n"
-                     "because some regions overlap and cover the same instance(s)." %
-                     (len(instance_indexes), np.sum(instances_in_each_region)))
-    return zip(selected_region_idxs, instances_in_each_region), desc_regions
-
-
-def detect_anomalies_and_describe(x, y, opts):
-    rng = np.random.RandomState(opts.randseed)
-
-    # prepare the AAD model
-    model = get_aad_model(x, opts, rng)
-    model.fit(x)
-    model.init_weights(init_type=opts.init)
-
-    # get the transformed data which will be used for actual score computations
-    x_transformed = model.transform_to_ensemble_features(x, dense=False, norm_unit=opts.norm_unit)
-
-    # populate labels as some dummy value (-1) initially
-    y_labeled = np.ones(x.shape[0], dtype=int) * -1
-
-    # at this point, w is uniform weight. Compute the number of anomalies
-    # discovered within the budget without incorporating any feedback
-    baseline_scores = model.get_score(x_transformed, model.w)
-    baseline_queried = np.argsort(-baseline_scores)
-    baseline_found = np.cumsum(y[baseline_queried[np.arange(opts.budget)]])
-    print("baseline found:\n%s" % (str(list(baseline_found))))
-
-    qstate = Query.get_initial_query_state(opts.qtype, opts=opts, budget=opts.budget)
-    queried = []  # labeled instances
-    ha = []  # labeled anomaly instances
-    hn = []  # labeled nominal instances
-    while len(queried) < opts.budget:
-        ordered_idxs, anom_score = model.order_by_score(x_transformed)
-        qx = qstate.get_next_query(ordered_indexes=ordered_idxs,
-                                   queried_items=queried)
-        queried.extend(qx)
-        for xi in qx:
-            y_labeled[xi] = y[xi]  # populate the known labels
-            if y[xi] == 1:
-                ha.append(xi)
-            else:
-                hn.append(xi)
-
-        # incorporate feedback and adjust ensemble weights
-        model.update_weights(x_transformed, y_labeled, ha=ha, hn=hn, opts=opts, tau_score=opts.tau)
-
-        # most query strategies (including QUERY_DETERMINISIC) do not have anything
-        # in update_query_state(), but it might be good to call this just in case...
-        qstate.update_query_state()
-
-    # the number of anomalies discovered within the budget while incorporating feedback
-    found = np.cumsum(y[queried])
-    print("AAD found:\n%s" % (str(list(found))))
-
-    # generate compact descriptions for the detected anomalies
-    if len(ha) > 0:
-        ridxs_counts, region_extents = describe_instances(x, np.array(ha), model=model, opts=opts)
-        logger.debug("selected region indexes and corresponding instance counts (among %d):\n%s" %
-                     (len(ha), str(list(ridxs_counts))))
-        logger.debug("region_extents: these are of the form [{feature_index: (feature range), ...}, ...]\n%s" %
-                     (str(region_extents)))
-
-
-if __name__ == "__main__":
-
-    # Prepare the aad arguments. It is easier to first create the parsed args and
-    # then create the actual AadOpts from the args
-    args = get_aad_command_args(debug=True, debug_args=get_debug_args())
-    configure_logger(args)
-
-    opts = AadOpts(args)
-    logger.debug(opts.str_opts())
-
-    np.random.seed(opts.randseed)
-
-    # load synthetic (toy 2) dataset
-    x, y = get_synthetic_samples(stype=2)
-
-    # run interactive anomaly detection loop
-    detect_anomalies_and_describe(x, y, opts)
-
-```
 
 
 Data Drift Detection

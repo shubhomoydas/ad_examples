@@ -1,0 +1,60 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{dsfont}
+
+\usepackage{graphicx}  %Required
+
+\usepackage[font=small,labelfont=sf,skip=0pt]{caption}
+\usepackage[caption=true,font=small,labelfont=sf,textfont=sf,skip=0pt]{subfig}
+\usepackage{wrapfig}
+\usepackage{floatrow}
+
+\title{GLAD: {\bf GL}ocalized {\bf A}nomaly {\bf D}etection via Active Feature Space Suppression}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\begin{figure*}[t]
+	\centering
+	\captionsetup{labelformat=empty}
+	\subfloat{\includegraphics[width=1.0\textwidth]{figures/AFSS.png}} \\[-1ex]
+	\caption{GLAD Architecture. The anomaly detection ensemble contains $M$ detectors. We assume that these are all pre-trained and cannot be modified. The final layer of the Feature Space Suppression Network (FSSN) contains $M$ sigmoid outputs, with each one paired with a corresponding ensemble member. Each output node in the FSSN is initially primed to predict the same probability ($0.5$ in our experiments) across the entire feature space. It then receives feedback from the analyst and learns which parts of the feature space are \textit{\textbf{relevant}} for each detector. For an instance ${\bf x}$, $s({\bf x})_m$ denotes the score assigned to it by the $m$-th detector, while $p({\bf x})_m$ denotes the probability computed by the FSSN that the $m$-th detector is relevant. The final anomaly score for an instance ${\bf x}$ is the sum of all its scores from each detector weighted by the corresponding relevances.}
+	\label{fig:architecture}
+\end{figure*}
+
+\paragraph{Approach} In order to customize an anomaly detector $\mathcal{D}_m$ for a particular task, we start by decomposing the anomaly score it assigns to an instance ${\bf x}$ into two parts: {\bf (a)} the original score $s_m({\bf x})$, and {\bf (b)} the \textit{relevance} $p_m({\bf x}) \in [0, 1]$. The score assigned by $\mathcal{D}_m$ is then $s_m({\bf x})p_m({\bf x})$. The overall anomaly score is computed as: $score({\bf x}) = \sum_{m=1}^M{s_m({\bf x})p_m({\bf x})}$.
+
+Initially, each detector is assumed to be uniformly relevant in every part of the input space. This assumption is implemented by priming a neural network referred to as \textit{FSSN} to predict the same probability value $b \in [0, 1]$ for every input using the $\ell_{prior}$ loss in Equation~\ref{eqn:prior}. \textit{In effect, this imposes \textbf{an uniform prior over the input space $\mathcal{X}$}}  (rather than the parameter space) for the relevance of each detector. When all detectors have the same relevance, the final anomaly score simply corresponds to the average score across all detectors (up to a multiplicative constant), and is \textbf{a good starting point for active learning.} Next, the algorithm receives label feedback from an analyst and determines whether the ensemble made an error (i.e., assigned a high score to a nominal). If so, the FSSN tries to suppress all errant detectors using a combination of $\ell_{prior}$ and the AAD loss $\ell_{AAD}$ for similar inputs: $\ell_{FSSN}({\bf x}) = \ell_{AAD}({\bf x}) + \lambda \ell_{prior}({\bf x})$.
+
+\begin{align}
+\ell_{prior}({\bf x}) &= \sum_{m=1}^M{-b\log(p_m({\bf x})) -(1 - b)\log(1 - p_m({\bf x}))} \label{eqn:prior}
+\end{align}
+
+\begin{figure*}[h]
+	\centering
+	\captionsetup{labelformat=empty}
+	\subfloat[Baseline LODA score contours]{\includegraphics[width=0.48\textwidth]{figures/test_afss_toy2_loda_4w.pdf} \label{fig:loda_all}} 
+	\subfloat[Score contours for each LODA projection]{\includegraphics[width=0.48\textwidth]{figures/test_loda_toy2_active_4w_ensemble.pdf} \label{fig:loda_scores}} \\
+	\subfloat[Initial uniform relevance ($b=0.5$)]{\includegraphics[width=0.48\textwidth]{figures/test_afss_toy2_active_4w_before.pdf} \label{fig:loda_uniform}} 
+	\subfloat[Relevance after 30 feedback iterations]{\includegraphics[width=0.48\textwidth]{figures/test_afss_toy2_active_4w_f30_after.pdf} \label{fig:loda_relevance}} \\[-1ex]
+	\caption{\textit{Toy} data. More red on the \textbf{top row} indicates more \textit{anomalous}. More red on the \textbf{bottom row} indicates more \textit{relevant}. The red `$\times$' are true anomalies and grey `$\times$' are true nominals. {\bf (a)} LODA with four projections (green lines) applied to the \textit{Toy} dataset. {\bf (b)} The contours of only the \textit{bottom left} LODA projection are somewhat aligned with the true anomalies, i.e., most anomalies lie in the higher anomaly score regions. Other projections are highly inaccurate. {\bf (c)} The output nodes of the FSSN are initially primed to return a relevance of $0.5$ everywhere in the feature space. {\bf (d)} The points circled in green were shown to the analyst for labeling, one per feedback iteration. After $30$ iterations, the bottom left projection was found to be most relevant in the top-right half-space, whereas it is completely irrelevant in the bottom-left half-space. Other projections were less relevant in most parts of the feature space.}
+	\label{fig:dataset}
+\end{figure*}
+
+\paragraph{Toy Data} The \textit{Toy} dataset and the corresponding LODA ensembles have been shown below as an illustration of how GLAD works. We find that GLAD learns useful relevance information that can be of help to the analyst.
+
+\end{document}

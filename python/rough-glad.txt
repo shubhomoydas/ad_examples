@@ -1,0 +1,49 @@
+
+bash ./glad.sh toy2 35 1 0.03 loda
+
+bash ./glad.sh toy2 150 10 0.03 loda
+
+# bash on Mac OSX:
+nohup bash ./glad.sh abalone 150 10 0.03 loda &
+nohup bash ./glad.sh ann_thyroid_1v3 150 10 0.03 loda &
+nohup bash ./glad.sh cardiotocography_1 150 10 0.03 loda &
+nohup bash ./glad.sh yeast 150 10 0.03 loda &
+
+nohup bash ./glad.sh mammography 150 10 0.03 loda &
+nohup bash ./glad.sh shuttle_1v23567 150 10 0.03 loda &
+
+nohup bash ./glad.sh kddcup 150 10 0.03 loda &
+nohup bash ./glad.sh covtype 150 10 0.03 loda &
+
+
+=============================
+# Unit tests with Toy data
+
+python -m glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy --op=unit --n_anoms=60 --loda_debug
+
+python -m glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --op=unit --n_anoms=60 --loda_debug --plot
+
+python -m glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --budget=30 --op=active --loda_debug --plot
+
+
+=============================
+# Test on real datasets
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_abalone.log --debug --dataset=abalone --budget=60
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_yeast.log --debug --dataset=yeast --budget=60
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_cardiotocography_1.log --debug --dataset=cardiotocography_1 --budget=60
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_ann_thyroid_1v3.log --debug --dataset=ann_thyroid_1v3 --budget=60
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_mammography.log --debug --dataset=mammography --budget=150
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_electricity.log --debug --dataset=electricity --budget=150
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_weather.log --debug --dataset=weather --budget=150
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_shuttle_1v23567.log --debug --dataset=shuttle_1v23567 --budget=150
+
+python -m glad.glad_batch --log_file=temp/glad/test_glad_kddcup.log --debug --dataset=kddcup --budget=150
+
