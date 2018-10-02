@@ -17,7 +17,7 @@ Python libraries required:
 Note: The code has been tested with **python 2.7** and **python 3.6.1**.
 
 The most important and **original work** in this repository pertains to active learning and demonstrates the power of *simplicity*:
-  - [Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite][#cite-this-work-in-publications])
+  - [Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work-in-publications))
   - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite](#cite-this-work-in-publications))
 
 
@@ -308,11 +308,9 @@ GLocalized Anomaly Detection
 
 End-users find it easier to trust algorithms they understand and are familiar with. Such algorithms are typically built on broadly general and simplifying assumptions over the entire feature space (i.e., *global* behavior), which might not be applicable universally (i.e., not relevant *locally* in some parts of the feature space) in an application domain. This observation is true of most machine learning algorithms including those for anomaly detection. **GL**ocalized **A**nomaly **D**etection (GLAD) was designed to allow a human analyst to continue using anomaly detection ensembles with global behavior by learning their local relevance in different parts of the feature space via label feedback.
 
-The approach is outlined below. The while the approach uses dynamic weighted ensembles, the most important aspect is the uniform prior over the *input space*. This approach of combining ensembles can potentially be applied for combining ensembles other than just for anomaly detection, and also in explore-exploit situations.
+While the approach (outlined below) uses dynamic weighted ensembles, the most important aspect is the uniform prior over the *input space*. This approach of combining ensembles can potentially be applied for combining ensembles other than just for anomaly detection, and also in explore-exploit situations.
 
-**The usage of priors cannot be overstated in human-in-the-loop algorithms.** Any person who has to inspect data, usually does so (or **wants to do so**) in a *systematic* manner. It is therefore an imperative for the machine learning algorithms that they be predictable and let the user follow their system. **Priors** help setup this system in a principled manner. Optimization algorithms that ignore this aspect, clearly miss this point.
-
-GLAD places a prior on the input space such that analysts can expect that they will be presented instances (somewhat) in accordance with the baseline anomaly scores while also providing feedback. Without the prior, the order in which instances are presented could vary a lot.
+**The usage of priors cannot be overstated in human-in-the-loop algorithms.** Any person who has to inspect the data one-by-one, usually does so (or **wants to do so**) in a *systematic* manner. It is therefore an imperative for the machine learning algorithms that they be predictable and let the user follow their system. **Priors** help setup this system in a principled manner. Optimization algorithms that ignore this aspect, clearly miss this point. GLAD places a prior on the input space such that analysts can expect that they will be presented instances (somewhat) in accordance with the baseline anomaly scores while also providing feedback. Without the prior, the order in which instances are presented could vary a lot.
 
 ![GLAD Approach](figures/glad/approach.png)
 
