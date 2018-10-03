@@ -5,8 +5,8 @@ This is used by the GLAD which puts a local flavor on global anomaly detectors
 with analyst feedback.
 
 Reference(s):
-    Das, S. and Doppa, J.R. (2018). *GLAD: GLocalized Anomaly Detection via
-            Active Feature Space Suppression*. *soon on arXiv*
+    Das, S. and Doppa, J.R. (2018). GLAD: GLocalized Anomaly Detection via
+            Active Feature Space Suppression. (https://arxiv.org/abs/1810.01403)
 """
 import numpy as np
 import tensorflow as tf
