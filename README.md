@@ -19,7 +19,7 @@ Note: The code has been tested with **python 2.7** and **python 3.6.1**.
 This repository includes, among other examples, my own original research in active learning and data drift detection:
   - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work-in-publications))
   - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite](#cite-this-work-in-publications))
-  - [Data drift detection](#data-drift-detection)([cite](#cite-this-work-in-publications))
+  - [Data drift detection](#data-drift-detection) ([cite](#cite-this-work-in-publications))
 
 
 Anomaly Detection Examples
@@ -115,7 +115,7 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 
 
 **Reference(s)**:
-  - Das, S. and Doppa, J.R. (2018). *GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression*. *soon on arXiv*
+  - Das, S. and Doppa, J.R. (2018). *GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression*. [(pdf)](https://arxiv.org/pdf/1810.01403.pdf)
 
   - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
 
@@ -134,9 +134,9 @@ In case you find this **repository** useful or use in your own work, please cite
     author = {Shubhomoy Das and Janardhan Rao Doppa},
     title = {GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression},
     year = {2018},
-    journal = {arXiv:tbd},
-    howpublished = {\url{https://arxiv.org/abs/tbd}},
-    note = {[Online; accessed 03-Oct-2018]}
+    journal = {arXiv:1810.01403},
+    howpublished = {\url{https://arxiv.org/abs/1810.01403}},
+    note = {[Online; accessed 02-Oct-2018]}
 }
 
 @article{das:2018,
@@ -331,7 +331,7 @@ The results on the *Toy2* dataset are shown below. In order to generate these fi
 ![GLAD Toy2](figures/glad/glad_toy2.png)
 
 **Reference(s)**:
-  - Das, S. and Doppa, J.R. (2018). *GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression*. *soon on arXiv*
+  - Das, S. and Doppa, J.R. (2018). *GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression*. [(pdf)](https://arxiv.org/pdf/1810.01403.pdf)
   
 
 Anomaly Detector vs Classifier
