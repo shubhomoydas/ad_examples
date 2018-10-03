@@ -309,7 +309,7 @@ GLocalized Anomaly Detection
 
 End-users find it easier to trust algorithms they understand and are familiar with. Such algorithms are typically built on broadly general and simplifying assumptions over the entire feature space (i.e., *global* behavior), which might not be applicable universally (i.e., not relevant *locally* in some parts of the feature space) in an application domain. This observation is true of most machine learning algorithms including those for anomaly detection. **GL**ocalized **A**nomaly **D**etection (GLAD) was designed to allow a human analyst to continue using anomaly detection ensembles with global behavior by learning their local relevance in different parts of the feature space via label feedback.
 
-While the approach (outlined below) uses dynamic weighted ensembles, the most important aspect is the uniform prior over the *input space*. This approach of combining ensembles can potentially be applied for combining ensembles other than just for anomaly detection, and also in explore-exploit situations.
+While the approach (outlined below) uses dynamic weighted ensembles, the key idea behind GLAD is to place a **uniform prior over the input space**. This is in contrast with other algorithms which place priors on the *parameter space* (e.g., using an L1 or L2 regularizer for the parameters). We can potentially apply similar priors in other algorithms, especially in explore-exploit situations, and is open for research.
 
 ![GLAD Approach](figures/glad/approach.png)
 
