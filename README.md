@@ -130,7 +130,7 @@ Cite this work in publications
 ------------------------------
 In case you find this **repository** useful or use in your own work, please cite it with the following BibTeX references:
 ```
-@article{das:2018,
+@article{das:2018b,
     author = {Shubhomoy Das and Janardhan Rao Doppa},
     title = {GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression},
     year = {2018},
@@ -139,7 +139,7 @@ In case you find this **repository** useful or use in your own work, please cite
     note = {[Online; accessed 02-Oct-2018]}
 }
 
-@article{das:2018,
+@article{das:2018a,
     author = {Shubhomoy Das and Md Rakibul Islam and Nitthilan Kannappan Jayakodi and Janardhan Rao Doppa},
     title = {Active Anomaly Detection via Ensembles},
     year = {2018},
