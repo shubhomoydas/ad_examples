@@ -21,6 +21,9 @@
 \usepackage{wrapfig}
 \usepackage{floatrow}
 
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
 \title{GLAD: {\bf GL}ocalized {\bf A}nomaly {\bf D}etection via Active Feature Space Suppression}
 
 \begin{document}
@@ -37,15 +40,26 @@
 	\label{fig:architecture}
 \end{figure*}
 
-\paragraph{Approach} We assume that we have an ensemble $\mathcal{E} = \{\mathcal{A}_1, ..., \mathcal{A}_M\}$ of $M$ pre-trained anomaly detectors. The input space is denoted by $\mathcal{X} \subseteq \mathbb{R}^d$. In order to customize an anomaly detector $\mathcal{A}_m$ for a particular task, we start by decomposing the anomaly score it assigns to an instance ${\bf x} \in \mathcal{X}$ into two parts: {\bf (a)} the original score $s_m({\bf x})$, and {\bf (b)} the \textit{relevance} $p_m({\bf x}) \in [0, 1]$. The score assigned by $\mathcal{A}_m$ is then $s_m({\bf x})p_m({\bf x})$. The overall anomaly score is computed as: \texttt{Score}$({\bf x}) = \sum_{m=1}^M{s_m({\bf x})p_m({\bf x})}$.
+\paragraph{Approach} We denote the input space by $\mathcal{X} \subseteq \mathbb{R}^d$. Each instance ${\bf x} \in \mathcal{X}$ is associated with a hidden label $y_i \in \{-1, +1\}$. Instances labeled $+1$ represent the \textit{anomaly} class and are at most a small fraction $\tau$ of all instances. The label $-1$ represents the \textit{nominal} class. We assume that we have an ensemble $\mathcal{E} = \{\mathcal{A}_1, ..., \mathcal{A}_M\}$ of $M$ pre-trained anomaly detectors. In order to customize an anomaly detector $\mathcal{A}_m$ for a particular task, we start by decomposing the anomaly score it assigns to an instance ${\bf x} \in \mathcal{X}$ into two parts: {\bf (a)} the original score $s_m({\bf x})$, and {\bf (b)} the \textit{relevance} $p_m({\bf x}) \in [0, 1]$. The score assigned by $\mathcal{A}_m$ is then $s_m({\bf x})p_m({\bf x})$. The overall anomaly score is computed as: \texttt{Score}$({\bf x}) = \sum_{m=1}^M{s_m({\bf x})p_m({\bf x})}$.
 
-We start with the assumption that each ensemble member is uniformly relevant in every part of the input feature space, i.e., $p_1({\bf x}) = ... = p_M({\bf x}) = const$. This assumption is implemented by priming a neural network referred to as \textit{FSSN} to predict the same probability value $b \in (0, 1)$ for every input (labeled and unlabeled) using the $\ell_{prior}$ loss in Equation~\ref{eqn:prior}. In effect, this places \textit{\textbf{a uniform prior for the relevance of each detector over the input space $\mathcal{X}$}}  (rather than the {\em parameter} space). When all detectors have the same relevance, the final anomaly score simply corresponds to the average score across all detectors (up to a multiplicative constant). This is \textbf{a good starting point for active learning.} Next, the algorithm receives label feedback from an analyst and determines whether the ensemble made an error (i.e., ranked a labeled nominal in the top $\tau$ fraction of instances which are assumed to be anomalous, or ranked a labeled anomaly lower than the top $\tau$ fraction of instances). If so, the FSSN tries to suppress all erroneous detectors using a combination of $\ell_{prior}$ and the AAD loss $\ell_{AAD}$ (Equation~\ref{eqn:l_fssn}) for similar inputs.
+We start with the assumption that each ensemble member is uniformly relevant in every part of the input feature space, i.e., $p_1({\bf x}) = ... = p_M({\bf x}) = const \ \forall {\bf x} \in \mathcal{X}$. This assumption is implemented by priming a neural network referred to as \textit{FSSN} to predict the same probability value $b \in (0, 1)$ for every input (labeled and unlabeled) using the $\ell_{prior}$ loss in Equation~\ref{eqn:prior}. In effect, this places \textit{\textbf{a uniform prior for the relevance of each detector over the input space $\mathcal{X}$}}  (rather than the {\em parameter} space). When all detectors have the same relevance, the final anomaly score simply corresponds to the average score across all detectors (up to a multiplicative constant). This is \textbf{a good starting point for active learning.} Next, the algorithm receives label feedback from an analyst and determines whether the ensemble made an error (i.e., ranked a labeled nominal in the top $\tau$ fraction of instances which are assumed to be anomalous, or ranked a labeled anomaly lower than the top $\tau$ fraction of instances). If so, the FSSN tries to suppress all erroneous detectors for similar inputs using a combination of $\ell_{prior}$ and the AAD loss $\ell_{AAD}$ (Equation~\ref{eqn:l_fssn}).
 
 \begin{align}
 \ell_{prior}({\bf x}) &= \sum_{m=1}^M{-b\log(p_m({\bf x})) -(1 - b)\log(1 - p_m({\bf x}))} \label{eqn:prior} \\
+\ell_A(q; ({\bf x}_i, y_i)) &= \left \{ 
+\begin{array}{lr}
+0 & \text{\texttt{Score}$({\bf x}_i)$} \ge q \text{ and $y_i=+1$} \\
+0 & \text{\texttt{Score}$({\bf x}_i)$} < q \text{ and $y_i=-1$} \\
+(q - \text{\texttt{Score}$({\bf x}_i)$}) & \text{\texttt{Score}$({\bf x}_i)$} < q \text{ and  $y_i=+1$} \\
+(\text{\texttt{Score}$({\bf x}_i)$} - q) & \text{\texttt{Score}$({\bf x}_i)$} \ge q \text{ and $y_i=-1$}
+\end{array} 
+\right. \label{eqn:loss_x_loss} \\
+\ell_{AAD} &= \frac{1}{|{\bf H}_f|} \sum_{{\bf x}_i \in {\bf H}_f} \left( \ell_A(\hat{q}_{\tau}^{(t-1)}; ({\bf x}_i, y_i)) + \ell_A(\text{\texttt{Score}}({\bf x}_{\tau}^{(t-1)}); ({\bf x}_i, y_i)) \right) \label{eqn:aad_loss} \\
 \ell_{FSSN}({\bf x}) &= \ell_{AAD}({\bf x}) + \lambda \ell_{prior}({\bf x}) \label{eqn:l_fssn} \\
 & \text{where $\lambda=1$ works well} \nonumber
 \end{align}
+
+$\mathbf{H}_f$ in Equation~\ref{eqn:aad_loss} denotes the set of instances labeled by the analyst. ${\mathbf x}_{\tau}^{(t-1)}$ and $\hat{q}_{\tau}^{(t-1)}$ are the instance and the score resp. ranked at the $\tau$-th quantile after the previous feedback iteration. $\ell_{A}$ encourages the scores of anomalies in $\mathbf{H}_f$ to be higher than that of $q$, and the scores of nominals in $\mathbf{H}_f$ to be lower.
 
 \begin{figure*}[h]
 	\centering
