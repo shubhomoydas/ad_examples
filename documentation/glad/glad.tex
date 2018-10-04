@@ -46,7 +46,7 @@ We start with the assumption that each ensemble member is uniformly relevant in 
 
 \begin{align}
 \ell_{prior}({\bf x}) &= \sum_{m=1}^M{-b\log(p_m({\bf x})) -(1 - b)\log(1 - p_m({\bf x}))} \label{eqn:prior} \\
-\ell_A(q; ({\bf x}_i, y_i)) &= \max(0, y_i (q - \text{\texttt{Score}$({\bf x}_i)$})) \label{eqn:la_loss} \\
+\ell_A(q; ({\bf x}, y)) &= \max(0, y (q - \text{\texttt{Score}$({\bf x})$})) \label{eqn:la_loss} \\
 \ell_{AAD}({\bf x}, y) &= \ell_A(q_{\tau}^{(t-1)}; ({\bf x}, y)) + \ell_A(\text{\texttt{Score}}({\bf x}_{\tau}^{(t-1)}); ({\bf x}, y)) \label{eqn:aad_loss} \\
 \ell_{FSSN} &= \frac{1}{|{\bf H}_f|} \sum_{({\bf x}, y) \in {\bf H}_f} \ell_{AAD}({\bf x}, y) + \frac{\lambda}{|{\bf D}|} \sum_{{\bf x} \in {\bf D}}\ell_{prior}({\bf x}) \label{eqn:loss_fssn} \\
 & \text{where $\lambda=1$ works well} \nonumber
