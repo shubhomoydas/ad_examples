@@ -48,7 +48,7 @@ We start with the assumption that each ensemble member is uniformly relevant in 
 \ell_{prior}({\bf x}) &= \sum_{m=1}^M{-b\log(p_m({\bf x})) -(1 - b)\log(1 - p_m({\bf x}))} \label{eqn:prior} \\
 \ell_A(q; ({\bf x}, y)) &= \max(0, y (q - \text{\texttt{Score}$({\bf x})$})) \label{eqn:la_loss} \\
 \ell_{AAD}({\bf x}, y) &= \ell_A(q_{\tau}^{(t-1)}; ({\bf x}, y)) + \ell_A(\text{\texttt{Score}}({\bf x}_{\tau}^{(t-1)}); ({\bf x}, y)) \label{eqn:aad_loss} \\
-\ell_{FSSN} &= \frac{1}{|{\bf H}_f|} \sum_{({\bf x}, y) \in {\bf H}_f} \ell_{AAD}({\bf x}, y) + \frac{\lambda}{|{\bf D}|} \sum_{{\bf x} \in {\bf D}}\ell_{prior}({\bf x}) \label{eqn:loss_fssn} \\
+\ell_{FSSN} &= \frac{1}{|{\bf H}_f^{(t)}|} \sum_{({\bf x}, y) \in {\bf H}_f^{(t)}} \ell_{AAD}({\bf x}, y) + \frac{\lambda}{|{\bf D}|} \sum_{{\bf x} \in {\bf D}}\ell_{prior}({\bf x}) \label{eqn:loss_fssn} \\
 & \text{where $\lambda=1$ works well} \nonumber
 \end{align}
 
@@ -65,7 +65,7 @@ We start with the assumption that each ensemble member is uniformly relevant in 
 \end{align}
 \fi
 
-$\mathbf{H}_f \subseteq {\bf D}$ in Equation~\ref{eqn:loss_fssn} denotes the set of instances labeled by the analyst. ${\mathbf x}_{\tau}^{(t-1)}$ and $q_{\tau}^{(t-1)}$ are the instance and the score resp. ranked at the $\tau$-th quantile after the previous feedback iteration. $\ell_{A}$ encourages the scores of anomalies in $\mathbf{H}_f$ to be higher than that of $q$, and the scores of nominals in $\mathbf{H}_f$ to be lower.
+$\mathbf{H}_f^{(t)} \subseteq {\bf D}$ in Equation~\ref{eqn:loss_fssn} denotes the total set of instances labeled by the analyst after $t$ feedback iterations. ${\mathbf x}_{\tau}^{(t-1)}$ and $q_{\tau}^{(t-1)}$ denote the instance ranked at the $\tau$-th quantile and its score after the $(t-1)$-th feedback iteration. $\ell_{A}$ encourages the scores of anomalies in $\mathbf{H}_f$ to be higher than that of $q$, and the scores of nominals in $\mathbf{H}_f$ to be lower.
 
 \begin{figure*}[h]
 	\centering
