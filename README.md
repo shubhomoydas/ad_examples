@@ -380,7 +380,7 @@ Comparison with related work
 ----------------------------
 My former collaborators Siddiqui et al. have employed the same tree-based model I introduced, and compare a variety of loss functions. The linear loss (similar to the AAD loss) again performs best. This is no surprise. They start with the uniform weights and perform greedy-select-top query. The regularizer in their work does not let the weights vary a lot from previous iteration. This helps to hold the hyperplane in the region of uncertainty for most of the query budget and makes the greedy strategy label efficient.
 
-**Note: Their results for AAD were based on an older AAD codebase, hence not accurate.**
+**Note: Their results for AAD were based on an older AAD codebase, hence not accurate. The below results were generated with the latest codebases for both algorithms.**
 
 **Reference(s)**:
   - Siddiqui, A., Fern, A., Dietterich, T., et al. (2018). *Feedback-Guided Anomaly Discovery via Online Optimization*, KDD [(pdf)](http://web.engr.oregonstate.edu/~afern/papers/kdd18-siddiqui.pdf)
