@@ -1,0 +1,32 @@
+# Run the below commands from the 'python' folder
+# we assume that iforest has been compiled to iforest.exe
+
+mkdir ./temp/outtest
+
+# BAL (AAD) loss
+nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 0 512 0 1 1 &
+nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 0 512 0 1 1 &
+nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 1 0 0 512 0 1 1 &
+nohup bash ./aad.sh yeast 300 10 0.03 7 1 0 0 512 0 1 1 &
+nohup bash ./aad.sh mammography 1500 10 0.03 7 1 0 0 4096 0 1 1 &
+nohup bash ./aad.sh shuttle_1v23567 1500 10 0.03 7 1 0 0 4096 0 1 1 &
+nohup bash ./aad.sh weather 1000 10 0.03 7 1 0 0 1024 0 1 1 &
+nohup bash ./aad.sh electricity 1500 10 0.03 7 1 0 0 1024 0 1 1 &
+
+nohup bash ./aad.sh covtype 3000 10 0.03 7 1 0 0 4096 0 1 1 &
+nohup bash ./aad.sh kddcup 3000 10 0.03 7 1 0 0 4096 0 1 1 &
+
+
+# Siddiqui et al 2018 loss
+../iforest.exe -i ../datasets/anomaly/abalone/fullsamples/abalone_1.csv -o ./temp/outtest/abalone_1 -t 100 -s 256 -m 1 -x 10 -f 300 -w 2 -l 0 -a 1
+../iforest.exe -i ../datasets/anomaly/ann_thyroid_1v3/fullsamples/ann_thyroid_1v3_1.csv -o ./temp/outtest/ann_thyroid_1v3_1 -t 100 -s 256 -m 1 -x 10 -f 300 -w 2 -l 0 -a 1
+../iforest.exe -i ../datasets/anomaly/cardiotocography_1/fullsamples/cardiotocography_1_1.csv -o ./temp/outtest/cardiotocography_1_1 -t 100 -s 256 -m 1 -x 10 -f 300 -w 2 -l 0 -a 1
+../iforest.exe -i ../datasets/anomaly/mammography/fullsamples/mammography_1.csv -o ./temp/outtest/mammography_1 -t 100 -s 256 -m 1 -x 10 -f 1500 -w 2 -l 0 -a 1
+../iforest.exe -i ../datasets/anomaly/yeast/fullsamples/yeast_1.csv -o ./temp/outtest/yeast_1 -t 100 -s 256 -m 1 -x 10 -f 300 -w 2 -l 0 -a 1
+../iforest.exe -i ../datasets/anomaly/shuttle_1v23567/fullsamples/shuttle_1v23567_1.csv -o ./temp/outtest/shuttle_1v23567_1 -t 100 -s 256 -m 1 -x 10 -f 1500 -w 2 -l 0 -a 1
+../iforest.exe -i ../datasets/anomaly/weather/fullsamples/weather_1.csv -o ./temp/outtest/weather_1 -t 100 -s 256 -m 1 -x 10 -f 1000 -w 2 -l 0 -a 1
+../iforest.exe -i ../datasets/anomaly/electricity/fullsamples/electricity_1.csv -o ./temp/outtest/electricity_1 -t 100 -s 256 -m 1 -x 10 -f 1500 -w 2 -l 0 -a 1
+
+# the below throw up runtime segmentation faults
+../iforest.exe -i ../datasets/anomaly/kddcup/fullsamples/kddcup_1.csv -o ./temp/outtest/kddcup_1 -t 100 -s 256 -m 1 -x 10 -f 3000 -w 2 -l 0 -a 1
+../iforest.exe -i ../datasets/anomaly/covtype/fullsamples/covtype_1.csv -o ./temp/outtest/covtype_1 -t 100 -s 256 -m 1 -x 10 -f 3000 -w 2 -l 0 -a 1
