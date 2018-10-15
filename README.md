@@ -382,7 +382,7 @@ My former collaborators Siddiqui et al. have employed the same tree-based model 
 **Note: Their results for AAD were based on an older AAD codebase, hence not accurate.**
 
 **Reference(s)**:
-  - Siddiqui, A., Fern, A., Dietterich, T. et al. (2018). *Feedback-Guided Anomaly Discovery via Online Optimization*, KDD [(pdf)](http://web.engr.oregonstate.edu/~afern/papers/kdd18-siddiqui.pdf)
+  - Siddiqui, A., Fern, A., Dietterich, T., et al. (2018). *Feedback-Guided Anomaly Discovery via Online Optimization*, KDD [(pdf)](http://web.engr.oregonstate.edu/~afern/papers/kdd18-siddiqui.pdf)
   
 ![Comparison FBOnline](figures/compare_fbonline.png)
 
