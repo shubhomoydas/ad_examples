@@ -37,10 +37,15 @@ class ResultDefs(object):
 
     def get_results(self, parentdir=None):
         file = self.get_complete_filepath(self.filename, parentdir)
-        resultsdf = pd.read_csv(file, header=None, sep=",")
+        header = None
+        start_col = 1
+        if self.name == "fbonline":
+            header = 0
+            start_col = 1  # there is no fileidx
+        resultsdf = pd.read_csv(file, header=header, sep=",")
         results = np.array(resultsdf.values, dtype=np.float32)
-        r_avg = np.mean(results[:, 2:], axis=0)
-        r_sd = np.std(results[:, 2:], axis=0)
+        r_avg = np.mean(results[:, start_col:], axis=0)
+        r_sd = np.std(results[:, start_col:], axis=0)
         return r_avg, r_sd, results.shape[0]
 
     def get_queried(self, parentdir=None):
@@ -181,6 +186,9 @@ def get_result_defs(args):
     ifor_stream_no_tree_replace_f = "{dataset}-iforest_tau_instance-trees{trees}_samples256_nscore4_leaf-top-unifprior-init_uniform-Ca1-1_1-fid1-runidx10-bd{budget}-tau0_030-topK0-norm-sw{window_size}_asuFalse_KL0_05_mw{max_windows}f2_20_anomalous_u10_tillbudget-{type}.csv"
     ifor_stream_no_tree_replace_d = "if_aad_trees{trees}_samples256_i7_q1_bd{budget}_nscore4_leaf_tau0.03_xtau_s0.5_init1_ca1_cx1_ma1000_mn1000_d100_stream{window_size}_KL0.05_mw{max_windows}f2_20_ret1_tillbudget_u10_norm"
 
+    fbonline_f = "{dataset}_1_summary_feed_{budget}_losstype_linear_updatetype_online_ngrad_1_reg_0_lrate_1_pwgt_0_inwgt_0_rtype_L2.csv"
+    fbonline_d = "fbonline"
+
     result_lists = [
         ResultDefs(name="rsforest_orig", display_name="RSF-Batch", dataset=args.dataset, num_anoms=num_anoms,
                    filename=rsf_orig_f.format(dataset=args.dataset, budget=budget),
@@ -291,7 +299,13 @@ def get_result_defs(args):
                    subdir=hst_stream_incr_d.format(dataset=args.dataset, budget=budget, trees=50, window_size=window_size, max_windows=max_windows)),
         ResultDefs(name="hstrees_stream_incr_no_upd", dataset=args.dataset, num_anoms=num_anoms,
                    filename=hst_stream_incr_no_upd_f.format(dataset=args.dataset, budget=budget, trees=50, type="num_seen", window_size=window_size, max_windows=max_windows),
-                   subdir=hst_stream_incr_no_upd_d.format(dataset=args.dataset, budget=budget, trees=50, window_size=window_size, max_windows=max_windows))
+                   subdir=hst_stream_incr_no_upd_d.format(dataset=args.dataset, budget=budget, trees=50, window_size=window_size, max_windows=max_windows)),
+        ResultDefs(name="fbonline", display_name="Feedback Guided Online", dataset=args.dataset, num_anoms=num_anoms,
+                   filename=fbonline_f.format(dataset=args.dataset, budget=budget, trees=100,
+                                              type="num_seen", window_size=window_size,
+                                              max_windows=max_windows),
+                   subdir=fbonline_d.format(dataset=args.dataset, budget=budget, trees=100,
+                                            window_size=window_size, max_windows=max_windows))
     ]
     result_map = {}
     for result_list in result_lists:

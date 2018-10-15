@@ -375,6 +375,18 @@ The [demo_aad.py](python/aad/demo_aad.py) shows the simpest AAD implementation t
     pythonw -m aad.demo_aad
 
 
+Comparison with related work
+----------------------------
+My former collaborators Siddiqui et al. have employed the same tree-based model I introduced, and compare a variety of loss functions. The linear loss (similar to the AAD loss) again performs best. This is no surprise. They start with the uniform weights and perform greedy-select-top query. The regularizer in their work does not let the weights vary a lot from previous iteration. This helps to hold the hyperplane in the region of uncertainty for most of the query budget and makes the greedy strategy label efficient.
+
+**Note: Their results for AAD were based on an older AAD codebase, hence not accurate.**
+
+**Reference(s)**:
+  - Siddiqui, A., Fern, A., Dietterich, T. et al. (2018). *Feedback-Guided Anomaly Discovery via Online Optimization*, KDD [(pdf)](http://web.engr.oregonstate.edu/~afern/papers/kdd18-siddiqui.pdf)
+  
+![Comparison FBOnline](figures/compare_fbonline.png)
+
+
 Data Drift Detection
 --------------------
 This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:

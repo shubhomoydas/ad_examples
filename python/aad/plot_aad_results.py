@@ -97,18 +97,20 @@ def get_result_names(result_type):
         return ["hstrees_orig", "hstrees", "rsforest_orig"]
     elif result_type == "ifor_loda":
         return ["ifor", "loda", "loda_baseline"]
+    elif result_type == "fbonline":
+        return ["ifor", "fbonline", "ifor_baseline"]
     else:
         raise ValueError("Invalid result_type: %s" % result_type)
 
 
-def process_results(args, result_type="batch", plot=True, plot_sd=False,
+def process_results(args, result_type="batch", plot=True, plot_sd=False, num_anoms=0,
                     legend_loc='lower right', legend_datasets=None, legend_size=14):
     result_names = get_result_names(result_type)
 
     cols = ["red", "green", "blue", "orange", "brown", "pink", "magenta", "black"]
     result_lists, result_map = get_result_defs(args)
     num_seen = 0
-    num_anoms = 0
+    # num_anoms = 0
     all_results = list()
     for i, r_name in enumerate(result_names):
         parent_folder = "./temp/aad/%s" % args.dataset
@@ -119,7 +121,7 @@ def process_results(args, result_type="batch", plot=True, plot_sd=False,
         logger.debug("[%s]\navg:\n%s\nsd:\n%s" % (rs.name, str(list(r_avg)), str(list(r_sd))))
         all_results.append((args.dataset, rs.display_name, r_avg, r_sd, r_n))
         num_seen = max(num_seen, len(r_avg))
-        num_anoms = max(num_anoms, rs.num_anoms)
+        if num_anoms >= 0: num_anoms = max(num_anoms, rs.num_anoms)
     if plot:
         dir_create("./temp/aad_plots/%s" % result_type)
         plot_results(all_results, cols, "./temp/aad_plots/%s/num_seen-%s.pdf" % (result_type, args.dataset),
@@ -181,11 +183,13 @@ if __name__ == "__main__":
     # result_type = "diversity"
     # result_type = "stream_diff"
     # result_type = "stream_diff08"
+    # result_type = "fbonline"
 
     plot_sd = False
     legend_loc = 'lower right'
     legend_datasets = None
     legend_size = 14
+    num_anoms = 0
     if result_type == "batch":
         plot_sd = True
         legend_datasets = ["abalone"]
@@ -206,6 +210,13 @@ if __name__ == "__main__":
         datasets = ['electricity', 'weather']
         legend_datasets = ["electricity"]
         legend_loc = 'upper left'
+    elif result_type == "fbonline":
+        datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', # 'kddcup',
+                    'shuttle_1v23567', 'mammography', # 'covtype',
+                    'weather', "electricity"
+                    ]
+        plot_sd = True
+        num_anoms = -1
     else:
         # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1']  # , 'mammography']
         # datasets = ['abalone', 'yeast', 'ann_thyroid_1v3']
@@ -221,7 +232,7 @@ if __name__ == "__main__":
     for dataset in datasets:
         args.dataset = dataset
         plot = (result_type != "diversity")
-        all_results.append(process_results(args, result_type=result_type, plot=plot, plot_sd=plot_sd,
+        all_results.append(process_results(args, result_type=result_type, plot=plot, plot_sd=plot_sd, num_anoms=num_anoms,
                                            legend_loc=legend_loc, legend_datasets=legend_datasets, legend_size=legend_size))
 
     if result_type == "diversity":

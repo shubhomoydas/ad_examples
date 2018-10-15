@@ -247,5 +247,5 @@ if __name__ == "__main__":
             if not dataset_legend_only or result_type == diversity_comparisons[0]:
                 legend_handles.append(ln)
             result_idx += 1
-        pl.legend(handles=legend_handles, loc='upper right', prop={'size': 10})
+        pl.legend(handles=legend_handles, loc='upper right', prop={'size': 12})
         dp.close()
