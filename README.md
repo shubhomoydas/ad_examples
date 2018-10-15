@@ -58,6 +58,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Some properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
       - **API Usage:** [How to employ AAD in your own application](#how-to-employ-aad-in-your-own-application)
+      - [Comparing AAD with related work](#comparison-with-related-work)
       - [Data drift detection and model update with streaming data](#data-drift-detection)
       - **Aside:** [Applying drift detection to tree-based classifiers](#applying-drift-detection-to-tree-based-classifiers)
       - [A bit of theoretical intuition](#intuition-behind-active-anomaly-discovery)
