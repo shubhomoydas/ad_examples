@@ -36,7 +36,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - [Classifier and pseudo-anomaly based](python/ad/pseudo_anom_outlier.py)
     - [Ensemble/Projection-based](python/loda/loda.py)
     - [A demonstration of outlier influence](python/ad/outlier_effect.py)
-    - [Spectral-based](python/ad/spectral_outlier.py)
+    - [Spectral-based](SpectralMethods.md) [code](python/ad/spectral_outlier.py)
   - timeseries (**Jump to** [illustrations](TimeSeries.md#timeseries-anomaly-detection))
     - Forecasting-based
       - [Exploratory Analysis](TimeSeries.md#exploratory-analysis)
@@ -58,11 +58,11 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Some properties of different tree-based detectors](TreeProperties.md)
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
       - **API Usage:** [How to employ AAD in your own application](#how-to-employ-aad-in-your-own-application)
-      - [Comparing AAD with related work](CompareRelated.md)
+      - [Comparing AAD with related work](CompareRelated.md#comparison-with-related-work)
       - [Data drift detection and model update with streaming data](DriftDetection.md)
       - **Aside:** [Applying drift detection to tree-based classifiers](DriftDetection.md#applying-drift-detection-to-tree-based-classifiers)
-      - [A bit of theoretical intuition](Motivations.md)
-  - [Reducing activity sequences to i.i.d](ActivitySequences.md) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
+      - [A bit of theoretical intuition](Motivations.md#motivation-for-ensemble-based-active-anomaly-discovery)
+  - [Reducing activity sequences to i.i.d](ActivitySequences.md#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
 
 There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'python/temp' folder when executed.
@@ -345,12 +345,4 @@ How to employ AAD in your own application
 The [demo_aad.py](python/aad/demo_aad.py) shows the simpest AAD implementation that can be used as a template by other developers. To load a different dataset, replace `get_synthetic_samples(stype=2)` (in the code) with the appropriate function(s). The following command executes the code; check the generated log file `python/temp/demo_aad.log` for details such as anomaly descriptions.
 
     pythonw -m aad.demo_aad
-
-
-Note on Spectral Clustering by label diffusion
-==============================================
-Spectral clustering tries to first find a lower dimensional representation of the data where it is better clustered after taking into account the inherent manifold structures. Next, any standard anomaly detector can be applied on the new representation. Although the python code has the [implementation](python/ad/spectral_outlier.py), the last step requires non-metric MDS transform and the scikit-learn implementation is not as good as R. Hence, use the R code (R/manifold_learn.R) for generating the transformed features.
-
-For details, refer to:
-Supervised and Semi-supervised Approaches Based on Locally-Weighted Logistic Regression by Shubhomoy Das, Travis Moore, Weng-keen Wong, Simone Stumpf, Ian Oberst, Kevin Mcintosh, Margaret Burnett, Artificial Intelligence, 2013.
 
