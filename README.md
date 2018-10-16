@@ -59,7 +59,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
       - **API Usage:** [How to employ AAD in your own application](#how-to-employ-aad-in-your-own-application)
       - [Comparing AAD with related work](CompareRelated.md#comparison-with-related-work)
-      - [Data drift detection and model update with streaming data](DriftDetection.md)
+      - [Data drift detection and model update with streaming data](DriftDetection.md#data-drift-detection)
       - **Aside:** [Applying drift detection to tree-based classifiers](DriftDetection.md#applying-drift-detection-to-tree-based-classifiers)
       - [A bit of theoretical intuition](Motivations.md#motivation-for-ensemble-based-active-anomaly-discovery)
   - [Reducing activity sequences to i.i.d](ActivitySequences.md#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
