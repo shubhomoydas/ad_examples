@@ -84,15 +84,18 @@ Active Anomaly Discovery (AAD)
 ==============================
 This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies.
 
-**Motivation and intuition**:
+
+**Motivation and intuition**
 
 Our motivation for exploring active anomaly detection with ensembles is presented in [Motivations.md](Motivations.md#motivation-for-ensemble-based-active-anomaly-discovery).
 
-**Approach**:
 
-The approach are explained in [(Das, S., Islam, R., et al. 2018)](https://arxiv.org/pdf/1809.06477.pdf) in detail.
+**Approach**
 
-**Demonstration of the basic idea**:
+The approach is explained in more detail in [(Das, S., Islam, R., et al. 2018)](https://arxiv.org/pdf/1809.06477.pdf).
+
+
+**Demonstration of the basic idea**
 
 *Assuming that the ensemble scores have already been computed*, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
 
