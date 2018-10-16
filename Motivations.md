@@ -5,10 +5,13 @@ Anomaly/Outlier ensembles have not been understood very well and leading researc
   - Why does the greedy selection strategy for active learning almost always perform best?
 
 This work is based on two basic assumptions (universal truths?) about anomaly detectors:
-  - They are **designed to assign the highest scores to true anomalies**.
-  - They **assign higher scores to anomalies than to nominals**.
+  1. They are **designed to assign the highest scores to true anomalies**.
+  2. They **assign higher scores to anomalies than to nominals**.
 
-These basic assumptions have enormous practical significance for active learning (Das et al. 2018) and are easily overlooked.
+These basic assumptions have enormous practical significance for active learning (Das et al. 2018) and are easily overlooked. Although they seem to imply the same thing (assumption 1 implies assumption 2), it helps to consider them separately because:
+  - Assumption 1 tells us that for anomaly detection (esp. with ensembles), the region of label uncertainty is at a certain extreme location of the score-space.
+  - Assumption 2 helps us incorporate weak supervision.
+
 
 **Reference(s)**:
   - Charu Aggarwal, Outlier Ensembles (Position Paper), KDD, 2012
