@@ -36,13 +36,13 @@ The main idea that helps understand AAD can be summarized as follows:
 Challenges specific to active learning for anomaly detection
 ------------------------------------------------------------
 While the basic approach and assumptions in active anomaly detection are simple (trivial?), there are three practical challenges that make this interesting:
-  - *Accuracy:* The baseline unsupervised model in which we incorporate feedback should be accurate, else it defeats the whole enterprise.
-  - *Feedback localization:* The label feedback should be localized to relevant regions of the feature space in order to improve generalization.
-  - *Many labeled instances:* The model should be able to incorporate many labeled instances. An ensemble or a model with low *capacity* will always under-fit and result in many false positives later.
+  - **Accuracy:** The baseline unsupervised model in which we incorporate feedback should be accurate, else it defeats the whole enterprise.
+  - **Feedback localization:** The label feedback should be localized to relevant regions of the feature space in order to improve generalization.
+  - **Many labeled instances:** The model should be able to incorporate many labeled instances. An ensemble or a model with low *capacity* will always under-fit and result in many false positives later.
 
 Keeping these challenges in mind, we consider two scenarios in i.i.d anomaly detection:
-  - *Freedom to choose the ensemble model:* We can choose any state-of-the-art ensemble model for which the members can be generated cheaply such as tree-based (e.g., Isolation Forest), projection-based (e.g., LODA), feature-bagging, etc. Here, the general AAD framework applies easily
-  - *Fixed few ensemble members:* In this case we can employ our glocalized anomaly detection technique (GLAD).
+  - **Freedom to choose the ensemble model:** We can choose any state-of-the-art ensemble model for which the members can be generated cheaply such as tree-based (e.g., Isolation Forest), projection-based (e.g., LODA), feature-bagging, etc. Here, the general AAD framework applies easily
+  - **Fixed few ensemble members:** In this case we can employ our glocalized anomaly detection technique (GLAD).
 
 
 Desirable properties of ensembles
