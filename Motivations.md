@@ -32,9 +32,24 @@ The main idea that helps understand AAD can be summarized as follows:
     - To ensure that the hyperplane passes through the region of uncertainty, a weak pair-wise constraint is employed; this constraint ensures that **labeled anomalies** are more likely to be assigned higher scores than **labeled nominals**; to make the constraint scalable, **AAD uses the score and instance ranked at the tau-th quantile as a proxy nominal**
     - Instances on one side of the margin are much more likely to be anomalies than on the other side; presenting instances from the 'anomaly' side to the analyst then reveals true anomalies faster
 
+
+Challenges specific to active learning for anomaly detection
+------------------------------------------------------------
+While the basic approach and assumptions in active anomaly detection are simple (trivial?), there are three practical challenges that make this interesting:
+  - *Accuracy:* The baseline unsupervised model in which we incorporate feedback should be accurate, else it defeats the whole enterprise.
+  - *Feedback localization:* The label feedback should be localized to relevant regions of the feature space in order to improve generalization.
+  - *Many labeled instances:* The model should be able to incorporate many labeled instances. An ensemble or a model with low *capacity* will always under-fit and result in many false positives later.
+
+Keeping these challenges in mind, we consider two scenarios in i.i.d anomaly detection:
+  - *Freedom to choose the ensemble model:* We can choose any state-of-the-art ensemble model for which the members can be generated cheaply such as tree-based (e.g., Isolation Forest), projection-based (e.g., LODA), feature-bagging, etc. Here, the general AAD framework applies easily
+  - *Fixed few ensemble members:* In this case we can employ our glocalized anomaly detection technique (GLAD).
+
+
+Desirable properties of ensembles
+---------------------------------
 The **desired properties** of an ensemble-based detector which will make it well-suited for active learning are:
   - **Inexpensive members:** computationally cheap to create ensemble members. If we employ a linear model (such as with AAD), it helps to have a large number of members because it then increases the capacity of the model to incorporate a large number of instance labels.
-  - **Somewhat-OK (weak?) accuracy:** if accuracy is low, then more members will be desired
+  - **Somewhat-OK (weak?) accuracy for individual members but high accuracy in aggregate:** if accuracy of each individual member is low, then more members will be desired
   - **Many and diverse members:** a large number of high-precision-low-recall members might work well in combination (such as the leaf nodes of tree-based detectors)
 
 Some anomaly detectors which fit the above desiderata are:
