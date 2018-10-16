@@ -25,7 +25,7 @@ The main idea that helps understand AAD can be summarized as follows:
     - For uncertainty sampling with a linear model, the hyperplane margin should pass through the region of uncertainty
     - The uncertainty region has a well-known prior when anomaly detector ensembles are employed
     - AAD designs a hyperplane that passes through the uncertainty region and tries to maintain it there so that uncertainty sampling can then be employed for anomaly detection
-    - To ensure that the hyperplane passes through the region of uncertainty, a weak pair-wise constraint is employed
+    - To ensure that the hyperplane passes through the region of uncertainty, a weak pair-wise constraint is employed; this constraint ensures that ***labeled anomalies** are more likely to be assigned higher scores than **labeled nominals**; to make the constraint scalable, **AAD uses the score and instance ranked at the tau-th quantile as a proxy nominal**
     - Instances on one side of the margin are much more likely to be anomalies than on the other side; presenting instances from the 'anomaly' side to the analyst then reveals true anomalies faster
 
 The **desired properties** of an ensemble-based detector which will make it well-suited for active learning are:
@@ -37,6 +37,11 @@ Some anomaly detectors which fit the above desiderata are:
   - LODA: The one-dimensional projections are the members
   - Tree-based detectors such as Isolation Forest: We may treat each tree in the forest or each node in the trees as the members
   - Feature bagging: Detectors created from each random feature subset act as the members
+
+
+Applicability of the idea beyond ensembles
+------------------------------------------
+Any detector with tunable parameters can employ the AAD-type of weak supervision. Using the score and instance ranked at the tau-th quantile as a proxy nominal helps incorporate weak supervision when labels from only one class (anomaly or nominal) are available.
 
 
 Intuition behind Active Anomaly Discovery
