@@ -10,6 +10,7 @@ This work is based on two basic assumptions (universal truths?) about anomaly de
 
 These basic assumptions have enormous practical significance for active learning (Das et al. 2018) and are easily overlooked. Although they seem to imply the same thing (assumption 1 implies assumption 2), it helps to consider them separately because:
   - Assumption 1 tells us that for anomaly detection (esp. with ensembles), the region of label uncertainty is at a certain extreme location of the score-space.
+  - Assumption 1 also implies that the average score is a good combination strategy *in the absence of any other information*
   - Assumption 2 helps us incorporate weak supervision.
 
 
