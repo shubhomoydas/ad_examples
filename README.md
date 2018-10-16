@@ -37,14 +37,14 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - [Ensemble/Projection-based](python/loda/loda.py)
     - [A demonstration of outlier influence](python/ad/outlier_effect.py)
     - [Spectral-based](python/ad/spectral_outlier.py)
-  - timeseries (**Jump to** [illustrations](#timeseries-anomaly-detection))
+  - timeseries (**Jump to** [illustrations](TimeSeries.md#timeseries-anomaly-detection))
     - Forecasting-based
-      - [Exploratory Analysis](#exploratory-analysis)
-      - [ARIMA](#arima-forecasting)
-      - [Regression](#regression-forecasting) (SVM, Random Forest, Neural Network)
-      - [Recurrent Neural Networks](#timeseries-modeling-with-rnnslstms) (RNN/LSTM)
+      - [Exploratory Analysis](TimeSeries.md#exploratory-analysis)
+      - [ARIMA](TimeSeries.md#arima-forecasting)
+      - [Regression](TimeSeries.md#regression-forecasting) (SVM, Random Forest, Neural Network)
+      - [Recurrent Neural Networks](TimeSeries.md#timeseries-modeling-with-rnnslstms) (RNN/LSTM)
     - i.i.d
-      - [Windows/Shingle based](#timeseries-outliers-with-shingles) (Isolation Forest, One-class SVM, LOF, Autoencoder)
+      - [Windows/Shingle based](TimeSeries.md#timeseries-outliers-with-shingles) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - [human-in-the-loop (active learning)](#active-anomaly-discovery-aad)
     - Active Anomaly Discovery ([batch setup](python/aad/aad_batch.py), [streaming setup](python/aad/aad_stream.py)) -- **Includes plots and illustrations (see sections below)**
       - [High-level summary of the approach](#active-anomaly-discovery-aad)
@@ -55,14 +55,14 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - **GLAD: GLocalized Anomaly Detection** ([glad_batch.py](python/glad/glad_batch.py))
         - [Approach and architecture](#glocalized-anomaly-detection)
       - **Aside:** [When we have a lot of labeled data (both anomalies and nominals), should we employ a classifier instead of an anomaly detector?](#anomaly-detector-vs-classifier)
-      - [Some properties of different tree-based detectors](#differences-between-isolation-forest-hs-trees-rs-forest)
+      - [Some properties of different tree-based detectors](TreeProperties.md)
       - [Running AAD with precomputed ensemble scores](#running-aad-with-precomputed-anomaly-scores)
       - **API Usage:** [How to employ AAD in your own application](#how-to-employ-aad-in-your-own-application)
       - [Comparing AAD with related work](CompareRelated.md)
-      - [Data drift detection and model update with streaming data](#data-drift-detection)
-      - **Aside:** [Applying drift detection to tree-based classifiers](#applying-drift-detection-to-tree-based-classifiers)
+      - [Data drift detection and model update with streaming data](DriftDetection.md)
+      - **Aside:** [Applying drift detection to tree-based classifiers](DriftDetection.md#applying-drift-detection-to-tree-based-classifiers)
       - [A bit of theoretical intuition](Motivations.md)
-  - [Reducing activity sequences to i.i.d](#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
+  - [Reducing activity sequences to i.i.d](ActivitySequences.md) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
 
 There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'python/temp' folder when executed.
@@ -331,17 +331,6 @@ A question that comes up often is: *if we have a lot of labeled anomaly and nomi
 ![Anomaly Detector vs Classifier](figures/aad/anomaly_vs_classifier.png)
 
 
-Differences between Isolation Forest, HS Trees, RS Forest
----------------------------------------------------------
-This [document](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf) explains why Isolation Forest is more effective in incorporating feedback at the leaf level. This is illustrated in the figure below. The plots are generated in the files `query_candidate_regions_ntop5_*.pdf` and `query_compact_ntop5_*.pdf` under `temp/aad/toy2/*` when the following commands are executed:
-
-    bash ./aad.sh toy2 35 1 0.03 7 1 0 0 512 0 1 1
-    bash ./aad.sh toy2 35 1 0.03 11 1 0 0 512 0 1 1
-    bash ./aad.sh toy2 35 1 0.03 12 1 0 0 512 0 1 1
-
-![Tree Differences](figures/aad/tree_differences.png)
-
-
 Running AAD with precomputed anomaly scores
 -------------------------------------------
 In case scores from anomaly detector ensembles are available in a CSV file, then AAD can be run with the following command.
@@ -358,171 +347,10 @@ The [demo_aad.py](python/aad/demo_aad.py) shows the simpest AAD implementation t
     pythonw -m aad.demo_aad
 
 
-Data Drift Detection
---------------------
-This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
-  - First, randomly partition the current window of data into two equal parts (*A* and *B*).
-  - For each tree in the forest, compute average KL-divergence as follows:
-    - Treat the tree as set of histogram bins
-    - Compute the instance distributions with each of the data partitions *A* and *B*.
-    - Compute the KL-divergence between these two distributions.
-    - Do this 10 times and average.
-  - We now have *T* KL divergences where *T* is the number of trees.
-  - Compute the (1-alpha) quantile value where alpha=0.05 by default, and call this *KL-q*.
-  - Now compute the distributions for each isolation tree with the complete window of data -- call this *P* (*P* is a set of *T* distributions) -- and set it as the baseline.
-  - When a new window of data arrives replace trees as follows:
-    - Compute the distribution in each isolation tree with the *entire* window of new data and call this *Q* (*Q* is a set of *T* new distributions).
-    - Next, check the KL-divergences between the distributions in P and the corresponding distributions in Q. If the KL-divergence i.e., *KL(p||q)* of at least (2\*alpha\*T) trees exceed *KL-q*, then:
-      - Replace all trees whose *KL(p||q)* is higher than *KL-q* with new trees created with the new data.
-      - Recompute *KL-q* and the baseline distributions *P* with the new data and the updated model.
-      - Retrain the weights certain number of times (determined by `N_WEIGHT_UPDATES_AFTER_STREAM` in `aad.sh`, 10 works well) with just the labeled data available so far (no additional feedback). This step helps tune the ensemble weights better after significant change to the model.
-
-For more details on KL-divergence based data drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following sample command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated (on the *Weather* dataset):
-    
-    pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
-
-Following shows the results of integrating drift detection along with label feedback in a streaming/limited memory setting for the three datasets (*Covtype, Electricity, Weather*) which we determined have significant drift. We used `RETENTION_TYPE=1` in `aad.sh` for all datasets. The commands for generating the discovery curves for `SAL (KL Adaptive)` are below. **These experiments will take a pretty long time to run because: (1) streaming implementation is currently not very efficient, (2) we get feedback for many iterations, and (3) we run all experiments 10 times to report an average.**
-
-    bash ./aad.sh weather 1000 10 0.03 7 1 0 1 1024 1 1 1
-    bash ./aad.sh electricity 1500 10 0.03 7 1 0 1 1024 1 1 1
-    bash ./aad.sh covtype 3000 10 0.03 7 1 0 1 4096 1 1 1
-
-![Integrated Data Drift Detection and Label Feedback](figures/streaming_results.png)
-
-**Why actively detect data drift?** This is a valid question: *why employ active drift detection if there is reason to believe that a less expensive passive approach such as always replacing a fraction of the model will work just as well?* The reason is that, in practice, analysts want to be alerted when there is a drift (maybe because other algorithms downstream have to be retrained). Only the active [drift detection] algorithms (such as *SAL (KL Adaptive)* in the plots above) offer this ability, not the passive ones (such as *SAL (Replace 20% Trees)* and *SAL (No Tree Replace)*). Active drift detection algorithms also need to be robust (low false positives/negatives) in order to be useful.
-
-
-The application of KL-divergence in the **specific manner employed here is novel**, and is motivated by the dataset partitioning idea (presented in a different context) in: Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
-
-
-Applying drift detection to tree-based classifiers
---------------------------------------------------
-The above KL-divergence based method can be applied to detect drift with tree-based classifiers such as Random Forest as well. The example [python/aad/test_concept_drift_classifier.py](python/aad/test_concept_drift_classifier.py) uses the wrapper class [RandomForestAadWrapper](python/aad/classifier_trees.py) to detect the drift with trees created by `sklearn.ensemble.RandomForestClassifier`.
-
-
-Timeseries Anomaly Detection
-============================
-The main motivation for writing these timeseries examples has been that while we can find each approach separately in other places on the web, we really should have most of them in one place to be able to compare head-to-head. **The parameter settings have been set to reasonable values, but should always be treated with a bit of skepticism since no formal model selection was employed**. The results look good with the *Airline* dataset as it was setup as the running example. However, they may be suboptimal with the other datasets (below) unless the parameters are tweaked a bit. The idea is to be able to play around with the basic timeseries modeling approaches and understand their strengths and weaknesses.
-
-We will use the [Airline dataset](datasets/AirlinePassengers) as the running example here. The dataset can be selected with the command line option `--dataset=<name>`. Datasets included with the codebase are:
-  - `airline`: [Airline dataset](datasets/AirlinePassengers)
-  - `aus_beer`: [Australian beer production](datasets/AustralianBeerProduction)
-  - `lynx`: [Canadian Lynx](datasets/CanadianLynx)
-  - `fisher_temp`: [Fisher river temperature](datasets/FisherRiver)
-  - `shampoo`: [Shampoo sales](datasets/ShampooSales)
-  - `us_accident`: [US accident deaths](datasets/USAccidentalDeaths)
-  - `wolf_sunspot`: [Wolf sunspot numbers](datasets/WolfSunSpot)
-
-Timeseries forecasting generally involves the following steps (in order):
-  - Exploratory analysis: Plot the timeseries and visually inspect it, employ ACF/PACF to determine lags (till how much in the past are values correlated) and seasonality.
-  - Detrending: We remove the trend (i.e., monotonous increase/decrease in value) to make the series *stationary*. In most cases, subtracting each value with its previous will remove the trend.
-  - Scaling: Scale values to a manageable range such as [-1, 1] so that algorithms can operate on well-conditioned values. We do this explicitly when applying our custom algorithms. Off-the-shelf forecasting algorithms such as ARIMA/SARIMA might not need this.
-  - Model the normalized (detrended and scaled) time series: ARIMA/SARIMA, RNN/LSTM, Regression etc.
-  - Forecast: Predict values into the future. This actually involves first predicting the normalized value and then applying inverse normalization. We will employ **rolling forecast** in the examples we present. Here, we predict only one timestep into the future. Then we get the true value and compute the **forecasting error**. Next, we append the true value to the training set and **remodel** the timeseries. This is repeated as long as desired.
-
-**Reference(s)**:
-  - Rob J Hyndman and George Athanasopoulos. *Forecasting: Principles and Practice*, 2nd Edition. OTexts, 2018. [online link](https://otexts.org/fpp2/)
-
-
-Exploratory analysis
---------------------
-The plots below are on the first page of the pdf generated by the command:
-
-    pythonw -m timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --log_transform --dataset=airline
-
-The original series is **log-transformed** (for variance stabilization) and is shown on the top row of the figure. There is a clear increasing trend. We de-trend the log-transformed series by differencing with 1-lag (bottom row of below figure).
-
-![Airline timeseries](figures/timeseries/airline_log_diff.png)
-
-The following plots are on the second page of the pdf generated by the same command (above). The PACF (bottom row in the below figure) shows that correlation decreases exponentially by 1-2 lags (or less); let's set the autocorrelation (AR) factor to 0. The ACF plot also shows peaks every 12 time points. This indicates a *seasonality* of 12. The ACF (top row in the below figure) drops to around zero by about lag 1. This indicates that a moving average (MA) factor of 1 might be reasonable in ARIMA models. It is usually hard to determine the best AR and MA factors, which is why AIC/BIC metrics are used for proper model selection. We will skip this for now.
-
-![Airline ACF/PACF](figures/timeseries/airline_acf_pacf.png)
-
-ARIMA Forecasting
------------------
-Now that we have determined the parameters for the SARIMA model, we can use them to model the timeseries and forecast. We used the first two-thirds of the series as our training set and the last one-third as the test set. The red curve in the bottom row of the below figure shows the forecast values. The green lines indicate the 10 points at which the forecast error is the highest. The top row shows the residuals when we model the *entire* timeseries with the SARIMA model. *Whether we should treat the forecast errors as anomalies would depend on the application*. The ARIMA/SARIMA orders for the example datasets are defined in [timeseries_datasets.py](python/common/timeseries_datasets.py).
-
-```python
-univariate_timeseries_datasets = {
-    # "name": (path, use_cols, date_columns, index_column, ARIMA_order)
-    # ARIMA_order: (AR, differences, MA, seasonality)
-    "airline": TsFileDef("AirlinePassengers/international-airline-passengers.csv", [1], False, None, (0, 1, 1, 12)),
-    "aus_beer": TsFileDef("AustralianBeerProduction/quarterly-beer-production-in-aus.csv", [2], False, None, (3, 1, 0, 4)),
-    "lynx": TsFileDef("CanadianLynx/lynx_trappings.csv", [1], False, None, (4, 1, 1, 12)),
-    "fisher_temp": TsFileDef("FisherRiver/mean-daily-temperature-fisher-ri.csv", [1], False, None, (4, 1, 0)),
-    "shampoo": TsFileDef("ShampooSales/sales-of-shampoo-over-a-three-ye.csv", [1], [0], None, (5, 1, 0)),
-    "us_accident": TsFileDef("USAccidentalDeaths/accidental-deaths-in-usa-monthly.csv", [1], False, None, (4, 1, 0, 12)),
-    "wolf_sunspot": TsFileDef("WolfSunSpot/wolfs-sunspot-numbers-1700-1988.csv", [1], False, None, (4, 1, 1, 12))
-}
-```
-
-![Airline SARIMA](figures/timeseries/airline_residuals_forecast.png)
-
-Regression Forecasting
-----------------------
-The idea here is to generate feature vectors which can be fed to a regression model. Specifically, if we have a timeseries *y_1, y_2, ..., y_N*, then we train a model for *y_(t+1) = f(y_(t-1), y_(t-2), .., y_(t-lag+1))*, i.e., a model that predicts the value at a particular time as a function of the previous values (till a reasonable lag). The plots below were generated with the commands:
-
-    pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=12 --dataset=airline
-    
-    pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=rfor --n_lags=12 --dataset=airline
-
-We show regression results with two algorithms: *Random Forest* and *Neural Network*. The section with the red curve is the forecast (test) data. Timepoints with the highest 10 errors are indicated with the green bars.
-
-![Airline Regression](figures/timeseries/airline_regression.png)
-
-
-Timeseries modeling with RNNs/LSTMs
------------------------------------
-The timeseries can be modeled as sequential data with RNNs (basic cell or LSTM). The following command employs an RNN with the **basic cell**. The top row shows the original series. The blue section will be used for training, and the red section will be test. The middle section shows the scaled/normalized train and test sections. The bottom row shows that forecast after inverse normalization and the points with the highest 10 errors are indicated with the green bars.
-
-    pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
-
-![Airline RNN Basic Cell](figures/timeseries/airline_rnn_basic.png)
-
-A similar plot using an RNN with LSTM cells can be generated with the following command.
-    
-    pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=airline
-
-The generated plots are shown below. In general, ARIMA and regression methods are probably better suited to the *Airline* dataset than the RNN models.
-
-![Airline RNN LSTM Cell](figures/timeseries/airline_rnn_lstm.png)
-
-
-Timeseries outliers with shingles
----------------------------------
-Here we illustrate the idea of anomaly detection in time series by breaking the series into windows ('shingles'), and then treating each window as i.i.d feature vector. Since we have been using the *Airline* dataset we will show the results on it here as well. However, keep in mind that this approach might **not** be the best for this dataset. Also, we do not require separate train/test sets; all the windows can be input to an unsupervised anomaly/outlier detector as a single dataset. For *Airline*, we set the window size to 6 and employ an Isolation Forest anomaly detectore. Since there is a clear trend, it is important to remove the trend before breaking up the timeseries into the smaller windows. The below command will output the plots below. `--log_transform` applies element-wise log to the series. This sometimes helps in stabilizing the variance. Other transforms should also be tried such as [Box-Cox transforms](https://en.wikipedia.org/wiki/Power_transform). Multiplicative seasonal and trend decomposition (`statsmodels.tsa.seasonal.seasonal_decompose`) might help as well, but we have not pursued this here. The red lines in the plots show the top 10 most anomalous windows. Note that unlike the previous examples where we reported the anomalous time **points**, here we can only report the anomalous time **windows**.
-
-    pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=6 --algo=ifor --normalize_trend --log_transform --dataset=airline
-
-![Airlines Shingles](figures/timeseries/airline_shingles.png)
-
-A more appropriate example might be the [simulated timeseries](datasets/simulated_timeseries). The below command breaks the timeseries into non-overlapping windows of 20 timepoints and then applies an autoencoder as the anomaly detector. The red lines show the top 10 most anomalous windows.
-
-    pythonw -m timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc --dataset=synthetic
-
-![Simulated timeseries](figures/timeseries/synthetic_shingles.png)
-
-
 Note on Spectral Clustering by label diffusion
 ==============================================
 Spectral clustering tries to first find a lower dimensional representation of the data where it is better clustered after taking into account the inherent manifold structures. Next, any standard anomaly detector can be applied on the new representation. Although the python code has the [implementation](python/ad/spectral_outlier.py), the last step requires non-metric MDS transform and the scikit-learn implementation is not as good as R. Hence, use the R code (R/manifold_learn.R) for generating the transformed features.
 
 For details, refer to:
 Supervised and Semi-supervised Approaches Based on Locally-Weighted Logistic Regression by Shubhomoy Das, Travis Moore, Weng-keen Wong, Simone Stumpf, Ian Oberst, Kevin Mcintosh, Margaret Burnett, Artificial Intelligence, 2013.
-
-
-Activity Modeling
-=================
-A simple application of word2vec for activity modeling can be found [here](python/timeseries/activity_word2vec.py). We try to infer relative sensor locations from sequence of sensor triggerings. The true [floor plan](http://ailab.wsu.edu/casas/hh/hh101/profile/page-6.html) and the inferred sensor locations (**for sensor ids starting with 'M' and 'MA'**) are shown below ([download the data here](http://casas.wsu.edu/datasets/hh101.zip)). This demonstrates a form of 'embedding' of the sensors in a latent space. The premise is that the **non-iid data such as activity sequences may be represented in the latent space as i.i.d data on which standard anomaly detectors may be employed**. We can be a bit more creative and try to apply **transfer learning** with this embedding.
-
-For example, imagine that we have a house (House-1) with labeled sensors (such as 'kitchen', 'living room', etc.) and another (House-2) with partially labeled sensors. Then, if we try to reduce the 'distance' between similarly labeled sensors in the latent space (by adding another loss-component to the word2vec embeddings), it can provide more information on which of the unlabeled sensors and activities in House-2 are similar to those in House-1. Moreover, the latent space allows representation of heterogeneous entities such as sensors, activities, locations, etc. in the same space which (in theory) helps detect similarities and associations in a more straightforward manner. In practice, the amount of data and the quality of the loss function matter a lot. Moreover, simpler methods of finding similarities/associations should not be overlooked. As an example, we might try to use embedding to figure out if a particular sensor is located in the bedroom. However, it might be simpler to just use the sensor's activation time to determine this information (assuming people sleep regular hours).
-
-![Floor Plan](datasets/CASAS/floor_plans/HH101-sensormap.png)
-
-![Relative Sensor Locations with Word2Vec](datasets/CASAS/floor_plans/activity_sensors_d15_original_tsne.png)
-
-Please refer to the following paper and the [CASAS website](http://ailab.wsu.edu/casas/hh) for the setup:
-    D. Cook, A. Crandall, B. Thomas, and N. Krishnan.
-    CASAS: A smart home in a box. IEEE Computer, 46(7):62-69, 2013.
-
 
