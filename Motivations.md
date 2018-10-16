@@ -36,7 +36,7 @@ The main idea that helps understand AAD can be summarized as follows:
 Challenges specific to active learning for anomaly detection
 ------------------------------------------------------------
 While the basic approach and assumptions in active anomaly detection are simple (trivial?), there are three practical challenges that make this interesting:
-  - **Accuracy:** The baseline unsupervised model in which we incorporate feedback should be accurate, else it defeats the whole enterprise.
+  - **Accuracy:** The baseline unsupervised model in which we incorporate feedback should be state-of-the-art, else it defeats the whole enterprise.
   - **Feedback localization:** The label feedback should be localized to relevant regions of the feature space in order to improve generalization.
   - **Many labeled instances:** The model should be able to incorporate many labeled instances. An ensemble or a model with low *capacity* will always under-fit and result in many false positives later.
 
