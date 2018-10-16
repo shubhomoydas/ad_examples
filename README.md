@@ -17,9 +17,9 @@ Python libraries required:
 Note: The code has been tested with **python 2.7** and **python 3.6.1**.
 
 This repository includes, among other examples, my own original research in active learning and data drift detection:
-  - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work-in-publications))
-  - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite](#cite-this-work-in-publications))
-  - [Data drift detection](DriftDetection.md#data-drift-detection) ([cite](#cite-this-work-in-publications))
+  - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite (Das, Islam, et al. 2018)](#cite-this-work))
+  - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite (Das and Doppa 2018)](#cite-this-work))
+  - [Data drift detection](DriftDetection.md#data-drift-detection) ([cite (Das, Islam, et al. 2018)](#cite-this-work))
 
 
 Anomaly Detection Examples
@@ -48,7 +48,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
   - [human-in-the-loop (active learning)](#active-anomaly-discovery-aad)
     - Active Anomaly Discovery ([batch setup](python/aad/aad_batch.py), [streaming setup](python/aad/aad_stream.py)) -- **Includes plots and illustrations (see sections below)**
       - [High-level summary of the approach](#active-anomaly-discovery-aad)
-      - [Cite this work](#cite-this-work-in-publications)
+      - [Cite this work](#cite-this-work)
       - **Jump right in:** [General instructions on running AAD](#running-aad)
       - **Explanations and Interpretability:** [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
       - **Query strategies:** [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
@@ -84,9 +84,17 @@ Active Anomaly Discovery (AAD)
 ==============================
 This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies.
 
-The motivations for exploring active anomaly detection with ensembles are presented [here](Motivations.md). The intuitions are explained in (Das, S., Islam, R., et al. 2018).
+**Motivation and intuition**:
 
-**Assuming that the ensemble scores have already been computed**, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
+Our motivation for exploring active anomaly detection with ensembles is presented in [Motivations.md](Motivations.md#motivation-for-ensemble-based-active-anomaly-discovery).
+
+**Approach**:
+
+The approach are explained in [(Das, S., Islam, R., et al. 2018)](https://arxiv.org/pdf/1809.06477.pdf) in detail.
+
+**Demonstration of the basic idea**:
+
+*Assuming that the ensemble scores have already been computed*, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
 
 To run [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
 
@@ -109,8 +117,8 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
   - Das, S. (2017). *Incorporating User Feedback into Machine Learning Systems*, [PhD Thesis](http://ir.library.oregonstate.edu/concern/graduate_thesis_or_dissertations/9019s7533) [(pdf)](https://ir.library.oregonstate.edu/downloads/m900p057t) -- The work on AAD in this repository was developed during my PhD and Post-doctoral research.
 
 
-Cite this work in publications
-------------------------------
+Cite this work
+--------------
 In case you find this **repository** useful or use in your own work, please cite it with the following BibTeX references:
 ```
 @article{das:2018b,
