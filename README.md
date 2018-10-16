@@ -61,7 +61,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Comparing AAD with related work](#comparison-with-related-work)
       - [Data drift detection and model update with streaming data](#data-drift-detection)
       - **Aside:** [Applying drift detection to tree-based classifiers](#applying-drift-detection-to-tree-based-classifiers)
-      - [A bit of theoretical intuition](#intuition-behind-active-anomaly-discovery)
+      - [A bit of theoretical intuition](Motivations.md)
   - [Reducing activity sequences to i.i.d](#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
 
@@ -84,25 +84,7 @@ Active Anomaly Discovery (AAD)
 ==============================
 This codebase replaces the older 'pyaad' project (https://github.com/shubhomoydas/pyaad). It implements an algorithm (AAD) to actively explore anomalies.
 
-The main idea that helps understand AAD can be summarized as follows:
-  - Uncertainty sampling for active learning in standard classification setting is label efficient
-  - Anomaly detector ensembles, **by design**, enable uncertainty sampling for anomaly detection (this is **not** obvious) such that both learning the *margin* (in a linear model) as well as discovering anomalies is efficient:
-    - For uncertainty sampling with a linear model, the hyperplane margin should pass through the region of uncertainty
-    - The uncertainty region has a well-known prior when anomaly detector ensembles are employed
-    - AAD designs a hyperplane that passes through the uncertainty region and tries to maintain it there so that uncertainty sampling can then be employed for anomaly detection
-    - instances on one side of the margin are much more likely to be anomalies than on the other side; presenting instances from the 'anomaly' side to the analyst then reveals true anomalies faster
-
-The **desired properties** of an ensemble-based detector which will make it well-suited for active learning are:
-  - **Inexpensive members:** computationally cheap to create ensemble members. If we employ a linear model (such as with AAD), it helps to have a large number of members because it then increases the capacity of the model to incorporate a large number of instance labels.
-  - **Somewhat-OK (weak?) accuracy:** if accuracy is low, then more members will be desired
-  - **Many and diverse members:** a large number of high-precision-low-recall members might work well in combination (such as the leaf nodes of tree-based detectors)
-
-Some anomaly detectors which fit the above desiderata are:
-  - LODA: The one-dimensional projections are the members
-  - Tree-based detectors such as Isolation Forest: We may treat each tree in the forest or each node in the trees as the members
-  - Feature bagging: Detectors created from each random feature subset act as the members
-
-The section ['Intuition behind Active Anomaly Discovery'](#intuition-behind-active-anomaly-discovery) below explains the idea in more depth.
+The motivations for exploring active anomaly detection with ensembles are presented [here](Motivations.md). The intuitions are explained in (Das, S., Islam, R., et al. 2018).
 
 **Assuming that the ensemble scores have already been computed**, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
 
@@ -378,9 +360,13 @@ The [demo_aad.py](python/aad/demo_aad.py) shows the simpest AAD implementation t
 
 Comparison with related work
 ----------------------------
-My former collaborators Siddiqui et al. have employed the same tree-based model we introduced in KDD IDEA workshop, and compare a variety of loss functions. The linear loss (similar to the AAD loss) again performs best. This is no surprise. They start with the uniform weights and perform greedy-select-top query. The regularizer in their work does not let the weights vary a lot from previous iteration. This ensures that the top-scored instances lie in the region of uncertainty through most of the query budget, and therefore makes the greedy strategy label efficient. This offers further validation of our approach.
+My former collaborators Siddiqui et al. have employed the same tree-based model we introduced in KDD IDEA workshop, and compare a variety of loss functions. The linear loss (similar to the AAD loss) again performs the best on real data. This is no surprise. They start with the uniform weights and perform greedy-select-top query. The regularizer in their work does not let the weights vary a lot from previous iteration. This ensures that the top-scored instances lie in the region of uncertainty through most of the query budget, and therefore makes the greedy strategy label efficient. This offers further validation of our approach.
 
-**Note: Their results for AAD were based on an older AAD codebase, hence not accurate. The below results were generated with the latest codebases for both algorithms.** These results were generated with commands in the file `python/compare_fbonline.txt`. The results for *KDDCup99* and *Covtype* could not be included for Siddiqui et al. 2018 because their code resulted in Segmentation Fault when run with 3000 feedback iterations (a reasonable budget for the large datasets).
+One misunderstanding about AAD (as stated in Siddiqui et al. 2018) is that AAD requires many parameters. **This is not correct.** The only configurable parameter is the approximate fraction of anomalies (tau). While earlier versions used to set separate penalty terms, these are all now set to 1.0 in AAD.
+
+Siddiqui et al. is also limited to **linear** models. In contrast, since AAD tries to score anomalies higher than nominals in a principled manner with the tau-th ranked score/instance as proxy, it can be applied to introduce weak supervision to a variety of detectors including any parameterized density estimation based approach. If the model is differentiable, just wire it up in a framework like *Tensorflow* along with the AAD-style loss. In fact, our glocalized approach [GLAD](#glocalized-anomaly-detection) does precisely this with a neural network in the mix.
+
+**Note: The results for AAD in Siddiqui et al. were based on an older AAD codebase, hence not accurate. The below results were generated with the latest codebases for both algorithms.** These results were generated with commands in the file `python/compare_fbonline.txt`. The results for *KDDCup99* and *Covtype* could not be included for Siddiqui et al. because their code resulted in Segmentation Fault when run with 3000 feedback iterations (a reasonable budget for the large datasets).
 
 **Reference(s)**:
   - Siddiqui, A., Fern, A., Dietterich, T., et al. (2018). *Feedback-Guided Anomaly Discovery via Online Optimization*, KDD [(pdf)](http://web.engr.oregonstate.edu/~afern/papers/kdd18-siddiqui.pdf)
@@ -428,37 +414,6 @@ The application of KL-divergence in the **specific manner employed here is novel
 Applying drift detection to tree-based classifiers
 --------------------------------------------------
 The above KL-divergence based method can be applied to detect drift with tree-based classifiers such as Random Forest as well. The example [python/aad/test_concept_drift_classifier.py](python/aad/test_concept_drift_classifier.py) uses the wrapper class [RandomForestAadWrapper](python/aad/classifier_trees.py) to detect the drift with trees created by `sklearn.ensemble.RandomForestClassifier`.
-
-
-Intuition behind Active Anomaly Discovery
------------------------------------------
-![Geometric Intuition for Active Learning](figures/geometric_intuition.png)
-
-*Question: Why should active learning help in anomaly detection with ensembles?* Let us assume that the anomaly scores are uniformly distributed on a 2D unit sphere as in the above figure (this is a setting commonly analysed in active learning theory literature as it is easier to convey the intuition). Also assume that **tau** fraction of instances are anomalous. When we treat the ensemble scores as 'features', then the 'feature' vectors of anomalies will tend to be closer to the uniform unit vector than the 'feature' vectors of nominals (uniform unit vector has the same values for all 'features' and magnitude = 1). This is because anomaly detectors are **designed** to assign higher scores to anomalies. In other words, the dot product between the score vectors of anomalies and the uniform vector is higher than the dot product between the scores vectors of nominals and the uniform vector. (Note: the dot product of any vector with the uniform vector is equivalent to the arithmetic mean of the vector components up to a multiplicative const.) This is why combining scores by averaging works well.
-
-Seen another way, the hyperplane perpendicular to the uniform weight vector and offset by `cos(pi.tau)` (in this simple 2D setting only) should be a good prior for the separating hyperplane between the anomalies and the nominals so that, *ideally*, anomalies lie at the extreme end -- the top right side of the hyperplane. The *ideal* classification rule then is: `sign(w.x - cos(pi.tau))` such that +1 is anomaly, -1 is nominal. On real-world data however, the true hyperplane normal is not exactly same as the uniform vector, but should be close (else the anomaly detectors forming the ensemble are poor). AAD is basically trying to find this true hyperplane by solving a large-margin classification problem. The example `percept.percept` illustrates this where we have true anomaly distribution (red points in the plots) displaced by a slight angle (*theta*) from the uniform weights. The true hyperplane normal is represented by the blue dashed line.
-
-With this setup, active learning can help discover the true anomaly region on the unit sphere (centered around blue dashed line) in a more efficient manner if we set the uniform vector (red dashed line) as a prior. To understand this intuitively, observe that we can design, as discussed in the previous paragraph, a hyperplane that is displaced from the origin such that a small fraction (*tau*) of instances are on one side and the rest are on the other side. Now, note three important observations: (1) top ranked instances are close to the hyperplane, (2) since instances close to the hyperplane have the most uncertain labels, top-ranked instances lie in the region of uncertainty (from the margin perspective), and (3) ensembles are designed so that most anomalies are top-ranked in the score-space which ensures that the uniform vector is a good prior for the hyperplane normal. Selecting top-ranked instances for labeling then results in **uncertainty** sampling which makes active learning *efficient* for learning the true hyperplane (see references below). It also makes selecting top-ranked instances for labeling efficient for discovering anomalies because: if the selected instance is truly an anomaly, it is a success; on the other hand, if the instance is a nominal, labeling it still helps to efficiently adjust the margin so that future query instances are more likely to be anomalies.
-
-**Note on the tau-based hyperplane displacement:** The hyperplane displacement `cos(pi.tau)` is assumed only for the simple 2D scenario. In a real setting, we need to estimate the hyperplane displacement from the data, as is done by AAD. Most researchers will refer to this displacement as the *bias*.
-
-**Note on score normalization:** By design (of ensemble members), the uniform weight vector is more closely 'hugged' by the ensemble score vectors of **true anomalies** than by the ensemble score vectors of nominals. However, if the score vectors are normalized to unit length (such that they all lie on a unit sphere), then this alignment is no longer guaranteed for every type of ensemble. For example, while the unit-length normalization works well for the Isolation Forest-based model with leaf nodes as the members, it does not work for the LODA-based model with the projection vectors as the members. The intuition behind AAD, as conveyed above, **does not** actually require the score vectors to lie on a unit sphere (not even for the Isolation Forest-based model). The general anomaly score distributions are expected to look more similar to the figure below when the anomaly scores are normalized to lie in the range [0, 1] -- as is commonly done before combining the member scores. The AAD intuition works well in this situation as well without any further unit-length normalization.
-
-![General Setup for Active Learning](figures/geometric_intuition_rect.png)
-
-The distribution of the angles between the normalized score vectors and the uniform weight vector can be checked with `aad.test_hyperplane_angles`. As a recommendation: the IForest leaf-based scores may be normalized (though, not required), but LODA based scores should **not** be normalized to unit length. The following command will generate the angle distribution plot for a dataset (e.g. *Abalone*), as shown in (Das et al. 2018) under the folder `python/temp/angles`.
-
-    bash ./aad.sh abalone 35 1 0.03 7 1 0 2 512 0 1 1
-
-
-**Reference(s)**:
-  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
-  - David Cohn, Les Atlas, and Richard Ladner. *Improving generalization with active learning.* Machine Learning, 15(2):201–221, May 1994.
-  - Maria-Florina Balcan, Andrei Z. Broder, and Tong Zhang. *Margin based active learning.* In COLT, 2007.
-  - Wu, K., Zhang, K., Fan, W., Edwards, A., and Philip, S. Y. *Rs-forest: A rapid density estimator for streaming anomaly detection.* In IEEE ICDM, 2014.
-
-
-![Evidence of Angular Distribution in Read Data](figures/aad/angles.png)
 
 
 Timeseries Anomaly Detection
