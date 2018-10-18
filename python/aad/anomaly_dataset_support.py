@@ -35,7 +35,7 @@ class ResultDefs(object):
             file = os.path.join(parentdir, file)
         return file
 
-    def get_results(self, parentdir=None):
+    def get_per_run_results(self, parentdir=None):
         file = self.get_complete_filepath(self.filename, parentdir)
         header = None
         start_col = 1
@@ -44,8 +44,12 @@ class ResultDefs(object):
             start_col = 1  # there is no fileidx
         resultsdf = pd.read_csv(file, header=header, sep=",")
         results = np.array(resultsdf.values, dtype=np.float32)
-        r_avg = np.mean(results[:, start_col:], axis=0)
-        r_sd = np.std(results[:, start_col:], axis=0)
+        return results[:, start_col:]
+
+    def get_results(self, parentdir=None):
+        results = self.get_per_run_results(parentdir=parentdir)
+        r_avg = np.mean(results, axis=0)
+        r_sd = np.std(results, axis=0)
         return r_avg, r_sd, results.shape[0]
 
     def get_queried(self, parentdir=None):

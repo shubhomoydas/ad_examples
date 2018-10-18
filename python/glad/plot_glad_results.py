@@ -45,19 +45,43 @@ def get_glad_result_defs(args, budget=-1, mink=2, maxk=15, reruns=10):
     return result_lists, result_map
 
 
+def get_results(result_map, r_name, relative=None, parent_folder=None):
+    rs = result_map[r_name]
+    if relative is None:
+        return rs.get_results(parent_folder)
+
+    base_rs = result_map[relative]
+
+    base_seen = base_rs.get_per_run_results(parentdir=parent_folder)
+    r_seen = rs.get_per_run_results(parentdir=parent_folder)
+
+    results = np.subtract(r_seen, base_seen)
+    r_avg = np.mean(results, axis=0)
+    r_sd = np.std(results, axis=0)
+    return r_avg, r_sd, results.shape[0]
+
+
 def process_glad_results(args, result_type="batch", budget=-1, plot=True, plot_sd=False,
+                         relative=None,
                          legend_loc='lower right', legend_datasets=None, legend_size=14):
+    parent_folder = "./temp/glad/%s" % args.dataset
     result_names = get_glad_result_names(result_type)
 
     cols = ["red", "blue", "green", "orange", "brown", "pink", "magenta", "black"]
     result_lists, result_map = get_glad_result_defs(args, budget=budget)
     num_seen = 0
     num_anoms = 0
+    relative_set = set()
+    if relative is not None:
+        relative_set = set(relative.values())
     all_results = list()
     for i, r_name in enumerate(result_names):
-        parent_folder = "./temp/glad/%s" % args.dataset
+        if r_name in relative_set:
+            continue  # skip this one
         rs = result_map[r_name]
-        r_avg, r_sd, r_n = rs.get_results(parent_folder)
+        relative_r_name = None if relative is None else relative[r_name]
+        r_avg, r_sd, r_n = get_results(result_map=result_map, r_name=r_name,
+                                       relative=relative_r_name, parent_folder=parent_folder)
         logger.debug("[%s]\navg:\n%s\nsd:\n%s" % (rs.name, str(list(r_avg)), str(list(r_sd))))
         all_results.append((args.dataset, rs.display_name, r_avg, r_sd, r_n))
         num_seen = max(num_seen, len(r_avg))
@@ -67,7 +91,7 @@ def process_glad_results(args, result_type="batch", budget=-1, plot=True, plot_s
         dir_create(outpath)
         plot_results(all_results, cols, "%s/num_seen-%s.pdf" % (outpath, args.dataset),
                      num_seen=num_seen, num_anoms=-1,  # num_anoms,
-                     plot_sd=plot_sd, legend_loc=legend_loc,
+                     plot_sd=plot_sd, ylabel="diff in #anoms seen from baseline", legend_loc=legend_loc,
                      legend_datasets=legend_datasets, legend_size=legend_size)
     return all_results, num_anoms
 
@@ -92,9 +116,11 @@ if __name__ == "__main__":
     legend_loc = 'lower right'
     legend_datasets = None
     legend_size = 14
+    relative = None
 
     if result_type == "batch":
-        plot_sd = False
+        # relative = {"loda_glad": "loda", "loda_aad": "loda"}
+        plot_sd = relative is not None
         # legend_datasets = ["abalone"]
 
     budget = 150
@@ -108,6 +134,6 @@ if __name__ == "__main__":
         args.dataset = dataset
         plot = True
         all_results.append(process_glad_results(args, result_type=result_type, budget=budget,
-                                                plot=plot, plot_sd=plot_sd,
+                                                plot=plot, plot_sd=plot_sd, relative=relative,
                                                 legend_loc=legend_loc, legend_datasets=legend_datasets,
                                                 legend_size=legend_size))

@@ -234,7 +234,7 @@ Suppose that `m` pre-labeled instances are already available *before* starting t
 
 Generating compact descriptions with AAD
 -------------------------------------------
-AAD, when used with a forest-based detector such as Isolation Forest, can output a compact set of subspaces that contain all labeled anomalies. The idea is explained in [anomaly_description.pdf](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf). Following illustrations show the results of this approach.
+AAD, when used with a forest-based detector such as Isolation Forest, can output a compact set of subspaces that contain all labeled anomalies. The idea is explained in [(Das, Islam, et al. 2018)](#cite-this-work). Following illustrations show the results of this approach.
 
 **Note:** The algorithm to compute compact descriptions (as illustrated here) might also be considered to be a non-parametric clustering algorithm where each 'description' is a cluster.
   
@@ -258,7 +258,7 @@ We assume that in a practical setting, the analyst(s) will be presented with ins
 
 Query diversity with compact descriptions
 -----------------------------------------
-The idea for querying a diverse set of instances without significantly affecting the anomaly detection efficiency is explained in [anomaly_description.pdf](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/anomaly_description/anomaly_description.pdf).
+The idea for querying a diverse set of instances without significantly affecting the anomaly detection efficiency is explained in [(Das, Islam, et al. 2018)](#cite-this-work).
 
 To generate the below, use the command:
     

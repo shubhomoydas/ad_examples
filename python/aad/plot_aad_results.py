@@ -26,7 +26,8 @@ def get_n_intermediate(x, n=10):
 
 
 def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
-                 plot_sd=False, legend_loc='lower right', legend_datasets=None, axis_fontsize=20, legend_size=14):
+                 plot_sd=False, ylabel=None,
+                 legend_loc='lower right', legend_datasets=None, axis_fontsize=20, legend_size=14):
     dataset = results[0][0]
     dp = DataPlotter(pdfpath=pdffile, rows=1, cols=1)
     pl = dp.get_next_plot()
@@ -34,13 +35,13 @@ def plot_results(results, cols, pdffile, num_seen=0, num_anoms=0,
     plt.xlim([0, num_seen])
     if num_anoms < 0:
         # plot actual number of anomalies discovered instead of the fraction
-        ylabel = '# of anomalies seen'
+        ylabel = '# of anomalies seen' if ylabel is None else ylabel
         ylim = 0.0
         for result in results:
             ylim = max(ylim, np.max(result[2]))
         plt.ylim([0., ylim+2])
     else:
-        ylabel = '% of total anomalies seen'
+        ylabel = '% of total anomalies seen' if ylabel is None else ylabel
         plt.ylim([0., 100.])
 
     plt.xlabel('# instances labeled', fontsize=axis_fontsize)
