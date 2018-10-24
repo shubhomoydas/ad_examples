@@ -62,6 +62,8 @@ def get_option_list():
                         help="File path to debug logs")
     parser.add_argument("--randseed", action="store", type=int, default=42,
                         help="Random seed so that results can be replicated")
+    parser.add_argument("--results_dir", action="store", default="./temp",
+                        help="Folder where the generated metrics will be stored")
     return parser
 
 
