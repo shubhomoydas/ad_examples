@@ -61,11 +61,13 @@ def generate_dependent_normal_samples(n, mu, mcorr, dvar):
                 mvar[j, i] = mvar[i, j]
         p = np.diag(np.sqrt(dvar))
         mvar = p.dot(mvar).dot(p)
+        rv = mvn(mu, mvar)
+        s = rv.rvs(size=n)
     else:
-        mvar[1] = dvar[1]
+        s = np.random.normal(loc=mu[0], scale=np.sqrt(dvar[0]), size=n)
+        # logger.debug(str(list(s)))
+        s = np.reshape(s, (-1, 1))
 
-    rv = mvn(mu, mvar)
-    s = rv.rvs(size=n)
     if n == 1:
         # handle the case where numpy automatically makes column vector if #rows is 1
         s = np.reshape(s, (n, len(s)))

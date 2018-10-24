@@ -60,6 +60,8 @@ def get_option_list():
                         help="Whether to plot figures")
     parser.add_argument("--log_file", type=str, default="", required=False,
                         help="File path to debug logs")
+    parser.add_argument("--randseed", action="store", type=int, default=42,
+                        help="Random seed so that results can be replicated")
     return parser
 
 
