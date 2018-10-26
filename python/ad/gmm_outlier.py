@@ -16,7 +16,7 @@ def make_ellipses(gmm, pl, colors):
     covariances = None
     for k in range(gmm.n_components):
         color = colors[k]
-        logger.debug("color: %s" % color)
+        # logger.debug("color: %s" % color)
         if gmm.covariance_type == 'full':
             covariances = gmm.covariances_[k][:2, :2]
         elif gmm.covariance_type == 'tied':
