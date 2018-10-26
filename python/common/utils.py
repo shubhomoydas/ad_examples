@@ -67,8 +67,9 @@ def get_option_list():
     return parser
 
 
-def get_command_args(debug=False, debug_args=None):
-    parser = get_option_list()
+def get_command_args(debug=False, debug_args=None, parser=None):
+    if parser is None:
+        parser = get_option_list()
 
     if debug:
         unparsed_args = debug_args
