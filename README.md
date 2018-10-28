@@ -378,9 +378,9 @@ GAN Training
 ------------
 We first need to train a robust GAN model in order to achieve a decent anomaly detection accuracy. Training GANs is not easy and, among other things, a few tricks need to be employed to avoid *mode collapse* (Goodfellow, 2016).
 
-The following have been implemented in this codebase to make the training robust:
+The following options are available in this codebase which can be tried to improve the GAN training (other options might be added later):
   1. One-sided label-smoothing (Goodfellow, 2016)
-  2. Conditional GAN (Mirza and Osindero, 2014)
+  2. Conditional GAN (Mirza and Osindero, 2014) -- we actually infer labels by unsupervised clustering. Hence the GAN training is fully unsupervised.
 
 *Mode collapse* might occur when just a few modes suck in the entire data distribution of GAN. One option is to first cluster the data with a less expensive algorithm (such as a mixture of Gaussians), then apply the cluster labels as class labels and train a Conditional GAN. On 1D-data, this approach shows visibly good results. See the figure below. The following commands generate the images plotted:
 
@@ -401,9 +401,9 @@ We will apply AnoGAN (Schlegl et al., 2017) on a 2D Toy data here and illustrate
     bash ./gan.sh toy2 cond 1 2000
 
 AnoGAN has multiple sources of uncertainty, of which some are:
-  [1] The GAN training
-  [2] The AnoGAN loss (proportion in which the reconstruction loss is combined with the discriminative loss)
-  [3] The stochasticity in computing the reconstructed images of test points
+  1. The GAN training
+  2. The AnoGAN loss (proportion in which the reconstruction loss is combined with the discriminative loss)
+  3. The stochasticity in computing the reconstructed images of test points
 
 These uncertainties might increase the number of false positives. Still, data such as images which have good low-dimensional latent representations might benefit from the GAN just enough to outperform the other i.i.d. point-based algorithms for that type of data.
 
