@@ -63,6 +63,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - **Aside:** [Applying drift detection to tree-based classifiers](DriftDetection.md#applying-drift-detection-to-tree-based-classifiers)
       - [A bit of theoretical intuition](Motivations.md#motivation-for-ensemble-based-active-anomaly-discovery)
   - [Generative Adversarial Nets (GAN) based Anomaly Detection](#gan-based-anomaly-detection)
+    - [AnoGAN](#anogan)
   - [Reducing activity sequences to i.i.d](ActivitySequences.md#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
 
@@ -392,9 +393,18 @@ The following have been implemented in this codebase to make the training robust
 
 ![Simple vs Conditional GAN](figures/gan/simple_vs_conditional.png)
 
-Since the results are encouraging with the 1D-data, we might apply this strategy to the 2D Toy data as well. However, it is unclear from the results (below) whether the unsupervised conditional GAN approach is any better than the simple GAN. The following commands generate the images plotted:
+AnoGAN
+------
+We will apply AnoGAN (Schlegl et al., 2017) on a 2D Toy data here and illustrate how it works -- most implementations jump to image data and make it harder to figure out the innards of the algorithm in a straightforward manner. Since the results are encouraging with the 1D-data, we might apply the clustering strategy to the Toy data as well when we train a GAN for AnoGAN. However, it is unclear from the results (below) whether the unsupervised conditional GAN approach is any better than the simple GAN. The following commands generate the images plotted:
 
     bash ./gan.sh toy2 gan 1 2000
     bash ./gan.sh toy2 cond 1 2000
+
+AnoGAN has multiple sources of uncertainty, of which some are:
+  [1] The GAN training
+  [2] The AnoGAN loss (proportion in which the reconstruction loss is combined with the discriminative loss)
+  [3] The stochasticity in computing the reconstructed images of test points
+
+These uncertainties might increase the number of false positives. Still, data such as images which have good low-dimensional latent representations might benefit from the GAN just enough to outperform the other i.i.d. point-based algorithms for that type of data.
 
 ![AnoGAN](figures/gan/ano_gan.png)
