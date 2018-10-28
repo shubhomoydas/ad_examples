@@ -74,9 +74,9 @@ if __name__ == "__main__":
     dir_create("./temp/dnn")  # for logging and plots
 
     args = get_command_args(debug=False, debug_args=["--dataset=kddcup_sub",
-                                                    "--n_epochs=100",
-                                                    "--debug", "--plot",
-                                                    "--log_file=./temp/dnn/autoencoder.log"])
+                                                     "--n_epochs=100",
+                                                     "--debug", "--plot",
+                                                     "--log_file=./temp/dnn/autoencoder.log"])
     # print "log file: %s" % args.log_file
     configure_logger(args)
 

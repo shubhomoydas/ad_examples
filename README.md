@@ -62,6 +62,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Data drift detection and model update with streaming data](DriftDetection.md#data-drift-detection)
       - **Aside:** [Applying drift detection to tree-based classifiers](DriftDetection.md#applying-drift-detection-to-tree-based-classifiers)
       - [A bit of theoretical intuition](Motivations.md#motivation-for-ensemble-based-active-anomaly-discovery)
+  - [Generative Adversarial Nets (GAN) based Anomaly Detection](#gan-based-anomaly-detection)
   - [Reducing activity sequences to i.i.d](ActivitySequences.md#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
 
@@ -357,3 +358,43 @@ The [demo_aad.py](python/aad/demo_aad.py) shows the simpest AAD implementation t
 
     pythonw -m aad.demo_aad
 
+
+GAN-based Anomaly Detection
+===========================
+Generative Adversarial Networks (GAN) (Goodfellow et al., 2014) are increasingly popular for anomaly detection and a few general approaches have emerged. The strength of GANs seems to be that they can exploit the latent representations in structured data such as images. One specific technique that we will investigate is AnoGAN (Schlegl et al. 2017). While AnoGAN was applied to medical image data, we will try to demonstrate its working in the simplest possible way with our *Toy* datasets.
+
+**Reference(s)**:
+  - Ian J. Goodfellow, Jean Pouget-Abadi, et al., Generative Adversarial Nets, NIPS 2014 [(pdf)](https://arxiv.org/pdf/1406.2661.pdf)
+
+  - Mehdi Mirza and Simon Osindero, Conditional Generative Adversarial Nets, 2014 [(pdf)](https://arxiv.org/pdf/1411.1784.pdf)
+
+  - Ian Goodfellow, *NIPS 2016 Tutorial: Generative Adversarial Networks*, NIPS 2016 [(pdf)](https://arxiv.org/pdf/1701.00160.pdf)
+
+  - Thomas Schlegl, Philipp Seebock, Sebastian M. Waldstein, Ursula Schmidt-Erfurth, Georg Langs, *Unsupervised Anomaly Detection with Generative Adversarial Networks to Guide Marker Discovery*, IPMI 2017 [(pdf)](https://arxiv.org/pdf/1703.05921.pdf)
+
+
+GAN Training
+------------
+We first need to train a robust GAN model in order to achieve a decent anomaly detection accuracy. Training GANs is not easy and, among other things, a few tricks need to be employed to avoid *mode collapse* (Goodfellow, 2016).
+
+The following have been implemented in this codebase to make the training robust:
+  1. One-sided label-smoothing (Goodfellow, 2016)
+  2. Conditional GAN (Mirza and Osindero, 2014)
+
+*Mode collapse* might occur when just a few modes suck in the entire data distribution of GAN. One option is to first cluster the data with a less expensive algorithm (such as a mixture of Gaussians), then apply the cluster labels as class labels and train a Conditional GAN. On 1D-data, this approach shows visibly good results. See the figure below. The following commands generate the images plotted:
+
+    bash ./gan.sh 2 gan 0 1000
+    bash ./gan.sh 2 cond 0 1000
+    bash ./gan.sh 3 gan 0 1000
+    bash ./gan.sh 3 cond 0 1000
+    bash ./gan.sh 4 gan 0 1000
+    bash ./gan.sh 4 cond 0 1000
+
+![Simple vs Conditional GAN](figures/gan/simple_vs_conditional.png)
+
+Since the results are encouraging with the 1D-data, we might apply this strategy to the 2D Toy data as well. However, it is unclear from the results (below) whether the unsupervised conditional GAN approach is any better than the simple GAN. The following commands generate the images plotted:
+
+    bash ./gan.sh toy2 gan 1 2000
+    bash ./gan.sh toy2 cond 1 2000
+
+![AnoGAN](figures/gan/ano_gan.png)
