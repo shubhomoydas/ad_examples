@@ -36,7 +36,7 @@ fi
 ANO_GAN_LAMBDA=0.5
 ANO_GAN=""
 if [[ "$ANO_GAN_IND" == "1" ]]; then
-    ALGO_NAME="ano_${ALGO_NAME}"
+    # ALGO_NAME="ano_${ALGO_NAME}"
     ANO_GAN="--ano_gan"
 fi
 
@@ -68,4 +68,4 @@ python -m dnn.test_gan --dataset=${DATASET} ${COND_GAN} ${ANO_GAN} \
     ${LABEL_SMOOTHING} --smoothing_prob=${SMOOTHING_PROB} \
     --ano_gan_lambda=${ANO_GAN_LAMBDA} ${INDV_LOSS} ${DIST_LOSS} \
     --n_epochs=${N_EPOCHS} --results_dir=${RESULTS_DIR} \
-    --log_file="${LOG_DIR}/${RESULTS_NAME}.log" --debug --plot
+    --log_file="${LOG_DIR}/${RESULTS_NAME}_a${ANO_GAN_IND}.log" --debug --plot

@@ -36,6 +36,13 @@ def test_ano_gan(gan=None, x=None, y=None, opts=None, tol=1e-3, max_iters=100):
         logger.debug("AnoGAN not enabled")
         return
 
+    if x.shape[0] != 2:
+        logger.debug("AnoGAN test instances for visualization only supports 2D Toy. "
+                     "For other datasets, setup test instances appropriately.")
+        return
+
+    # Test instances for illustration for Toy dataset.
+    # Set these up appropriately for other datasets.
     x_test = np.array([
                        [-2.5, 6.],
                        [2., 3.],
@@ -122,7 +129,7 @@ def test_gan(opts):
               gen_layer_activations=gan_defs['gen_layer_activations'],
               label_smoothing=opts.label_smoothing, smoothing_prob=0.9,
               conditional=opts.conditional, n_classes=n_classes, pvals=pvals, l2_lambda=0.001,
-              enable_ano_gan=opts.ano_gan,
+              enable_ano_gan=True,
               n_epochs=opts.n_epochs, batch_size=25, shuffle=True,
               listener=GanListener(x, y=y, ll_freq=100, plot_freq=100, opts=opts))
     gan.init_session()

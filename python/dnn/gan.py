@@ -625,9 +625,9 @@ class GanOpts(object):
         self.k = 0
 
     def get_opts_name_prefix(self):
-        ano_gan_sig = "_ano" if self.ano_gan else ""
+        # ano_gan_sig = "_ano" if self.ano_gan else ""
         cond_sig = "_cond" if self.conditional else ""
-        algo_sig = "%s%s_gan" % (cond_sig, ano_gan_sig)
+        algo_sig = "%s_gan" % (cond_sig)
         k_sig = "_k%d" % self.k if self.k > 0 else ""
         smoothing_sig = "_ls%d" % (int(self.smoothing_prob*10)) if self.label_smoothing else ""
         name = "%s%s%s%s_%d" % (self.dataset, algo_sig, k_sig, smoothing_sig, self.n_epochs)
