@@ -36,7 +36,7 @@ def test_ano_gan(gan=None, x=None, y=None, opts=None, tol=1e-3, max_iters=100):
         logger.debug("AnoGAN not enabled")
         return
 
-    if x.shape[0] != 2:
+    if x.shape[1] != 2:
         logger.debug("AnoGAN test instances for visualization only supports 2D Toy. "
                      "For other datasets, setup test instances appropriately.")
         return
