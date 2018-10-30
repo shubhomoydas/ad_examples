@@ -101,17 +101,19 @@ def test_gan(opts):
     y = y_one_hot = class_codes = pvals = gmm = None
     n_classes = 0
 
-    if opts.conditional:
+    if opts.conditional or opts.info_gan:
         # We will assign pseudo-classes using an unsupervised technique.
         # This might provide a better structure to guide the GAN training.
-        y, gmm = get_cluster_labels(x, min_k=2, max_k=10)
+        y_cls, gmm = get_cluster_labels(x, min_k=2, max_k=10)
 
-        n_classes = len(np.unique(y))
+        n_classes = len(np.unique(y_cls))
         class_codes = np.eye(n_classes, dtype=np.float32)
-        y_one_hot = class_codes[y]
 
-        pvals = np.sum(y_one_hot, axis=0) * 1.0 / len(y)
-        logger.debug("pvals: %s" % (str(list(pvals))))
+        if opts.conditional:
+            y = y_cls
+            y_one_hot = class_codes[y]
+            pvals = np.sum(y_one_hot, axis=0) * 1.0 / len(y)
+            logger.debug("pvals: %s" % (str(list(pvals))))
 
     opts.k = n_classes
 
@@ -128,6 +130,7 @@ def test_gan(opts):
               gen_layer_nodes=gan_defs['gen_layer_nodes'],
               gen_layer_activations=gan_defs['gen_layer_activations'],
               label_smoothing=opts.label_smoothing, smoothing_prob=0.9,
+              info_gan=opts.info_gan, info_gan_lambda=1.0,
               conditional=opts.conditional, n_classes=n_classes, pvals=pvals, l2_lambda=0.001,
               enable_ano_gan=True,
               n_epochs=opts.n_epochs, batch_size=25, shuffle=True,

@@ -4,6 +4,11 @@
 # bash ./gan.sh <dataset> <algo> <ano_gan_ind[0|1]> <n_epochs>
 #
 # =========
+# Supported Datasets:
+#   2, 3, 4, donut, face, toy2
+# ---------
+#
+# =========
 # Examples:
 # ---------
 #
@@ -57,6 +62,12 @@ if [[ "$ALGO" == "cond" ]]; then
     COND_GAN="--conditional"
 fi
 
+INFO_GAN=""
+if [[ "$ALGO" == "info" ]]; then
+    ALGO_NAME="info_${ALGO_NAME}"
+    INFO_GAN="--info_gan"
+fi
+
 LOG_DIR="./temp/gan"
 RESULTS_NAME="${DATASET}_${ALGO_NAME}${LABEL_SMOOTHING_SIG}_${N_EPOCHS}"
 RESULTS_DIR="./temp/gan/${RESULTS_NAME}"
@@ -64,7 +75,7 @@ RESULTS_DIR="./temp/gan/${RESULTS_NAME}"
 mkdir -p ${LOG_DIR}
 mkdir -p ${RESULTS_DIR}
 
-python -m dnn.test_gan --dataset=${DATASET} ${COND_GAN} ${ANO_GAN} \
+python -m dnn.test_gan --dataset=${DATASET} ${INFO_GAN} ${COND_GAN} ${ANO_GAN} \
     ${LABEL_SMOOTHING} --smoothing_prob=${SMOOTHING_PROB} \
     --ano_gan_lambda=${ANO_GAN_LAMBDA} ${INDV_LOSS} ${DIST_LOSS} \
     --n_epochs=${N_EPOCHS} --results_dir=${RESULTS_DIR} \

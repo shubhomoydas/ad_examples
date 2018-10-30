@@ -61,6 +61,10 @@ def read_dataset(args):
         y = np.append(np.zeros(200, dtype=int), np.ones(200, dtype=int))
         y = np.append(y, 2*np.ones(200, dtype=int))
         y = np.append(y, 3*np.ones(200, dtype=int))
+    elif args.dataset == "donut":
+        x, y = load_donut_data()
+    elif args.dataset == "face":
+        x, y = load_face_data()
     else:
         # raise ValueError("dataset '%s' not supported" % opts.dataset)
         x, y = read_anomaly_dataset(args.dataset)

@@ -8,7 +8,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 """
-A simple [conditional] GAN with fully connected layers for both generator and discriminator.
+A simple [conditional|Info] GAN with fully connected layers for both generator and discriminator.
 Also supports AnoGAN.
 
 See dnn/test_gan.py for usage.
@@ -18,6 +18,8 @@ References:
 [2] Conditional Generative Adversarial Nets by Mehdi Mirza and Simon Osindero, 2014
 [3] Unsupervised Anomaly Detection with Generative Adversarial Networks to Guide Marker Discovery
     by Thomas Schlegl, Philipp Seebock, Sebastian M. Waldstein, Ursula Schmidt-Erfurth, Georg Langs, IPMI 2017
+[4] InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets
+    by Xi Chen, Yan Duan, Rein Houthooft, John Schulman, Ilya Sutskever, Pieter Abbeel
 """
 
 
@@ -63,7 +65,7 @@ class GAN(object):
     """ A GAN or a conditional GAN for simple i.i.d data """
     def __init__(self, data_dim=1, discr_layer_nodes=None, discr_layer_activations=None,
                  gen_input_dim=None, gen_layer_nodes=None, gen_layer_activations=None,
-                 label_smoothing=False, smoothing_prob=0.9,
+                 label_smoothing=False, smoothing_prob=0.9, info_gan=False, info_gan_lambda=1.0,
                  conditional=False, n_classes=0, pvals=None, enable_ano_gan=False,
                  n_epochs=10, batch_size=25, shuffle=False, learning_rate=0.005,
                  l2_lambda=0.001, listener=None, use_adam=False):
@@ -85,8 +87,12 @@ class GAN(object):
             if True, then use one-sided label smoothing for discriminator loss
         :param smoothing_prob: float
             label-smoothing probability
+        :param info_gan: bool
+            if True, then use InfoGAN, else simple or conditional GAN
+        :param info_gan_lambda: float
+            InfoGAN regularization penalty
         :param conditional: bool
-            if True, then use Conditional GAN, else simple GAN
+            if True, then use Conditional GAN, else simple or InfoGAN
         :param n_classes:
             number of class labels in conditional mode
         :param pvals: np.array(dtype=np.float32)
@@ -108,6 +114,8 @@ class GAN(object):
         """
         self.label_smoothing = label_smoothing
         self.smoothing_prob = smoothing_prob
+        self.info_gan = info_gan
+        self.info_gan_lambda = info_gan_lambda
         self.conditional = conditional
         self.n_classes = n_classes
         self.pvals = pvals
@@ -136,13 +144,22 @@ class GAN(object):
         self.discr_data = self.discr_gen = None
         self.discr_loss = self.gen_loss = self.discr_training_op = self.gen_training_op = None
 
+        # InfoGAN variables and losses
+        self.q_network = self.q_pred = None
+        self.info_gan_loss = None
+
+        # AnoGAN variables and losses
         self.ano_gan_lambda = None
         self.ano_z = self.ano_gan_net_G = self.ano_gan_net_D = None
         self.ano_gan_training_op = self.ano_gan_loss = None
-        self.ano_gan_loss_R = self.ano_gan_loss_D = None
+        self.ano_gan_loss_R = self.ano_gan_loss_D = self.ano_gan_info_loss = None
+        self.ano_gan_q_network = None
 
         # Tensoflow session object
         self.session = None
+
+        if self.conditional and self.info_gan:
+            raise ValueError("Only one of conditional or info_gan should be true")
 
         self.init_network()
 
@@ -161,65 +178,122 @@ class GAN(object):
             self.gen = self.generator(z=self.z, y=self.y, reuse_gen=False)
             self.discr_data, self.discr_gen = self.discriminator(x=self.x, y=self.y, reuse_discr=False)
 
+        if self.info_gan:
+            with tf.variable_scope("InfoGAN"):
+                # The last-but-one layer of the discriminator will be the input to
+                # category prediction layer. The expectation is w.r.t generator output.
+                self.q_network = self.init_info_gan_network(self.discr_gen_output(layer_from_top=2), reuse=False)
+
+                # the below will be used to predict category for debug; it is not required for training
+                self.q_pred = self.init_info_gan_network(self.discr_data_output(layer_from_top=2), reuse=True)  # for prediction
+
+        if not self.label_smoothing:
+            discr_loss_data = -tf.log(tf.nn.sigmoid(self.discr_data_output()))
+        else:
+            logger.debug("Label smoothing enabled with smoothing probability: %f" % self.smoothing_prob)
+            discr_logit = self.discr_data_output()
+            discr_loss_data = tf.nn.sigmoid_cross_entropy_with_logits(logits=discr_logit,
+                                                                      labels=tf.ones(shape=tf.shape(discr_logit)) * self.smoothing_prob)
+
+        discr_gen_logit = self.discr_gen_output()
+        discr_gen_probs = tf.nn.sigmoid(discr_gen_logit)
+        self.discr_loss = tf.reduce_mean(discr_loss_data - tf.log(1 - discr_gen_probs))
+        self.gen_loss = tf.reduce_mean(-tf.log(discr_gen_probs))
+
+        self.info_gan_loss = tf.constant(0.0)
+        if self.info_gan:
+            logger.debug("Adding InfoGAN regularization")
+            q_out = self.q_network[len(self.q_network) - 1]  # output layer of category prediction
+            # compute entropy
+            self.info_gan_loss = self.entropy_reg(q_out)
+
+        vars = tf.trainable_variables()
+        for v in vars: logger.debug(v.name)
+        g_params = [v for v in vars if v.name.startswith('GAN/G/')]
+        d_params = [v for v in vars if v.name.startswith('GAN/D/')]
+        q_params = [v for v in vars if v.name.startswith('InfoGAN/')]
+        if self.info_gan and len(q_params) == 0:
+            # Just to be sure we do not have programmatic errors
+            raise ValueError("No q_params found for InfoGAN")
+
+        if self.l2_lambda > 0:
+            # add L2 regularization loss
+            logger.debug("Adding L2 regularization")
+            l2_loss_g, l2_loss_d, l2_loss_q = self.get_l2_regularizers(g_params, d_params, q_params)
+            self.gen_loss += self.l2_lambda * l2_loss_g
+            self.discr_loss += self.l2_lambda * l2_loss_d
+
+            if self.info_gan:
+                self.info_gan_loss += self.l2_lambda * l2_loss_q
+                g_params.extend(q_params)
+                d_params.extend(q_params)
+
+        self.gen_training_op = self.training_op(self.gen_loss+self.info_gan_loss, var_list=g_params, use_adam=self.use_adam)
+        self.discr_training_op = self.training_op(self.discr_loss+self.info_gan_loss, var_list=d_params, use_adam=self.use_adam)
+
         if self.enable_ano_gan:
-            # AnoGAN functionality
+            # Prepare variables required for AnoGAN functionality
+            #
+            # Note: AnoGAN functionality will come in use only *after* the
+            # GAN (simple|conditional|InfoGAN) has been fully trained.
             self.ano_gan_lambda = tf.placeholder(tf.float32, shape=(), name="ano_gan_lambda")
             self.ano_z = tf.Variable(initial_value=tf.zeros([1, self.gen_input_dim]), trainable=True, name="ano_z")
             with tf.variable_scope("GAN", reuse=True):
                 self.ano_gan_net_G, self.ano_gan_net_D = self.init_ano_gan_network(x=self.x, y=self.y, z=self.ano_z)
 
-        with tf.name_scope("gan_loss"):
-            if not self.label_smoothing:
-                discr_loss_data = -tf.log(tf.nn.sigmoid(self.discr_data_output()))
-            else:
-                logger.debug("Label smoothing enabled with smoothing probability: %f" % self.smoothing_prob)
-                discr_logit = self.discr_data_output()
-                discr_loss_data = tf.nn.sigmoid_cross_entropy_with_logits(logits=discr_logit,
-                                                                          labels=tf.ones(shape=tf.shape(discr_logit)) * self.smoothing_prob)
+            ano_gan_G, ano_gan_D, ano_gan_D_features = self.ano_gan_outputs()
 
-            discr_gen_logit = self.discr_gen_output()
-            discr_gen_probs = tf.nn.sigmoid(discr_gen_logit)
-            self.discr_loss = tf.reduce_mean(discr_loss_data - tf.log(1 - discr_gen_probs))
-            self.gen_loss = tf.reduce_mean(-tf.log(discr_gen_probs))
+            # reconstruction loss: generate synthetic data in original
+            # feature space that is close to input data
+            self.ano_gan_loss_R = tf.reduce_sum(tf.abs(tf.subtract(self.x, ano_gan_G)))
+            # ano_gan_loss_R = tf.nn.l2_loss(tf.subtract(self.x, ano_gan_G))
 
-            vars = tf.trainable_variables()
-            # for v in vars: logger.debug(v.name)
-            d_params = [v for v in vars if v.name.startswith('GAN/D/')]
-            g_params = [v for v in vars if v.name.startswith('GAN/G/')]
+            # discrimination loss: encourage generated data to be
+            # similar to real data
+            self.ano_gan_loss_D = tf.reduce_sum(-tf.log(tf.nn.sigmoid(ano_gan_D)))
 
-            if self.l2_lambda > 0:
-                # add L2 regularization loss
-                logger.debug("Adding L2 regularization")
-                # d_weights = [v for v in d_params if v.name.endswith('/W:0')]
-                # g_weights = [v for v in g_params if v.name.endswith('/W:0')]
-                l2_loss_d = 0.0
-                l2_loss_g = 0.0
-                for v in d_params:
-                    l2_loss_d += tf.nn.l2_loss(v)
-                for v in g_params:
-                    l2_loss_g += tf.nn.l2_loss(v)
-                self.discr_loss += self.l2_lambda * l2_loss_d
-                self.gen_loss += self.l2_lambda * l2_loss_g
+            self.ano_gan_info_loss = tf.constant(0.0)
+            if self.info_gan:
+                # apply appropriate variable scope for reuse
+                with tf.variable_scope("InfoGAN"):
+                    # The last-but-one layer of the discriminator will be the input to
+                    # category prediction layer. The expectation is w.r.t generator output.
+                    self.ano_gan_q_network = self.init_info_gan_network(ano_gan_D_features, reuse=True)
 
-            self.discr_training_op = self.training_op(self.discr_loss, var_list=d_params, use_adam=self.use_adam)
-            self.gen_training_op = self.training_op(self.gen_loss, var_list=g_params, use_adam=self.use_adam)
+                    # Compute the InfoGAN entropy regularization loss for
+                    # AnoGAN with the output of ano_gan_q_network
+                    self.ano_gan_info_loss = self.entropy_reg(self.ano_gan_q_network[len(self.ano_gan_q_network)-1])
 
-            if self.enable_ano_gan:
-                # AnoGAN functionality
-                ano_gan_G, ano_gan_D = self.ano_gan_outputs()
+            self.ano_gan_loss = (1 - self.ano_gan_lambda) * self.ano_gan_loss_R + \
+                                self.ano_gan_lambda * (self.ano_gan_loss_D + self.ano_gan_info_loss)
 
-                # reconstruction loss: generate synthetic data in original
-                # feature space that is close to input data
-                self.ano_gan_loss_R = tf.reduce_sum(tf.abs(tf.subtract(self.x, ano_gan_G)))
-                # ano_gan_loss_R = tf.nn.l2_loss(tf.subtract(self.x, ano_gan_G))
+            self.ano_gan_training_op = self.training_op(self.ano_gan_loss, var_list=[self.ano_z], use_adam=self.use_adam)
 
-                # discrimination loss: encourage generated data to be
-                # similar to real data
-                self.ano_gan_loss_D = tf.reduce_sum(-tf.log(tf.nn.sigmoid(ano_gan_D)))
-                # self.ano_gan_loss_D = tf.reduce_sum(-ano_gan_D)
+    def entropy_reg(self, x):
+        return -tf.reduce_mean(tf.reduce_sum(tf.multiply(x,tf.log(x)), axis=1))
 
-                self.ano_gan_loss = (1 - self.ano_gan_lambda) * self.ano_gan_loss_R + self.ano_gan_lambda * self.ano_gan_loss_D
-                self.ano_gan_training_op = self.training_op(self.ano_gan_loss, var_list=[self.ano_z], use_adam=self.use_adam)
+    def get_l2_regularizers(self, g_params, d_params, q_params=None):
+        """ Returns L2 regularizers for generator and discriminator variables
+
+        :param g_params: list of tf.Variable
+            The generator parameters
+        :param d_params: list of tf.Variable
+            The discriminator parameters
+        :param q_params: list of tf.Variable
+            The InfoGAN regularization parameters
+        :return: generator, discriminator, InfoGAN L2 regularizer losses
+        """
+        l2_loss_g = 0.0
+        l2_loss_d = 0.0
+        l2_loss_q = 0.0
+        for v in g_params:
+            l2_loss_g += tf.nn.l2_loss(v)
+        for v in d_params:
+            l2_loss_d += tf.nn.l2_loss(v)
+        if q_params is not None:
+            for v in q_params:
+                l2_loss_q += tf.nn.l2_loss(v)
+        return l2_loss_g, l2_loss_d, l2_loss_q
 
     def generator(self, z, y=None, reuse_gen=False):
         inp = z
@@ -262,6 +336,10 @@ class GAN(object):
                                                activations=self.discr_layer_activations, reuse=True)
         return discr_data, discr_gen
 
+    def init_info_gan_network(self, x, reuse=False):
+        return self.gan_construct(x, n_neurons=[self.n_classes], names=["q_out"],
+                                  activations=[tf.nn.softmax], reuse=reuse)
+
     def init_session(self):
         self.session = tf.Session()
         init = tf.global_variables_initializer()
@@ -278,11 +356,11 @@ class GAN(object):
 
         return optimizer.minimize(loss, var_list=var_list)
 
-    def discr_data_output(self):
-        return self.discr_data[len(self.discr_data)-1]
+    def discr_data_output(self, layer_from_top=1):
+        return self.discr_data[len(self.discr_data) - layer_from_top]
 
-    def discr_gen_output(self):
-        return self.discr_gen[len(self.discr_gen)-1]
+    def discr_gen_output(self, layer_from_top=1):
+        return self.discr_gen[len(self.discr_gen) - layer_from_top]
 
     def gen_output(self):
         return self.gen[len(self.gen) - 1]
@@ -297,7 +375,14 @@ class GAN(object):
         return ano_gan_net_G, ano_gan_net_D
 
     def ano_gan_outputs(self):
-        return self.ano_gan_net_G[len(self.ano_gan_net_G) - 1], self.ano_gan_net_D[len(self.ano_gan_net_D) - 1]
+        """ Returns layers of generator and discrminator which will be used by AnoGAN
+        Returns the last layers of discriminator and generator,
+        and last-but-one of discriminator. The last-but-one layer of
+        discriminator is used for the entropy regularization if the GAN is InfoGAN variety.
+        """
+        return self.ano_gan_net_G[len(self.ano_gan_net_G) - 1], \
+               self.ano_gan_net_D[len(self.ano_gan_net_D) - 1], \
+               self.ano_gan_net_D[len(self.ano_gan_net_D) - 2] if self.info_gan else None
 
     def get_gen_input_samples(self, n=1, gen_y=False):
         if gen_y and self.pvals is None:
@@ -313,8 +398,8 @@ class GAN(object):
         x = self.session.run([self.gen_output()], feed_dict=feed_dict)[0]
         return x
 
-    def gan_layer(self, x, n_neurons, name, activation=None):
-        with tf.variable_scope(name):
+    def gan_layer(self, x, n_neurons, name, activation=None, reuse=False):
+        with tf.variable_scope(name, reuse=reuse):
             n_inputs = int(x.get_shape()[1])
             stddev = 2. / np.sqrt(n_inputs)
             init = tf.truncated_normal((n_inputs, n_neurons), stddev=stddev)
@@ -330,9 +415,8 @@ class GAN(object):
         layer_input = x
         layers = list()
         for i, name in enumerate(names):
-            with tf.variable_scope(name, reuse=reuse):
-                hidden = self.gan_layer(layer_input, n_neurons=n_neurons[i], name=names[i],
-                                        activation=activations[i])
+            hidden = self.gan_layer(layer_input, n_neurons=n_neurons[i], name=names[i],
+                                    activation=activations[i], reuse=reuse)
             layers.append(hidden)
             layer_input = hidden
         return layers
@@ -420,6 +504,24 @@ class GAN(object):
         return np.mean(ll), np.std(ll)
 
     def get_anomaly_score_z(self, x, y_one_hot=None, z=None, ano_gan_lambda=0.1):
+        """ Get the anomaly score with an initialized z
+
+        This corresponds to one back-prop step in AnoGAN for computing
+        a reconstructed image, for the input test point x, starting from an initial z
+
+        :param x: np.ndarray (one row-vector)
+            Test instance whose image needs to be reconstructed
+        :param y_one_hot: np.ndarray (one row-vector)
+        :param z: np.ndarray (one row-vector)
+            If this is None, a random z will be sampled, else the input z will be use
+        :param ano_gan_lambda: float
+        :return: gen_x, ano_z, loss, loss_R, loss_D
+            gen_x: the reconstructed image for 'x' starting from latent representation 'z'
+            ano_z: the optimal computed by back-propagation
+            loss: AnoGAN loss
+            loss_R: reconstruction loss component of the AnoGAN loss
+            loss_D: descrimination loss component of the AnoGAN loss
+        """
         if not self.enable_ano_gan:
             raise RuntimeError("AnoGAN not enabled for this network")
 
@@ -428,18 +530,18 @@ class GAN(object):
         assign_z = self.ano_z.assign(z)
         self.session.run(assign_z)
 
-        ano_gan_G, ano_gan_D = self.ano_gan_outputs()
+        ano_gan_G, ano_gan_D, _ = self.ano_gan_outputs()
         feed_dict = {self.x: x, self.ano_gan_lambda: ano_gan_lambda}
         if self.conditional:
             feed_dict.update({self.y: y_one_hot})
         self.session.run([self.ano_gan_training_op], feed_dict=feed_dict)
         rets = self.session.run([ano_gan_G, self.ano_gan_loss, self.ano_z,
-                                 self.ano_gan_loss_R, self.ano_gan_loss_D], feed_dict=feed_dict)
+                                 self.ano_gan_loss_R, self.ano_gan_loss_D, self.ano_gan_info_loss], feed_dict=feed_dict)
         gen_x = rets[0]
         loss = rets[1]
         ano_z = rets[2]
         loss_R = rets[3]
-        loss_D = rets[4]
+        loss_D = rets[4] + rets[5]
 
         return gen_x, ano_z, loss, loss_R, loss_D
 
@@ -472,6 +574,7 @@ class GAN(object):
         while i < max_iters and abs(loss - prev_loss) > tol:
             prev_loss = loss
             gen_x, z, loss, loss_R, loss_D = self.get_anomaly_score_z(x, y_one_hot=y_one_hot, z=z, ano_gan_lambda=ano_gan_lambda)
+            z = self.clip(z)  # make z values in [0, 1]
             losses.append(loss)
             losses_R.append(loss_R)
             losses_D.append(loss_D)
@@ -480,6 +583,10 @@ class GAN(object):
         logger.debug(tm.message("AnoGAN loss (iters: %d, final loss: %f)" % (i, losses[-1])))
         # logger.debug("losses:\n%s" % (str(losses)))
         return gen_x, z, loss, loss_R, loss_D, np.vstack(trace)
+
+    def clip(self, z, low=0.0, hi=1.0):
+        z = np.minimum(np.maximum(z, low), hi)
+        return z
 
     def get_anomaly_score_x(self, x, ano_gan_lambda=0.1, tol=1e-3, max_iters=100, use_loss=True, mode_avg=True):
         """ Try each label and return the generated instance with best metrics (loss or distance)
@@ -520,6 +627,21 @@ class GAN(object):
         return gen_x, z, loss, loss_R, loss_D, trace
 
     def get_anomaly_score(self, x, ano_gan_lambda=0.1, tol=1e-3, max_iters=100, use_loss=True, mode_avg=True):
+        """ Returns the anomaly score of test instance x
+
+        :param x: np.ndarray (one row-vector)
+        :param ano_gan_lambda: float
+        :param tol: float
+            loss tolerance to check for termination of back-propagation
+            steps when computing reconstruction image
+        :param max_iters: int
+        :param use_loss: bool
+            (applies only to conditional GAN and when mode_avg is False, default: True)
+            If true, then employs the AnoGAN loss when selecting the best category for test instance
+        :param mode_avg: bool
+            (applies only to conditional GAN, default: True)
+        :return:
+        """
         losses = np.zeros(x.shape[0], dtype=np.float32)
         losses_R = np.zeros(x.shape[0], dtype=np.float32)
         losses_D = np.zeros(x.shape[0], dtype=np.float32)
@@ -579,6 +701,8 @@ def get_gan_option_list():
                         help="Probability to use for one-sided label smoothing")
     parser.add_argument("--ano_gan_lambda", action="store", type=float, default=0.1,
                         help="The AnoGAN penalty term that balances reconstruction loss and discriminative loss")
+    parser.add_argument("--info_gan", action="store_true", default=False,
+                        help="Whether to use simple GAN or InfoGAN")
     parser.add_argument("--conditional", action="store_true", default=False,
                         help="Whether to use simple GAN or Conditional GAN")
     parser.add_argument("--ano_gan", action="store_true", default=False,
@@ -614,6 +738,7 @@ class GanOpts(object):
         self.ano_gan_lambda = args.ano_gan_lambda
         self.ano_gan_individual = args.ano_gan_individual
         self.ano_gan_use_dist = args.ano_gan_use_dist
+        self.info_gan = args.info_gan
         self.conditional = args.conditional
         self.ano_gan = args.ano_gan
         self.budget = args.budget
@@ -626,8 +751,9 @@ class GanOpts(object):
 
     def get_opts_name_prefix(self):
         # ano_gan_sig = "_ano" if self.ano_gan else ""
+        info_gan_sig = "_info" if self.info_gan else ""
         cond_sig = "_cond" if self.conditional else ""
-        algo_sig = "%s_gan" % (cond_sig)
+        algo_sig = "%s%s_gan" % (cond_sig, info_gan_sig)
         k_sig = "_k%d" % self.k if self.k > 0 else ""
         smoothing_sig = "_ls%d" % (int(self.smoothing_prob*10)) if self.label_smoothing else ""
         name = "%s%s%s%s_%d" % (self.dataset, algo_sig, k_sig, smoothing_sig, self.n_epochs)

@@ -371,8 +371,10 @@ Generative Adversarial Networks (GAN) (Goodfellow et al., 2014) are increasingly
 
   - Ian Goodfellow, *NIPS 2016 Tutorial: Generative Adversarial Networks*, NIPS 2016 [(pdf)](https://arxiv.org/pdf/1701.00160.pdf)
 
-  - Thomas Schlegl, Philipp Seebock, Sebastian M. Waldstein, Ursula Schmidt-Erfurth, Georg Langs, *Unsupervised Anomaly Detection with Generative Adversarial Networks to Guide Marker Discovery*, IPMI 2017 [(pdf)](https://arxiv.org/pdf/1703.05921.pdf)
+  - Xi Chen, Yan Duan, Rein Houthooft, John Schulman, Ilya Sutskever, Pieter Abbeel, *InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets*, NIPS 2016 [(pdf)](https://arxiv.org/pdf/1606.03657.pdf)
 
+  - Thomas Schlegl, Philipp Seebock, Sebastian M. Waldstein, Ursula Schmidt-Erfurth, Georg Langs, *Unsupervised Anomaly Detection with Generative Adversarial Networks to Guide Marker Discovery*, IPMI 2017 [(pdf)](https://arxiv.org/pdf/1703.05921.pdf)
+  
 
 GAN Training
 ------------
@@ -380,7 +382,8 @@ We first need to train a robust GAN model in order to achieve a decent anomaly d
 
 The following options are available in this codebase which can be tried to improve the GAN training (other options might be added later):
   1. One-sided label-smoothing (Goodfellow, 2016)
-  2. Conditional GAN (Mirza and Osindero, 2014) -- we actually infer labels by unsupervised clustering. Hence the GAN training is fully unsupervised.
+  2. Conditional GAN (Mirza and Osindero, 2014) -- we infer labels by unsupervised clustering. Hence the GAN training is fully unsupervised.
+  3. InfoGAN (Chen et al, 2016) -- we perform unsupervised clustering by Gaussian mixtures and select the number of classes by BIC model selection criteria. This is then set as the number of labels for InfoGAN.
 
 *Mode collapse* might occur when just a few modes suck in the entire data distribution of GAN. One option is to first cluster the data with a less expensive algorithm (such as a mixture of Gaussians), then apply the cluster labels as class labels and train a Conditional GAN. On 1D-data, this approach shows visibly good results. See the figure below. The following commands generate the images plotted:
 
@@ -390,6 +393,8 @@ The following options are available in this codebase which can be tried to impro
     bash ./gan.sh 3 cond 0 1000
     bash ./gan.sh 4 gan 0 1000
     bash ./gan.sh 4 cond 0 1000
+
+In order to see the results for InfoGAN, replace `cond/gan` by `info` in the above commands (e.g., `bash ./gan.sh 2 info 0 1000`). InfoGAN did not yield very good generative models for the sample data.
 
 ![Simple vs Conditional GAN](figures/gan/simple_vs_conditional.png)
 
