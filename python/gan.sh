@@ -40,6 +40,7 @@ fi
 
 ANO_GAN_LAMBDA=0.5
 ANO_GAN=""
+N_ANO_GAN_TEST=1
 if [[ "$ANO_GAN_IND" == "1" ]]; then
     # ALGO_NAME="ano_${ALGO_NAME}"
     ANO_GAN="--ano_gan"
@@ -63,6 +64,7 @@ if [[ "$ALGO" == "cond" ]]; then
 fi
 
 INFO_GAN=""
+INFO_GAN_LAMBDA=1.0
 if [[ "$ALGO" == "info" ]]; then
     ALGO_NAME="info_${ALGO_NAME}"
     INFO_GAN="--info_gan"
@@ -75,7 +77,8 @@ RESULTS_DIR="./temp/gan/${RESULTS_NAME}"
 mkdir -p ${LOG_DIR}
 mkdir -p ${RESULTS_DIR}
 
-python -m dnn.test_gan --dataset=${DATASET} ${INFO_GAN} ${COND_GAN} ${ANO_GAN} \
+python -m dnn.test_gan --dataset=${DATASET} ${COND_GAN} ${ANO_GAN} \
+    --n_ano_gan_test=${N_ANO_GAN_TEST} ${INFO_GAN} --info_gan_lambda=${INFO_GAN_LAMBDA} \
     ${LABEL_SMOOTHING} --smoothing_prob=${SMOOTHING_PROB} \
     --ano_gan_lambda=${ANO_GAN_LAMBDA} ${INDV_LOSS} ${DIST_LOSS} \
     --n_epochs=${N_EPOCHS} --results_dir=${RESULTS_DIR} \

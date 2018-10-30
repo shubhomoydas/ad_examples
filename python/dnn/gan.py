@@ -164,6 +164,9 @@ class GAN(object):
         # Tensoflow session object
         self.session = None
 
+        self.unif_lo = 0.0  # -1.0
+        self.unif_hi = 1.0
+
         if self.conditional and self.info_gan:
             raise ValueError("Only one of conditional or info_gan should be true")
 
@@ -187,15 +190,6 @@ class GAN(object):
             self.gen = self.generator(z=self.z, y=self.y, reuse_gen=False)
             self.discr_data, self.discr_gen = self.discriminator(x=self.x, y=self.y, reuse_discr=False)
 
-        if self.info_gan:
-            with tf.variable_scope("InfoGAN"):
-                # The last-but-one layer of the discriminator will be the input to
-                # category prediction layer. The expectation is w.r.t generator output.
-                self.q_network = self.init_info_gan_network(get_nn_layer(self.discr_gen, layer_from_top=2), reuse=False)
-
-                # the below will be used to predict category for debug; it is not required for training
-                self.q_pred = self.init_info_gan_network(get_nn_layer(self.discr_data, layer_from_top=2), reuse=True)
-
         if not self.label_smoothing:
             discr_loss_data = -tf.log(tf.nn.sigmoid(get_nn_layer(self.discr_data, layer_from_top=1)))
         else:
@@ -212,6 +206,17 @@ class GAN(object):
         self.info_gan_loss = tf.constant(0.0)
         if self.info_gan:
             logger.debug("Adding InfoGAN regularization")
+            with tf.variable_scope("InfoGAN"):
+                # The last-but-one layer of the discriminator (when the input is from
+                # fake generated data) will be the input to category prediction layer.
+                # The expectation is w.r.t generator output.
+                self.q_network = self.init_info_gan_network(get_nn_layer(self.discr_gen, layer_from_top=2),
+                                                            reuse=False)
+
+                # the below will be used to predict category for debug; it is not required for training
+                self.q_pred = self.init_info_gan_network(get_nn_layer(self.discr_data, layer_from_top=2),
+                                                         reuse=True)
+
             # get softmax output layer of q_network that predicts class
             q_out = get_nn_layer(self.q_network, layer_from_top=1)
             # compute entropy of class predictions
@@ -238,8 +243,10 @@ class GAN(object):
                 g_params.extend(q_params)
                 d_params.extend(q_params)
 
-        self.gen_training_op = self.training_op(self.gen_loss+self.info_gan_loss, var_list=g_params, use_adam=self.use_adam)
-        self.discr_training_op = self.training_op(self.discr_loss+self.info_gan_loss, var_list=d_params, use_adam=self.use_adam)
+        self.gen_training_op = self.training_op(self.gen_loss + self.info_gan_lambda * self.info_gan_loss,
+                                                var_list=g_params, use_adam=self.use_adam)
+        self.discr_training_op = self.training_op(self.discr_loss + self.info_gan_lambda * self.info_gan_loss,
+                                                  var_list=d_params, use_adam=self.use_adam)
 
         if self.enable_ano_gan:
             # Prepare variables required for AnoGAN functionality
@@ -402,7 +409,7 @@ class GAN(object):
         y = None
         if gen_y:
             y = np.random.multinomial(1, pvals=self.pvals, size=n).astype(float)
-        return np.random.uniform(low=0., high=1.0, size=(n, self.gen_input_dim)), y
+        return np.random.uniform(low=self.unif_lo, high=self.unif_hi, size=(n, self.gen_input_dim)), y
 
     def get_gen_output_samples(self, z, y=None):
         feed_dict = {self.z: z}
@@ -587,7 +594,7 @@ class GAN(object):
         while i < max_iters and abs(loss - prev_loss) > tol:
             prev_loss = loss
             gen_x, z, loss, loss_R, loss_D = self.get_anomaly_score_z(x, y_one_hot=y_one_hot, z=z, ano_gan_lambda=ano_gan_lambda)
-            z = self.clip(z)  # make z values in [0, 1]
+            z = self.clip(z, lo=self.unif_lo, hi=self.unif_hi)  # make z values in [lo, hi]
             losses.append(loss)
             losses_R.append(loss_R)
             losses_D.append(loss_D)
@@ -597,8 +604,8 @@ class GAN(object):
         # logger.debug("losses:\n%s" % (str(losses)))
         return gen_x, z, loss, loss_R, loss_D, np.vstack(trace)
 
-    def clip(self, z, low=0.0, hi=1.0):
-        z = np.minimum(np.maximum(z, low), hi)
+    def clip(self, z, lo, hi):
+        z = np.minimum(np.maximum(z, lo), hi)
         return z
 
     def get_anomaly_score_x(self, x, ano_gan_lambda=0.1, tol=1e-3, max_iters=100, use_loss=True, mode_avg=True):
@@ -716,6 +723,8 @@ def get_gan_option_list():
                         help="The AnoGAN penalty term that balances reconstruction loss and discriminative loss")
     parser.add_argument("--info_gan", action="store_true", default=False,
                         help="Whether to use simple GAN or InfoGAN")
+    parser.add_argument("--info_gan_lambda", action="store", type=float, default=1.0,
+                        help="The InfoGAN penalty term")
     parser.add_argument("--conditional", action="store_true", default=False,
                         help="Whether to use simple GAN or Conditional GAN")
     parser.add_argument("--ano_gan", action="store_true", default=False,
@@ -726,6 +735,8 @@ def get_gan_option_list():
     parser.add_argument("--ano_gan_use_dist", action="store_true", default=False,
                         help="Whether to use euclidean dist-based reconstruction error for Conditional AnoGAN. "
                              "By default, the composite loss will be used")
+    parser.add_argument("--n_ano_gan_test", type=int, default=1, required=False,
+                        help="Number of times AnoGAN loss will be computed for each test instance")
     parser.add_argument("--budget", type=int, default=1, required=False,
                         help="Budget for feedback")
     parser.add_argument("--n_epochs", type=int, default=200, required=False,
@@ -752,8 +763,12 @@ class GanOpts(object):
         self.ano_gan_individual = args.ano_gan_individual
         self.ano_gan_use_dist = args.ano_gan_use_dist
         self.info_gan = args.info_gan
+        self.info_gan_lambda = args.info_gan_lambda
         self.conditional = args.conditional
         self.ano_gan = args.ano_gan
+        self.ano_gan_individual = args.ano_gan_individual
+        self.ano_gan_use_dist = args.ano_gan_use_dist
+        self.n_ano_gan_test = args.n_ano_gan_test
         self.budget = args.budget
         self.n_epochs = args.n_epochs
         self.train_batch_size = args.train_batch_size
@@ -765,11 +780,12 @@ class GanOpts(object):
     def get_opts_name_prefix(self):
         # ano_gan_sig = "_ano" if self.ano_gan else ""
         info_gan_sig = "_info" if self.info_gan else ""
+        info_gan_lambda_sig = "" if self.info_gan_lambda == 1.0 else "_il%d" % int(self.info_gan_lambda*10)
         cond_sig = "_cond" if self.conditional else ""
         algo_sig = "%s%s_gan" % (cond_sig, info_gan_sig)
         k_sig = "_k%d" % self.k if self.k > 0 else ""
         smoothing_sig = "_ls%d" % (int(self.smoothing_prob*10)) if self.label_smoothing else ""
-        name = "%s%s%s%s_%d" % (self.dataset, algo_sig, k_sig, smoothing_sig, self.n_epochs)
+        name = "%s%s%s%s%s_%d" % (self.dataset, algo_sig, k_sig, smoothing_sig, info_gan_lambda_sig, self.n_epochs)
         return name
 
     def get_alad_metrics_name_prefix(self):

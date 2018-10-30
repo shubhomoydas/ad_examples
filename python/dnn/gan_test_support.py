@@ -132,8 +132,8 @@ def plot_2D_gan_samples(x, y=None, gen_x=None, gen_y=None, gmm=None, pdfpath=Non
     dp.close()
 
 
-def plot_log_likelihood(lls, plot_sd=True, args=None):
-    llpdfpath = "%s/%s_log_likelihood_%d.pdf" % (args.results_dir, args.dataset, args.n_epochs)
+def plot_log_likelihood(lls, plot_sd=True, opts=None):
+    llpdfpath = "%s/%s_log_likelihood.pdf" % (opts.results_dir, opts.get_opts_name_prefix())
     x = [epoch+1 for epoch, _, _ in lls]
     y = [ll_mean for _, ll_mean, _ in lls]
     sd = [ll_sd for _, _, ll_sd in lls]

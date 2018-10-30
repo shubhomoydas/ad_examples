@@ -54,22 +54,32 @@ def test_ano_gan(gan=None, x=None, y=None, opts=None, tol=1e-3, max_iters=100):
                        [2, 6.5],
                        ], dtype=np.float32)
     # x_test = x_test[[0]]
-    gen_x, losses, losses_R, losses_D, traces = gan.get_anomaly_score(x_test, ano_gan_lambda=opts.ano_gan_lambda,
-                                                                      tol=tol, max_iters=max_iters,
-                                                                      use_loss=not opts.ano_gan_use_dist,
-                                                                      mode_avg=not opts.ano_gan_individual)
-    logger.debug("Test x:\n%s\n\nAnoGAN x:\n%s" % (str(x_test), str(gen_x)))
-    s = ["inst#, loss, loss_R, loss_D"]
-    for i in range(len(losses)):
-        l, lr, ld = (losses[i], losses_R[i], losses_D[i])
-        s.append("%3d, %1.4f, %1.4f, %1.4f" % (i+1, l, lr, ld))
-    logger.debug("\n%s" % "\n".join(s))
+    all_gen_x = []
+    all_losses = np.zeros(x_test.shape[0], dtype=np.float32)
+    all_traces = []
+    logger.debug("Averaging AnoGAN test over %d times" % opts.n_ano_gan_test)
+    for i in range(opts.n_ano_gan_test):
+        gen_x, losses, losses_R, losses_D, traces = gan.get_anomaly_score(x_test, ano_gan_lambda=opts.ano_gan_lambda,
+                                                                          tol=tol, max_iters=max_iters,
+                                                                          use_loss=not opts.ano_gan_use_dist,
+                                                                          mode_avg=not opts.ano_gan_individual)
+        all_gen_x.append(gen_x)
+        all_losses += losses
+        all_traces.append(traces)
+        logger.debug("[%d] Test x:\n%s\n\nAnoGAN x:\n%s" % (i, str(x_test), str(gen_x)))
+        s = ["inst#, loss, loss_R, loss_D"]
+        for i in range(len(losses)):
+            l, lr, ld = (losses[i], losses_R[i], losses_D[i])
+            s.append("%3d, %1.4f, %1.4f, %1.4f" % (i+1, l, lr, ld))
+        logger.debug("\n%s" % "\n".join(s))
 
-    ordered_insts = np.argsort(-losses)
+    all_losses = all_losses / opts.n_ano_gan_test
+    ordered_insts = np.argsort(-all_losses)
     logger.debug("Ordered on loss score:\n%s" % str(list(ordered_insts+1)))
 
     d = x_test.shape[1]
     if opts.plot and d == 2:
+        # plot details of only the first test run
         colors = ["red", "blue", "green", "orange", "brown", "cyan", "magenta", "pink", "yellow"]
         pdfpath = "%s/%s_test_ano_%d%s%s.pdf" % \
                   (opts.results_dir, opts.get_opts_name_prefix(), int(opts.ano_gan_lambda*100),
@@ -78,17 +88,18 @@ def test_ano_gan(gan=None, x=None, y=None, opts=None, tol=1e-3, max_iters=100):
         pl = dp.get_next_plot()
         dp.plot_points(x, pl, defaultcol='grey', marker='.', s=10)
         dp.plot_points(x_test, pl, defaultcol='black', marker='x', s=25)
-        dp.plot_points(gen_x, pl, defaultcol='red', marker='x', s=25)
+        dp.plot_points(all_gen_x[0], pl, defaultcol='red', marker='x', s=25)
         x_min = np.min(x, axis=0)
         x_max = np.max(x, axis=0)
         x_range = np.subtract(x_max, x_min) / 100.
         for i in range(x_test.shape[0]):
             pl.text(x_test[i, 0], x_test[i, 1] + 2*x_range[1],
                     "%d" % (i+1), fontsize=20, color='black')
+            gen_x = all_gen_x[0]
             pl.text(gen_x[i, 0] + 2*x_range[1], gen_x[i, 1] + 2*x_range[1],
                     "%d" % (i + 1), fontsize=20, color=colors[i % len(colors)])
 
-        for i, xy in enumerate(traces):
+        for i, xy in enumerate(all_traces[0]):
             pl.plot(xy[:, 0], xy[:, 1], '-', color=colors[i % len(colors)], linewidth=1, label=None)
         dp.close()
 
@@ -131,7 +142,7 @@ def test_gan(opts):
               gen_layer_nodes=gan_defs['gen_layer_nodes'],
               gen_layer_activations=gan_defs['gen_layer_activations'],
               label_smoothing=opts.label_smoothing, smoothing_prob=0.9,
-              info_gan=opts.info_gan, info_gan_lambda=1.0,
+              info_gan=opts.info_gan, info_gan_lambda=opts.info_gan_lambda,
               conditional=opts.conditional, n_classes=n_classes, pvals=pvals, l2_lambda=0.001,
               enable_ano_gan=True,
               n_epochs=opts.n_epochs, batch_size=25, shuffle=True,
@@ -146,7 +157,7 @@ def test_gan(opts):
 
     if opts.plot:
         if gan.listener is not None and len(gan.listener.lls) > 0:
-            plot_log_likelihood(gan.listener.lls, plot_sd=True, args=opts)
+            plot_log_likelihood(gan.listener.lls, plot_sd=True, opts=opts)
         if d == 1:
             z, _ = gan.get_gen_input_samples(n=x.shape[0], gen_y=False)
             if not opts.conditional:
