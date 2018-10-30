@@ -109,11 +109,12 @@ def test_gan(opts):
         n_classes = len(np.unique(y_cls))
         class_codes = np.eye(n_classes, dtype=np.float32)
 
+        y_one_hot = class_codes[y_cls]
+        pvals = np.sum(y_one_hot, axis=0) * 1.0 / len(y_cls)
+        logger.debug("pvals: %s" % (str(list(pvals))))
+
         if opts.conditional:
-            y = y_cls
-            y_one_hot = class_codes[y]
-            pvals = np.sum(y_one_hot, axis=0) * 1.0 / len(y)
-            logger.debug("pvals: %s" % (str(list(pvals))))
+            y = y_cls  # pass on the class labels only for Conditional GAN, not InfoGAN
 
     opts.k = n_classes
 

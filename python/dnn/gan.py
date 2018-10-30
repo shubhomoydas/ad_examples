@@ -22,6 +22,8 @@ References:
     by Xi Chen, Yan Duan, Rein Houthooft, John Schulman, Ilya Sutskever, Pieter Abbeel
 """
 
+TINY = 1e-8  # as in virtually every InfoGAN implementation on the internet
+
 
 def set_random_seeds(py_seed=42, np_seed=42, tf_seed=42):
     random.seed(py_seed)
@@ -59,6 +61,10 @@ def get_cluster_labels(x, min_k=1, max_k=10):
     y = gmm.predict(x)
     # logger.debug("y:\n%s" % (str(y)))
     return y, gmm
+
+
+def get_nn_layer(layers, layer_from_top=1):
+    return layers[len(layers) - layer_from_top]
 
 
 class GAN(object):
@@ -161,6 +167,9 @@ class GAN(object):
         if self.conditional and self.info_gan:
             raise ValueError("Only one of conditional or info_gan should be true")
 
+        if (self.conditional or self.info_gan) and self.pvals is None:
+            raise ValueError("pvals is required for ConditionalGAN and InfoGAN")
+
         self.init_network()
 
     def init_network(self):
@@ -182,20 +191,20 @@ class GAN(object):
             with tf.variable_scope("InfoGAN"):
                 # The last-but-one layer of the discriminator will be the input to
                 # category prediction layer. The expectation is w.r.t generator output.
-                self.q_network = self.init_info_gan_network(self.discr_gen_output(layer_from_top=2), reuse=False)
+                self.q_network = self.init_info_gan_network(get_nn_layer(self.discr_gen, layer_from_top=2), reuse=False)
 
                 # the below will be used to predict category for debug; it is not required for training
-                self.q_pred = self.init_info_gan_network(self.discr_data_output(layer_from_top=2), reuse=True)  # for prediction
+                self.q_pred = self.init_info_gan_network(get_nn_layer(self.discr_data, layer_from_top=2), reuse=True)
 
         if not self.label_smoothing:
-            discr_loss_data = -tf.log(tf.nn.sigmoid(self.discr_data_output()))
+            discr_loss_data = -tf.log(tf.nn.sigmoid(get_nn_layer(self.discr_data, layer_from_top=1)))
         else:
             logger.debug("Label smoothing enabled with smoothing probability: %f" % self.smoothing_prob)
-            discr_logit = self.discr_data_output()
+            discr_logit = get_nn_layer(self.discr_data, layer_from_top=1)
             discr_loss_data = tf.nn.sigmoid_cross_entropy_with_logits(logits=discr_logit,
                                                                       labels=tf.ones(shape=tf.shape(discr_logit)) * self.smoothing_prob)
 
-        discr_gen_logit = self.discr_gen_output()
+        discr_gen_logit = get_nn_layer(self.discr_gen, layer_from_top=1)
         discr_gen_probs = tf.nn.sigmoid(discr_gen_logit)
         self.discr_loss = tf.reduce_mean(discr_loss_data - tf.log(1 - discr_gen_probs))
         self.gen_loss = tf.reduce_mean(-tf.log(discr_gen_probs))
@@ -203,9 +212,10 @@ class GAN(object):
         self.info_gan_loss = tf.constant(0.0)
         if self.info_gan:
             logger.debug("Adding InfoGAN regularization")
-            q_out = self.q_network[len(self.q_network) - 1]  # output layer of category prediction
-            # compute entropy
-            self.info_gan_loss = self.entropy_reg(q_out)
+            # get softmax output layer of q_network that predicts class
+            q_out = get_nn_layer(self.q_network, layer_from_top=1)
+            # compute entropy of class predictions
+            self.info_gan_loss = self.marginal_mutual_info(q_out, self.pvals)
 
         vars = tf.trainable_variables()
         for v in vars: logger.debug(v.name)
@@ -262,15 +272,25 @@ class GAN(object):
 
                     # Compute the InfoGAN entropy regularization loss for
                     # AnoGAN with the output of ano_gan_q_network
-                    self.ano_gan_info_loss = self.entropy_reg(self.ano_gan_q_network[len(self.ano_gan_q_network)-1])
+                    self.ano_gan_info_loss = self.marginal_mutual_info(get_nn_layer(self.ano_gan_q_network,
+                                                                                    layer_from_top=1),
+                                                                       self.pvals)
 
             self.ano_gan_loss = (1 - self.ano_gan_lambda) * self.ano_gan_loss_R + \
                                 self.ano_gan_lambda * (self.ano_gan_loss_D + self.ano_gan_info_loss)
 
             self.ano_gan_training_op = self.training_op(self.ano_gan_loss, var_list=[self.ano_z], use_adam=self.use_adam)
 
-    def entropy_reg(self, x):
-        return -tf.reduce_mean(tf.reduce_sum(tf.multiply(x,tf.log(x)), axis=1))
+    def marginal_mutual_info(self, q_c_x, c, include_h_c=False):
+        """ Compute avg. entropy of probability distributions arcoss all rows of q_c_x
+
+        Each row of q_c_x contains one probability distribution (likely computed with softmax)
+        """
+        mi = -tf.reduce_mean(tf.reduce_sum(tf.multiply(c, tf.log(q_c_x + TINY)), axis=1))
+        if include_h_c:
+            # usually this is constant; hence add this only if asked for
+            mi += -tf.reduce_mean(tf.reduce_sum(c * tf.log(c + TINY), axis=1))
+        return mi
 
     def get_l2_regularizers(self, g_params, d_params, q_params=None):
         """ Returns L2 regularizers for generator and discriminator variables
@@ -331,7 +351,8 @@ class GAN(object):
             if prep_gen_input:
                 # the discriminator's loss for the generated data needs to back-propagate through
                 # the same network as that for the real data; hence reuse_discr=True
-                inp = self.gen_output() if y is None else tf.concat(values=[self.gen_output(), y], axis=1)
+                gen_out = get_nn_layer(self.gen, layer_from_top=1)
+                inp = gen_out if y is None else tf.concat(values=[gen_out, y], axis=1)
                 discr_gen = self.gan_construct(inp, self.discr_layer_nodes, names=discr_layer_names,
                                                activations=self.discr_layer_activations, reuse=True)
         return discr_data, discr_gen
@@ -355,15 +376,6 @@ class GAN(object):
             optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
 
         return optimizer.minimize(loss, var_list=var_list)
-
-    def discr_data_output(self, layer_from_top=1):
-        return self.discr_data[len(self.discr_data) - layer_from_top]
-
-    def discr_gen_output(self, layer_from_top=1):
-        return self.discr_gen[len(self.discr_gen) - layer_from_top]
-
-    def gen_output(self):
-        return self.gen[len(self.gen) - 1]
 
     def init_ano_gan_network(self, x=None, y=None, z=None):
         # here we assume that all networks have already been created
@@ -395,7 +407,7 @@ class GAN(object):
     def get_gen_output_samples(self, z, y=None):
         feed_dict = {self.z: z}
         if self.conditional: feed_dict.update({self.y: y})
-        x = self.session.run([self.gen_output()], feed_dict=feed_dict)[0]
+        x = self.session.run([get_nn_layer(self.gen, layer_from_top=1)], feed_dict=feed_dict)[0]
         return x
 
     def gan_layer(self, x, n_neurons, name, activation=None, reuse=False):
@@ -455,9 +467,10 @@ class GAN(object):
         :return: np.array
             Probability of each input data
         """
+        discr_data_out = get_nn_layer(self.discr_data, layer_from_top=1)
         if not self.conditional:
             feed_dict_discr = {self.x: x}
-            probs = self.session.run([self.discr_data_output()], feed_dict=feed_dict_discr)[0]
+            probs = self.session.run([discr_data_out], feed_dict=feed_dict_discr)[0]
             probs = probs.reshape(-1)
         else:
             feed_dict_discr = {self.x: x}
@@ -466,7 +479,7 @@ class GAN(object):
                 for i, c in enumerate(y):
                     y_one_hot[i, c] = 1.
                 feed_dict_discr.update({self.y: y_one_hot})
-                probs = self.session.run([self.discr_data_output()], feed_dict=feed_dict_discr)[0]
+                probs = self.session.run([discr_data_out], feed_dict=feed_dict_discr)[0]
                 probs = probs.reshape(-1)
             else:
                 # marginalize over all classes
@@ -475,7 +488,7 @@ class GAN(object):
                     y_one_hot = np.zeros(shape=(x.shape[0], self.n_classes), dtype=np.float32)
                     y_one_hot[:, c] = 1.
                     feed_dict_discr.update({self.y: y_one_hot})
-                    probs_c = self.session.run([self.discr_data_output()], feed_dict=feed_dict_discr)[0]
+                    probs_c = self.session.run([discr_data_out], feed_dict=feed_dict_discr)[0]
                     probs += self.pvals[c] * probs_c.reshape(-1)
         return probs
 
