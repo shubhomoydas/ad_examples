@@ -563,6 +563,9 @@ class GAN(object):
         loss_R = rets[3]
         loss_D = rets[4] + rets[5]
 
+        # make z values in [lo, hi]
+        ano_z = self.clip(ano_z, lo=self.unif_lo, hi=self.unif_hi)
+
         return gen_x, ano_z, loss, loss_R, loss_D
 
     def get_anomaly_score_xy(self, x, y=None, z=None, ano_gan_lambda=0.1, tol=1e-3, max_iters=100):
@@ -594,7 +597,6 @@ class GAN(object):
         while i < max_iters and abs(loss - prev_loss) > tol:
             prev_loss = loss
             gen_x, z, loss, loss_R, loss_D = self.get_anomaly_score_z(x, y_one_hot=y_one_hot, z=z, ano_gan_lambda=ano_gan_lambda)
-            z = self.clip(z, lo=self.unif_lo, hi=self.unif_hi)  # make z values in [lo, hi]
             losses.append(loss)
             losses_R.append(loss_R)
             losses_D.append(loss_D)
