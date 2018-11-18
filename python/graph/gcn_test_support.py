@@ -111,14 +111,20 @@ def sample_indexes(n, frac=1.0, random_state=None):
     return rnd_idxs[:n_hat]
 
 
-def read_dataset(dataset, sub_sample=1.0, labeled_frac=1.0, random_state=None):
-    random_state = check_random_state(random_state)
+def read_dataset(dataset, sub_sample=1.0, labeled_frac=1.0):
+    random_state = None
     if dataset == "face":
         x, y = read_face_dataset_with_labels()
+        # since we use this dataset for illustrative purposes,
+        # we should make sure that we always sample the same instances
+        random_state = 40
     elif dataset == "face_top":
         x, y = read_face_dataset_with_labels()
         idxs = np.where(y != 2)  # exclude mouth
         x, y = x[idxs], y[idxs]
+        # since we use this dataset for illustrative purposes,
+        # we should make sure that we always sample the same instances
+        random_state = 40
     elif dataset == "synth_graph":
         x, y = read_synth_graph_dataset_with_labels()
     elif dataset == "synth_graph_small":
@@ -126,6 +132,7 @@ def read_dataset(dataset, sub_sample=1.0, labeled_frac=1.0, random_state=None):
     else:
         raise ValueError("dataset '%s' not supported" % dataset)
 
+    random_state = check_random_state(random_state)
     n_orig = x.shape[0]
     if dataset == "synth_graph" and labeled_frac < 1.0:
         y_orig = y
@@ -160,7 +167,8 @@ def read_dataset(dataset, sub_sample=1.0, labeled_frac=1.0, random_state=None):
 
 
 def read_graph_dataset(dataset, sub_sample=1.0, labeled_frac=1.0, n_neighbors=5, euclidean=False):
-    x, y, y_orig = read_dataset(dataset, sub_sample=sub_sample, labeled_frac=labeled_frac, random_state=40)
+    x, y, y_orig = read_dataset(dataset, sub_sample=sub_sample,
+                                labeled_frac=labeled_frac)
 
     if dataset == "face" or dataset == "face_top":
         ga = GraphAdjacency(n_neighbors=n_neighbors, euclidean=euclidean, self_loops=True)

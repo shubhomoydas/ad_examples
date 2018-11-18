@@ -350,6 +350,23 @@ class SimpleGCN(object):
         err = (1.0 * len(tp)) / len(labeled_indexes)
         return err
 
+    def get_f1_score(self, y_orig):
+        """ Returns F1 score
+
+        :param y_orig: np.array
+            Original labels for each node in the graph
+        :return: float
+        """
+        unlabeled_indexes = np.where(self.fit_y < 0)[0]
+        y_hat = self.predict()
+        if False:
+            logger.debug(y_orig)
+            logger.debug("\ntrue:\n%s\npredicted:\n%s" % (str(list(y_orig[unlabeled_indexes])),
+                                                          str(list(y_hat[unlabeled_indexes]))))
+        f1 = f1_score(y_true=y_orig[unlabeled_indexes], y_pred=y_hat[unlabeled_indexes],
+                      average='micro')
+        return f1
+
     def grad_logit_diff_wrt_attacker(self, target, attacker, label_1, label_2):
         """ Computes the gradient of diff of target node logits wrt attacker node values
 
@@ -382,6 +399,22 @@ class SimpleGCN(object):
         return g_v
 
     def best_feature_wrt_attacker(self, target, attacker, old_label, new_label):
+        """ Returns index of the feature along which the logit difference at the target is highest
+
+        Treats the attacker values as the variables w.r.t which
+        derivatives will be computed.
+
+        :param target: int
+            Index of target node
+        :param attacker: int
+            Inex of attack node
+        :param old_label: int
+            Old class label of target node
+        :param new_label: int
+            New class label for target node
+        :return: int, np.array
+            feature index, gradients for all features
+        """
         grad_diffs = self.grad_logit_diff_wrt_attacker(target, attacker, new_label, old_label)
         abs_grad_diffs = np.abs(grad_diffs)
         most_change_feature = np.argmax(abs_grad_diffs)
@@ -392,11 +425,21 @@ class SimpleGCN(object):
         return most_change_feature, grad_diffs
 
 
-class AttackModel(object):
-    def __init__(self, model, target_nodes, attack_nodes):
-        self.model = model
+class SimpleGCNAttack(object):
+    """ Implementation of feature modification-based attack on GCNs
+
+    Reference(s):
+        [1] Adversarial Attacks on Neural Networks for Graph Data
+            by Daniel Zugner, Amir Akbarnejad, and Stephan Gunnemann, KDD 2018
+    """
+
+    def __init__(self, gcn, target_nodes, attack_nodes, min_prod=0.0, max_prod=5.0, max_iters=15):
+        self.gcn = gcn
         self.target_nodes = target_nodes
         self.attack_nodes = attack_nodes
+        self.min_prod = min_prod
+        self.max_prod = max_prod
+        self.max_iters = max_iters
 
     def suggest_node_feature(self, target_node, attack_node, old_label, new_label):
         """
@@ -411,10 +454,10 @@ class AttackModel(object):
             feature index, gradients wrt all input features
         """
         if len(self.target_nodes) > 0 and len(self.attack_nodes) > 0:
-            best_feature, feature_grads = self.model.best_feature_wrt_attacker(target=target_node,
-                                                                               attacker=attack_node,
-                                                                               old_label=old_label,
-                                                                               new_label=new_label)
+            best_feature, feature_grads = self.gcn.best_feature_wrt_attacker(target=target_node,
+                                                                             attacker=attack_node,
+                                                                             old_label=old_label,
+                                                                             new_label=new_label)
             return best_feature, feature_grads
 
     def suggest_node(self):
@@ -425,7 +468,7 @@ class AttackModel(object):
 
         Note: Since this is just a simple demo, we only consider one target node.
         """
-        probs = self.model.decision_function()
+        probs = self.gcn.decision_function()
         sorted_probs = np.argsort(-probs, axis=1)
         y_hat = sorted_probs[:, 0]  # predicted best for all nodes
         y_hat_2 = sorted_probs[:, 1]  # predicted second-best for all nodes
@@ -445,19 +488,75 @@ class AttackModel(object):
                 best = (target_node, old_label, attack_node, best_feature, feature_grads)
         return best, all_grads
 
+    def modify_gcn_and_predict(self, node, node_val, retrain=False):
+        """ Modifies the node in the graph and then predicts labels
+
+        :param node: int
+            The index of the node whose value will be modified
+        :param node_val: np.array
+            Value of the modified node
+        :param retrain: bool
+            Whether to retrain the GCN after modifying the instance before prediction
+        :return: np.array
+            Predicted labels for every node in the graph
+        """
+
+        x, y, A = self.gcn.fit_x, self.gcn.fit_y, self.gcn.fit_A
+        old_val = np.copy(x[node, :])  # save previous value
+        x[node, :] = node_val
+        if retrain:
+            mod_gcn = SimpleGCN(n_neurons=self.gcn.n_neurons, activations=self.gcn.activations,
+                                n_classes=self.gcn.n_classes, max_epochs=self.gcn.max_epochs,
+                                learning_rate=self.gcn.learning_rate, l2_lambda=self.gcn.l2_lambda)
+            mod_gcn.fit(x, y, A)
+        else:
+            mod_gcn = self.gcn
+
+        y_hat = mod_gcn.predict()
+
+        x[node, :] = old_val  # restore previous value
+
+        return y_hat
+
+    def find_minimum_modification(self, target_node, mod_node, old_label, search_direction):
+        """ Search along search_direction for mod_node until label of target_node flips
+
+        The goal is to find the smallest modification to the mod_node
+        along the search_direction that results in the target node's label
+        getting changed.
+
+        :param target_node: int
+            Index of target_node whose predicted label should be changed
+        :param mod_node: int
+            Index of node whose value will be changed
+        :param old_label: int
+            Old label of the target_node
+        :param search_direction: np.array
+            The direction of change -- usually determined by computing gradient of a function
+        :return: np.array
+            Modified value for mod_node that flips target node's label
+            None is returned of no such value is found
+        """
+        min_prod = self.min_prod
+        max_prod = self.max_prod
+        prod = 0.5
+        orig_val = np.copy(self.gcn.fit_x[mod_node, :])
+        mod_val = None
+        for i in range(self.max_iters):
+            node_val = orig_val + prod * search_direction
+            y_hat = self.modify_gcn_and_predict(node=mod_node, node_val=node_val, retrain=False)
+            if y_hat[target_node] != old_label:
+                mod_val = node_val
+                if prod < 0.01:
+                    break
+                max_prod = prod
+            else:
+                min_prod = prod
+            prod = (min_prod + max_prod) / 2
+        logger.debug("prod: %f; mod_val: %s" % (prod, "" if mod_val is None else str(mod_val)))
+        return mod_val
+
     def modify_structure(self):
         """ Attack by changing the graph adjacency matrix """
         raise NotImplementedError("modify_structure() not implemented yet")
-
-
-def get_f1_score(gcn, y_semi, y_orig):
-    unlabeled_indexes = np.where(y_semi < 0)[0]
-    y_hat = gcn.predict()
-    if False:
-        logger.debug(y_orig)
-        logger.debug("\ntrue:\n%s\npredicted:\n%s" % (str(list(y_orig[unlabeled_indexes])),
-                                                      str(list(y_hat[unlabeled_indexes]))))
-    f1 = f1_score(y_true=y_orig[unlabeled_indexes], y_pred=y_hat[unlabeled_indexes],
-                  average='micro')
-    return f1
 

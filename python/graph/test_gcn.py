@@ -4,7 +4,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from common.gen_samples import *
-from .simple_gcn import SimpleGCN, AttackModel, set_random_seeds, get_f1_score
+from .simple_gcn import SimpleGCN, SimpleGCNAttack, set_random_seeds
 from .gcn_test_support import read_graph_dataset, get_target_and_attack_nodes, \
     plot_graph, test_tensorflow_array_differentiation, test_marked_nodes, \
     gradients_to_arrow_texts, nodes_to_arrow_texts
@@ -37,52 +37,11 @@ def plot_labels_with_modified_node(gcn, y_hat, target_node, old_label, modified_
     gcn.fit_x[modified_node, :] = old_val  # restore previous value
 
 
-def modify_and_predict_gcn(gcn, node, node_val, retrain=False):
-    """ Modifies the node in the graph and then predicts labels """
+def plot_model_diagnostics(attack_model, mod_node=None, attack_grads=None, pdfpath=None):
+    gcn = attack_model.gcn
+    target_nodes = attack_model.target_nodes
+    attack_nodes = attack_model.attack_nodes
 
-    x, y, A = gcn.fit_x, gcn.fit_y, gcn.fit_A
-    old_val = np.copy(x[node, :])  # save previous value
-    x[node, :] = node_val
-    if retrain:
-        mod_gcn = SimpleGCN(n_neurons=gcn.n_neurons, activations=gcn.activations,
-                            n_classes=gcn.n_classes, max_epochs=gcn.max_epochs,
-                            learning_rate=gcn.learning_rate, l2_lambda=gcn.l2_lambda)
-        mod_gcn.fit(x, y, A)
-    else:
-        mod_gcn = gcn
-
-    y_hat = mod_gcn.predict()
-
-    x[node, :] = old_val  # restore previous value
-
-    return y_hat
-
-
-def find_minimum_modification(gcn, target_node, mod_node, old_label, search_direction):
-    """ Search along search_direction for mod_node until label of target_node flips """
-    min_val = 0.0
-    max_val = 5.0
-    max_iters = 15
-    prod = 0.5
-    orig_val = np.copy(gcn.fit_x[mod_node, :])
-    mod_val = None
-    for i in range(max_iters):
-        node_val = orig_val + prod * search_direction
-        y_hat = modify_and_predict_gcn(gcn, node=mod_node, node_val=node_val, retrain=False)
-        if y_hat[target_node] != old_label:
-            mod_val = node_val
-            if prod < 0.01:
-                break
-            max_val = prod
-        else:
-            min_val = prod
-        prod = (min_val + max_val) / 2
-    logger.debug("prod: %f; mod_val: %s" % (prod, "" if mod_val is None else str(mod_val)))
-    return mod_val
-
-
-def plot_model_diagnostics(gcn, target_nodes=None, attack_nodes=None,
-                           mod_node=None, attack_grads=None, pdfpath=None):
     m_nodes = [target_nodes, attack_nodes]
     m_colors = ['green', 'magenta']
 
@@ -107,7 +66,7 @@ def plot_model_diagnostics(gcn, target_nodes=None, attack_nodes=None,
 
     if mod_node is not None:
         target_node, old_label, modified_node, node_val = mod_node
-        y_hat_mod = modify_and_predict_gcn(gcn, node=modified_node, node_val=node_val, retrain=False)
+        y_hat_mod = attack_model.modify_gcn_and_predict(node=modified_node, node_val=node_val, retrain=False)
         plot_labels_with_modified_node(gcn, y_hat_mod, target_node, old_label, modified_node, node_val,
                                        marked_nodes=m_nodes, marked_colors=m_colors,
                                        title=r"${\bf (d)}$ Predicted Labels on Modified Graph", dp=dp)
@@ -117,15 +76,15 @@ def plot_model_diagnostics(gcn, target_nodes=None, attack_nodes=None,
 def test_gcn(args):
     dataset = args.dataset
 
+    # Changing the below will change the output plots as well
     sub_sample = 0.3
     labeled_frac = 0.3
     n_neighbors = 5  # includes self
-    euclidean = False
 
     x, y, y_orig, A = read_graph_dataset(dataset, sub_sample=sub_sample,
                                          labeled_frac=labeled_frac,
                                          n_neighbors=n_neighbors,
-                                         euclidean=euclidean)
+                                         euclidean=False)
 
     # Number of classes includes the '0' class and excludes all marked '-1' i.e., unlabeled.
     n_classes = np.max(y)+1  # len(np.unique(y[y >= 0]))
@@ -139,7 +98,7 @@ def test_gcn(args):
     l2_lambda = 0.001
 
     # Two NN layers implies max two-hop information propagation
-    # through graph by the GCN in each training epoch.
+    # through graph by the GCN in each forward/backward propagation.
     n_neurons = [10, n_classes]
     activations = [tf.nn.leaky_relu, None]
     # activations = [None, None]
@@ -152,30 +111,30 @@ def test_gcn(args):
 
     gcn.fit(x, y, A)
 
-    f1 = get_f1_score(gcn, y, y_orig)
+    f1 = gcn.get_f1_score(y_orig)
     logger.debug("f1 score: %f" % f1)
 
     mod_node = None
-    all_grads = None
     if len(target_nodes) > 0:
-        atk = AttackModel(model=gcn, target_nodes=target_nodes, attack_nodes=attack_nodes)
-        best, all_grads = atk.suggest_node()
+        attack_model = SimpleGCNAttack(gcn=gcn, target_nodes=target_nodes,
+                                       attack_nodes=attack_nodes)
+        best, all_grads = attack_model.suggest_node()
         if best is not None:
             target_node, old_label, attack_node, feature, grads = best
             search_direction = np.zeros(grads.shape, dtype=grads.dtype)
             search_direction[feature] = grads[feature]
-            mod_val = find_minimum_modification(gcn, target_node=target_node, mod_node=attack_node,
-                                                old_label=old_label,
-                                                search_direction=search_direction)
+            mod_val = attack_model.find_minimum_modification(target_node=target_node,
+                                                             mod_node=attack_node,
+                                                             old_label=old_label,
+                                                             search_direction=search_direction)
             if mod_val is not None:
                 mod_node = (target_node, old_label, attack_node, mod_val)
                 logger.debug("Suggested node: %d, feature: %d, grads: %s" % (attack_node, feature, grads))
 
-    if args.plot:
-        fsig = "%s_n%d_l%d%s" % (dataset, n_neighbors, len(n_neurons), "" if not euclidean else "_euc")
-        pdfpath = "temp/test_gcn_%s.pdf" % (fsig)
-        plot_model_diagnostics(gcn, target_nodes, attack_nodes,
-                               mod_node=mod_node, attack_grads=all_grads, pdfpath=pdfpath)
+        if args.plot and x.shape[1] == 2:  # plot only if 2D dataset
+            fsig = "%s_n%d_l%d" % (dataset, n_neighbors, len(n_neurons))
+            pdfpath = "temp/test_gcn_%s.pdf" % (fsig)
+            plot_model_diagnostics(attack_model, mod_node=mod_node, attack_grads=all_grads, pdfpath=pdfpath)
 
     gcn.close_session()
 
