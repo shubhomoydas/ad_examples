@@ -10,7 +10,7 @@ from .gcn_test_support import read_graph_dataset, get_target_and_attack_nodes, \
     gradients_to_arrow_texts, nodes_to_arrow_texts
 
 """
-pythonw -m graph.test_gcn --debug --plot --log_file=temp/test_gcn.log --dataset=synth_graph
+pythonw -m graph.test_gcn --debug --plot --log_file=temp/test_gcn.log --dataset=face_top
 """
 
 
