@@ -15,8 +15,13 @@ pythonw -m graph.test_gcn --debug --plot --log_file=temp/test_gcn.log --dataset=
 
 
 def plot_labels_with_modified_node(gcn, y_hat, target_node, old_label, modified_node, node_val,
+                                   lbl_color_map=None,
                                    marked_nodes=None, marked_colors=None, title=None, dp=None):
+    """ Plots the annotated graph details
 
+    The plotting constants such as arrow scale etc. are tuned
+    for the 'face_top' dataset.
+    """
     old_val = np.copy(gcn.fit_x[modified_node, :])  # save previous value
     gcn.fit_x[modified_node, :] = node_val
 
@@ -30,7 +35,7 @@ def plot_labels_with_modified_node(gcn, y_hat, target_node, old_label, modified_
                     "head_width": 0.01,
                     "head_length": 0.02}]
 
-    plot_graph(gcn.fit_x, y_hat, gcn.fit_A,
+    plot_graph(gcn.fit_x, y_hat, gcn.fit_A, lbl_color_map=lbl_color_map,
                marked_nodes=marked_nodes, marked_colors=marked_colors,
                nodes=False, edges=True, edges_title=title, arrow_texts=arrow_texts, dp=dp)
 
@@ -38,28 +43,42 @@ def plot_labels_with_modified_node(gcn, y_hat, target_node, old_label, modified_
 
 
 def plot_model_diagnostics(attack_model, mod_node=None, attack_grads=None, pdfpath=None):
+    """ Plots the annotated graph details
+
+    The plotting constants such as arrow scale etc. are tuned
+    for the 'face_top' dataset.
+    """
     gcn = attack_model.gcn
     target_nodes = attack_model.target_nodes
     attack_nodes = attack_model.attack_nodes
 
+    lbl_color_map = {-1: "grey", 0: "blue", 1: "red", 2: "green", 3: "orange"}
     m_nodes = [target_nodes, attack_nodes]
     m_colors = ['green', 'magenta']
 
-    node_arrow_texts = nodes_to_arrow_texts(gcn.fit_x, nodes=target_nodes, scale=[-0.08, 0.04],
-                                            text="target", head_width=0.02, head_length=0.01)
-    node_arrow_texts.extend(nodes_to_arrow_texts(gcn.fit_x, nodes=attack_nodes, scale=[-0.08, 0.04],
-                                                 text="attacker", head_width=0.02, head_length=0.01))
+    node_arrow_scale = np.array([-0.08, 0.04], dtype=np.float32)
+    text_offset = node_arrow_scale + [-0.10, 0.02]
+    node_arrow_texts = nodes_to_arrow_texts(gcn.fit_x, nodes=target_nodes, scale=node_arrow_scale,
+                                            text="target", text_offset=text_offset,
+                                            head_width=0.02, head_length=0.01)
+    node_arrow_texts.extend(nodes_to_arrow_texts(gcn.fit_x, nodes=attack_nodes, scale=node_arrow_scale,
+                                                 text="attacker", text_offset=text_offset,
+                                                 head_width=0.02, head_length=0.01))
 
     y_hat = gcn.predict()
     dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2, save_tight=True)
-    plot_graph(gcn.fit_x, gcn.fit_y, gcn.fit_A,
+    plot_graph(gcn.fit_x, gcn.fit_y, gcn.fit_A, lbl_color_map=lbl_color_map,
                marked_nodes=m_nodes, marked_colors=m_colors,
                nodes=True, edges=True, arrow_texts=node_arrow_texts,
                nodes_title=r"${\bf (a)}$ Synthetic Semi-supervised Dataset",
                edges_title=r"${\bf (b)}$ Graph by Joining Nearest Neighbors", dp=dp)
+
+    grad_arrow_scale = np.array([-0.025, -0.07], dtype=np.float32)
     node_arrow_texts = gradients_to_arrow_texts(gcn.fit_x, grads=attack_grads,
-                                           scale=[-0.025, -0.07], head_width=0.02, head_length=0.01)
-    plot_graph(gcn.fit_x, y_hat, gcn.fit_A,
+                                                scale=grad_arrow_scale,
+                                                text_offset=grad_arrow_scale + [-0.28, -0.04],
+                                                head_width=0.02, head_length=0.01)
+    plot_graph(gcn.fit_x, y_hat, gcn.fit_A, lbl_color_map=lbl_color_map,
                marked_nodes=m_nodes, marked_colors=m_colors,
                nodes=False, edges=True, edges_title=r"${\bf (c)}$ Predicted Labels",
                arrow_texts=node_arrow_texts, dp=dp)
@@ -68,7 +87,7 @@ def plot_model_diagnostics(attack_model, mod_node=None, attack_grads=None, pdfpa
         target_node, old_label, modified_node, node_val = mod_node
         y_hat_mod = attack_model.modify_gcn_and_predict(node=modified_node, node_val=node_val, retrain=False)
         plot_labels_with_modified_node(gcn, y_hat_mod, target_node, old_label, modified_node, node_val,
-                                       marked_nodes=m_nodes, marked_colors=m_colors,
+                                       lbl_color_map=lbl_color_map, marked_nodes=m_nodes, marked_colors=m_colors,
                                        title=r"${\bf (d)}$ Predicted Labels on Modified Graph", dp=dp)
     dp.close()
 

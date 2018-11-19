@@ -181,16 +181,16 @@ def read_graph_dataset(dataset, sub_sample=1.0, labeled_frac=1.0, n_neighbors=5,
     return x, y, y_orig, A
 
 
-def gradients_to_arrow_texts(x, grads=None, scale=None, head_width=0.02, head_length=0.01):
-    """
-    Tuned for the synthetic dataset 'face_top'
-    """
+def gradients_to_arrow_texts(x, grads=None, scale=None, text_offset=None, head_width=0.02, head_length=0.01):
+    """ Annotates gradients with arrow pointers """
     if grads is None or len(grads) == 0:
         return []
     arrow_texts = []
+    if text_offset is None:
+        text_offset = scale
     for node, best_feature, f_grads in grads:
         start_pos = x[node]
-        text_pos = start_pos + scale + [-0.28, -0.04]
+        text_pos = start_pos + text_offset
         arrow_text = {"start_pos": start_pos, "text_pos": text_pos,
                       "scale": scale,
                       "text": "grad: [%0.3f, %0.3f]" % (f_grads[0], f_grads[1]),
@@ -200,13 +200,15 @@ def gradients_to_arrow_texts(x, grads=None, scale=None, head_width=0.02, head_le
     return arrow_texts
 
 
-def nodes_to_arrow_texts(x, nodes, scale, text, head_width=0.02, head_length=0.01):
+def nodes_to_arrow_texts(x, nodes, scale, text, text_offset=None, head_width=0.02, head_length=0.01):
     arrow_texts = []
     if nodes is None:
         return arrow_texts
+    if text_offset is None:
+        text_offset = scale
     for node in nodes:
         start_pos = x[node]
-        text_pos = start_pos + scale + [-0.10, 0.02]
+        text_pos = start_pos + text_offset
         arrow_text = {"start_pos": start_pos, "text_pos": text_pos,
                       "scale": scale,
                       "text": text,
@@ -252,10 +254,10 @@ def plot_edges(x, A, pl):
             pl.plot([x[i, 0], x[j, 0]], [x[i, 1], x[j, 1]], "-", color="gray", linewidth=0.5)
 
 
-def plot_graph(x, y, A, marked_nodes=None, marked_colors=None,
+def plot_graph(x, y, A, lbl_color_map=None,
+               marked_nodes=None, marked_colors=None,
                nodes_title=None, edges_title=None,
                nodes=True, edges=False, arrow_texts=None, dp=None):
-    lbl_color_map = {-1: "grey", 0: "blue", 1: "red", 2: "green", 3: "orange"}
     if nodes:
         pl = dp.get_next_plot()
         if nodes_title is not None:
@@ -334,9 +336,10 @@ def test_marked_nodes(args):
     target_nodes, attack_nodes = get_target_and_attack_nodes(x, dataset)
 
     fsig = "marked_nodes"
+    lbl_color_map = {-1: "grey", 0: "blue", 1: "red", 2: "green", 3: "orange"}
     pdfpath = "temp/test_gcn_%s_%s.pdf" % (dataset, fsig)
     dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2)
-    plot_graph(x, y, A=None,
+    plot_graph(x, y, A=None, lbl_color_map=lbl_color_map,
                marked_nodes=[target_nodes, attack_nodes],
                marked_colors=['green', 'magenta'], edges=False, dp=dp)
     dp.close()
