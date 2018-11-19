@@ -433,7 +433,7 @@ class SimpleGCNAttack(object):
             by Daniel Zugner, Amir Akbarnejad, and Stephan Gunnemann, KDD 2018
     """
 
-    def __init__(self, gcn, target_nodes, attack_nodes, min_prod=0.0, max_prod=5.0, max_iters=15):
+    def __init__(self, gcn, target_nodes, attack_nodes, min_prod=0.0, max_prod=5.0, max_iters=20):
         self.gcn = gcn
         self.target_nodes = target_nodes
         self.attack_nodes = attack_nodes
@@ -537,6 +537,9 @@ class SimpleGCNAttack(object):
             Modified value for mod_node that flips target node's label
             None is returned of no such value is found
         """
+        if np.sum(search_direction ** 2) == 0.:
+            # if search direction has zero magnitude, we cannot search at all
+            return None
         min_prod = self.min_prod
         max_prod = self.max_prod
         prod = 0.5
@@ -547,13 +550,14 @@ class SimpleGCNAttack(object):
             y_hat = self.modify_gcn_and_predict(node=mod_node, node_val=node_val, retrain=False)
             if y_hat[target_node] != old_label:
                 mod_val = node_val
-                if prod < 0.01:
+                if max_prod - prod < 1e-2 and mod_val is not None:
                     break
                 max_prod = prod
             else:
                 min_prod = prod
             prod = (min_prod + max_prod) / 2
-        logger.debug("prod: %f; mod_val: %s" % (prod, "" if mod_val is None else str(mod_val)))
+        logger.debug("prod: %f; (max_prod - prod): %f; mod_val: %s" %
+                     (prod, max_prod-prod, "" if mod_val is None else str(mod_val)))
         return mod_val
 
     def modify_structure(self):

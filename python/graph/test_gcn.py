@@ -96,6 +96,7 @@ def test_gcn(args):
 
     learning_rate = 0.1
     l2_lambda = 0.001
+    search_along_max_grad_feature = True
 
     # Two NN layers implies max two-hop information propagation
     # through graph by the GCN in each forward/backward propagation.
@@ -122,7 +123,11 @@ def test_gcn(args):
         if best is not None:
             target_node, old_label, attack_node, feature, grads = best
             search_direction = np.zeros(grads.shape, dtype=grads.dtype)
-            search_direction[feature] = grads[feature]
+            if search_along_max_grad_feature:
+                # as in nettack paper (Zugner et al., 2018)
+                search_direction[feature] = grads[feature]
+            else:
+                search_direction[:] = grads[:]
             mod_val = attack_model.find_minimum_modification(target_node=target_node,
                                                              mod_node=attack_node,
                                                              old_label=old_label,

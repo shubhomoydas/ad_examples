@@ -275,7 +275,7 @@ def plot_graph(x, y, A, marked_nodes=None, marked_colors=None,
 
 def get_target_and_attack_nodes(x, dataset):
     if dataset == "face":
-        target_nodes = find_insts(x, [0.75, 0.8], [0.7, 0.8])
+        target_nodes = find_insts(x, [0.75, 0.8], [0.7, 0.8])[:1]
         attack_nodes = find_insts(x, [0.6, 0.95], [0.8, 0.95])
     elif dataset == "face_top":
         target_nodes = find_insts(x, [0.4, 0.5], [0.9, 1.0])[:1]  # just one target node
