@@ -6,8 +6,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from common.gen_samples import *
 from .simple_gcn import SimpleGCN, SimpleGCNAttack, set_random_seeds
 from .gcn_test_support import read_graph_dataset, get_target_and_attack_nodes, \
-    plot_graph, test_tensorflow_array_differentiation, test_marked_nodes, \
-    gradients_to_arrow_texts, nodes_to_arrow_texts
+    plot_graph, gradients_to_arrow_texts, nodes_to_arrow_texts, \
+    test_edge_sample, test_tensorflow_array_differentiation, test_marked_nodes
 
 """
 pythonw -m graph.test_gcn --debug --plot --log_file=temp/test_gcn.log --dataset=face_top
@@ -124,7 +124,7 @@ def test_gcn(args):
     # activations = [None, None]
     # activations = [tf.nn.sigmoid, None]
     # activations = [tf.nn.tanh, None]
-    gcn = SimpleGCN(n_neurons=n_neurons, activations=activations,
+    gcn = SimpleGCN(input_shape=x.shape, n_neurons=n_neurons, activations=activations,
                     n_classes=n_classes, max_epochs=5000,
                     learning_rate=learning_rate, l2_lambda=l2_lambda,
                     rand_seed=args.randseed+2)
@@ -177,4 +177,5 @@ if __name__ == "__main__":
     # test_tensorflow_array_differentiation()
     # test_marked_nodes(args)
     test_gcn(args)
+    # test_edge_sample(args)
 

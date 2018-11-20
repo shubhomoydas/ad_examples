@@ -76,6 +76,26 @@ class GraphAdjacency(object):
 
         return A
 
+    def sample_edges(self, A, prob=1.0):
+        r, c = np.where(A > 0)  # row, column
+        # logger.debug("r:\n%s" % str(r))
+        # logger.debug("c:\n%s" % str(c))
+        # Assume that A is symmetric and get all edges excluding self-loops.
+        upper_diag_indexes = np.where(r < c)[0]
+        # logger.debug("r upper:\n%s" % str(r[upper_diag_indexes]))
+        # logger.debug("c upper:\n%s" % str(c[upper_diag_indexes]))
+        all_upper = np.arange(len(upper_diag_indexes), dtype=np.int32)
+        np.random.shuffle(all_upper)
+        all_upper = all_upper[0:int(prob*len(all_upper))]
+        sampled_edges = upper_diag_indexes[all_upper]
+        A_new = np.zeros(A.shape, dtype=A.dtype)
+        for i, j in zip(r[sampled_edges], c[sampled_edges]):
+            A_new[i, j] = 1
+            A_new[j, i] = 1  # symmetric matrix
+        if self.self_loops:
+            A_new += np.eye(A_new.shape[0])
+        return A_new
+
 
 class SimpleGCN(object):
     """ Implementation of a simple Graph Convolutional Network and APIs to support attack
@@ -86,12 +106,16 @@ class SimpleGCN(object):
         [2] Adversarial Attacks on Neural Networks for Graph Data
             by Daniel Zugner, Amir Akbarnejad, and Stephan Gunnemann, KDD 2018
     """
-    def __init__(self, n_neurons, activations, n_classes, learning_rate=0.005,
-                 l2_lambda=0.001, train_batch_size=25, max_epochs=1, tol=1e-4,
-                 rand_seed=42):
+    def __init__(self, input_shape, n_neurons, activations, n_classes,
+                 name="gcn", graph=None,
+                 learning_rate=0.005, l2_lambda=0.001, train_batch_size=25,
+                 max_epochs=1, tol=1e-4, rand_seed=42):
+        self.input_shape = input_shape
         self.n_neurons = n_neurons
         self.activations = activations
         self.n_classes = n_classes
+        self.name = name
+        self.graph = graph
         self.learning_rate = learning_rate
         self.l2_lambda = l2_lambda
         self.train_batch_size = train_batch_size
@@ -100,7 +124,7 @@ class SimpleGCN(object):
         self.rand_seed = rand_seed
 
         self.layer_names = None
-        self.n_features = 0
+        self.n_features = self.input_shape[1]
         self.X = None
         self.y_labeled = None
         self.network = None
@@ -122,8 +146,12 @@ class SimpleGCN(object):
         self.attack_network = None
         self.attack_grad = None
 
-        self.reset_graph()
-        self.session = None
+        if self.graph is None:
+            self.reset_graph()
+
+        with self.graph.as_default():
+            self.init_network()
+            self.init_session()
 
     def dnn_layer(self, x, A, n_neurons, name, activation=None, reuse=False):
         with tf.variable_scope(name, reuse=reuse):
@@ -147,16 +175,14 @@ class SimpleGCN(object):
             layer_input = hidden
         return layers
 
-    def init_network(self, input_shape):
-
-        self.n_features = input_shape[1]
-        n = input_shape[0]
-        self.X = tf.placeholder(tf.float32, shape=(None, self.n_features), name="X")
-        self.y_labeled = tf.placeholder(tf.float32, shape=(None, self.n_classes), name="y")
-        self.A_hat = tf.placeholder(tf.float32, shape=(n, n), name="A")
-        self.iDroot = tf.placeholder(tf.float32, shape=(n, n), name="iD")
-        self.layer_names = ['layer_%d' % i for i, _ in enumerate(self.n_neurons)]
-        with tf.variable_scope("GCN"):
+    def init_network(self):
+        n = self.input_shape[0]
+        self.X = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_X" % self.name)
+        self.y_labeled = tf.placeholder(tf.float32, shape=(None, self.n_classes), name="%s_y" % self.name)
+        self.A_hat = tf.placeholder(tf.float32, shape=(n, n), name="%s_A" % self.name)
+        self.iDroot = tf.placeholder(tf.float32, shape=(n, n), name="%s_iD" % self.name)
+        self.layer_names = ['%s_layer_%d' % (self.name, i) for i, _ in enumerate(self.n_neurons)]
+        with tf.variable_scope("%s_GCN" % self.name):
             self.network = self.dnn_construct(self.X, self.A_hat, self.n_neurons,
                                               self.layer_names, self.activations, reuse=False)
         # loss
@@ -166,7 +192,7 @@ class SimpleGCN(object):
         self.xentropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits_tensor,
                                                                                        labels=self.y_labeled))
         vars = tf.trainable_variables()
-        params = [v for v in vars if v.name.endswith('/W:0')]
+        params = [v for v in vars if v.name.startswith("%s" % self.name) and v.name.endswith('/W:0')]
         if len(params) == 0:
             raise ValueError("No trainable parameters")
 
@@ -203,16 +229,16 @@ class SimpleGCN(object):
         X_attack =  [    self.X_attack_node    ]  <- Variable
                     [ self.X_below_attack_node ]  <- fixed placeholder
         """
-        self.target = tf.placeholder(tf.int32, shape=(), name="target")
-        self.label_1 = tf.placeholder(tf.int32, shape=(), name="label_1")
-        self.label_2 = tf.placeholder(tf.int32, shape=(), name="label_2")
+        self.target = tf.placeholder(tf.int32, shape=(), name="%s_target" % self.name)
+        self.label_1 = tf.placeholder(tf.int32, shape=(), name="%s_label_1" % self.name)
+        self.label_2 = tf.placeholder(tf.int32, shape=(), name="%s_label_2" % self.name)
 
-        self.X_above_attack_node = tf.placeholder(tf.float32, shape=(None, self.n_features), name="x_pre")
-        self.X_attack_node = tf.Variable(tf.zeros([1, self.n_features]), name="attacker")
-        self.X_below_attack_node = tf.placeholder(tf.float32, shape=(None, self.n_features), name="x_pos")
+        self.X_above_attack_node = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_x_pre" % self.name)
+        self.X_attack_node = tf.Variable(tf.zeros([1, self.n_features]), name="%s_attacker" % self.name)
+        self.X_below_attack_node = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_x_pos" % self.name)
         self.X_attack = tf.concat([self.X_above_attack_node, self.X_attack_node, self.X_below_attack_node], axis=0)
 
-        with tf.variable_scope("GCN", reuse=True):
+        with tf.variable_scope("%s_GCN" % self.name, reuse=True):
             self.attack_network = self.dnn_construct(self.X_attack, self.A_hat, self.n_neurons,
                                                      self.layer_names, self.activations, reuse=True)
         # get the logits for the target node
@@ -248,11 +274,15 @@ class SimpleGCN(object):
 
     def init_session(self):
         self.session = tf.Session(graph=self.graph)
-        self.session.run(tf.global_variables_initializer())
 
     def close_session(self):
         if self.session is not None:
             self.session.close()
+
+    def reset_session(self):
+        """ close existing session if any and start a new one """
+        self.close_session()
+        self.init_session()
 
     def reset_graph(self):
         self.graph = tf.Graph()
@@ -285,8 +315,8 @@ class SimpleGCN(object):
         return D, iDroot
 
     def fit(self, x, y, A):
-        self.reset_graph()
         with self.graph.as_default():
+            self.session.run(tf.global_variables_initializer())
             self._fit(x, y, A)
 
     def _fit(self, x, y, A):
@@ -296,10 +326,6 @@ class SimpleGCN(object):
             By this point the default graph has already set to self.graph
             (see self.fit() above)
         """
-        self.close_session()  # close existing session if any
-        self.init_network(x.shape)
-        self.init_session()
-
         D, iDroot = self.get_iDroot(A)
         A_hat = np.dot(np.dot(iDroot, A), iDroot)
         self.fit_x = x
@@ -505,7 +531,8 @@ class SimpleGCNAttack(object):
         old_val = np.copy(x[node, :])  # save previous value
         x[node, :] = node_val
         if retrain:
-            mod_gcn = SimpleGCN(n_neurons=self.gcn.n_neurons, activations=self.gcn.activations,
+            mod_gcn = SimpleGCN(input_shape=self.gcn.input_shape, n_neurons=self.gcn.n_neurons,
+                                activations=self.gcn.activations,
                                 n_classes=self.gcn.n_classes, max_epochs=self.gcn.max_epochs,
                                 learning_rate=self.gcn.learning_rate, l2_lambda=self.gcn.l2_lambda)
             mod_gcn.fit(x, y, A)

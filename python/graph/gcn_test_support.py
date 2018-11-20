@@ -343,3 +343,37 @@ def test_marked_nodes(args):
                marked_nodes=[target_nodes, attack_nodes],
                marked_colors=['green', 'magenta'], edges=False, dp=dp)
     dp.close()
+
+
+def test_edge_sample(args):
+    dataset = args.dataset
+
+    # Changing the below will change the output plots as well
+    sub_sample = 0.3
+    labeled_frac = 0.3
+    n_neighbors = 5  # includes self
+
+    x, y, y_orig, A = read_graph_dataset(dataset, sub_sample=sub_sample,
+                                         labeled_frac=labeled_frac,
+                                         n_neighbors=n_neighbors,
+                                         euclidean=False)
+    n_classes = len(np.unique(y[y >= 0]))
+    logger.debug("n_classes: %d" % n_classes)
+
+    target_nodes, attack_nodes = get_target_and_attack_nodes(x, dataset)
+
+    fsig = "marked_nodes"
+    lbl_color_map = {-1: "grey", 0: "blue", 1: "red", 2: "green", 3: "orange"}
+
+    # logger.debug("\n%s" % str(A))
+    ga = GraphAdjacency(n_neighbors, self_loops=True)
+
+    pdfpath = "temp/test_gcn_edge_samples_%s_%s.pdf" % (dataset, fsig)
+    dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2)
+    for i in range(4):
+        A_new = ga.sample_edges(A, prob=0.75)
+        # logger.debug("\n%s" % str(A_new))
+        plot_graph(x, y, A=A_new, lbl_color_map=lbl_color_map,
+                   marked_nodes=[target_nodes, attack_nodes],
+                   marked_colors=['green', 'magenta'], nodes=False, edges=True, dp=dp)
+    dp.close()
