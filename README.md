@@ -65,6 +65,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
   - [Generative Adversarial Nets (GAN) based Anomaly Detection](#gan-based-anomaly-detection)
     - [AnoGAN](#anogan)
   - [Anomaly injection by adversarial behavior and Graph Convolutional Networks](#graph-convolutional-network)
+    - [Robustness with ensembles](#robustness-with-ensembles)
   - [Reducing activity sequences to i.i.d](ActivitySequences.md#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
 
@@ -442,7 +443,10 @@ Figure **(c)** shows the gradients for the two attack nodes. In this example set
 
 ![GCN](figures/gcn/gcn_face_top.png)
 
-**Robustness with ensembles:** One commonly suggested technique to improve robustness of deep networks is to use **ensembles**. For GCNs, we can train multiple GCN models with subsampled edges. This means that although the nodes of the graph remain the same across all models, the adjacency matrices differ. The below command creates such a model with 10 members. The corresponding results are shown below. Here, we see that in Figure **(c)** the gradients are now smaller in magnitude. This implies that the attacker node's influence is somewhat diminished. As a result, the attribute(s) of the attacker need to change more to flip the target's label. Of course, this is just one data point. A more rigorous analysis would look at the results averaged across multiple nodes.
+
+Robustness with ensembles
+-------------------------
+One commonly suggested technique to improve robustness of deep networks is to use *ensembles*. For GCNs, we can train multiple GCN models with subsampled edges. This means that although the nodes of the graph remain the same across all models, the adjacency matrices differ. The below command creates such a model with 10 members. The corresponding results are shown below. Here, we see that in Figure **(c)** the gradients are now smaller in magnitude. This implies that the attacker node's influence is somewhat diminished. As a result, the attribute(s) of the attacker need to change more (Figure **(d)**) to flip the target's label. Of course, this is just one data point. A more rigorous analysis would look at the results averaged across multiple nodes.
 
     pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --ensemble --n_estimators=10 --edge_sample_prob=0.6
 
