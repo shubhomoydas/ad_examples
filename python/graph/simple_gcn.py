@@ -80,14 +80,15 @@ class GraphAdjacency(object):
         r, c = np.where(A > 0)  # row, column
         # logger.debug("r:\n%s" % str(r))
         # logger.debug("c:\n%s" % str(c))
-        # Assume that A is symmetric and get all edges excluding self-loops.
-        upper_diag_indexes = np.where(r < c)[0]
-        # logger.debug("r upper:\n%s" % str(r[upper_diag_indexes]))
-        # logger.debug("c upper:\n%s" % str(c[upper_diag_indexes]))
-        all_upper = np.arange(len(upper_diag_indexes), dtype=np.int32)
+        # Assume that A is symmetric and get all edges in upper triangular
+        # matrix excluding self-loops.
+        upper_triangular_indexes = np.where(r < c)[0]
+        # logger.debug("r upper:\n%s" % str(r[upper_triangular_indexes]))
+        # logger.debug("c upper:\n%s" % str(c[upper_triangular_indexes]))
+        all_upper = np.arange(len(upper_triangular_indexes), dtype=np.int32)
         np.random.shuffle(all_upper)
         all_upper = all_upper[0:int(prob*len(all_upper))]
-        sampled_edges = upper_diag_indexes[all_upper]
+        sampled_edges = upper_triangular_indexes[all_upper]
         A_new = np.zeros(A.shape, dtype=A.dtype)
         for i, j in zip(r[sampled_edges], c[sampled_edges]):
             A_new[i, j] = 1
@@ -107,15 +108,16 @@ class SimpleGCN(object):
             by Daniel Zugner, Amir Akbarnejad, and Stephan Gunnemann, KDD 2018
     """
     def __init__(self, input_shape, n_neurons, activations, n_classes,
-                 name="gcn", graph=None,
+                 name="gcn", graph=None, session=None,
                  learning_rate=0.005, l2_lambda=0.001, train_batch_size=25,
-                 max_epochs=1, tol=1e-4, rand_seed=42):
+                 max_epochs=1, tol=1e-4, rand_seed=42, init_network_now=True):
         self.input_shape = input_shape
         self.n_neurons = n_neurons
         self.activations = activations
         self.n_classes = n_classes
         self.name = name
         self.graph = graph
+        self.session = session
         self.learning_rate = learning_rate
         self.l2_lambda = l2_lambda
         self.train_batch_size = train_batch_size
@@ -142,16 +144,19 @@ class SimpleGCN(object):
 
         self.fit_x = self.fit_y = self.fit_labeled_indexes = self.fit_A = self.fit_A_hat = None
         self.target = self.label_1 = self.label_2 = None
-        self.X_above_attack_node = self.X_attack_node = self.X_below_attack_node = None
+        self.X_above_attack_node = self.X_attack_node = self.X_below_attack_node = self.X_attack = None
         self.attack_network = None
         self.attack_grad = None
 
         if self.graph is None:
-            self.reset_graph()
+            self.init_tf_graph()
 
-        with self.graph.as_default():
-            self.init_network()
+        if self.session is None:
             self.init_session()
+
+        if init_network_now:
+            with self.graph.as_default():
+                self.init_network()
 
     def dnn_layer(self, x, A, n_neurons, name, activation=None, reuse=False):
         with tf.variable_scope(name, reuse=reuse):
@@ -175,16 +180,23 @@ class SimpleGCN(object):
             layer_input = hidden
         return layers
 
-    def init_network(self):
+    def prepare_input_variables(self):
+        # separated this out of init_network so that ensembles can be supported
+        x = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_X" % self.name)
+        y_labeled = tf.placeholder(tf.float32, shape=(None, self.n_classes), name="%s_y" % self.name)
+        return x, y_labeled
+
+    def setup_network(self, x, y_labeled, init_attack_network_now=True):
+        self.X = x
+        self.y_labeled = y_labeled
+
         n = self.input_shape[0]
-        self.X = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_X" % self.name)
-        self.y_labeled = tf.placeholder(tf.float32, shape=(None, self.n_classes), name="%s_y" % self.name)
         self.A_hat = tf.placeholder(tf.float32, shape=(n, n), name="%s_A" % self.name)
         self.iDroot = tf.placeholder(tf.float32, shape=(n, n), name="%s_iD" % self.name)
         self.layer_names = ['%s_layer_%d' % (self.name, i) for i, _ in enumerate(self.n_neurons)]
-        with tf.variable_scope("%s_GCN" % self.name):
-            self.network = self.dnn_construct(self.X, self.A_hat, self.n_neurons,
-                                              self.layer_names, self.activations, reuse=False)
+
+        self.network = self.build_gcn(self.X, reuse=False)
+
         # loss
         self.labeled_indexes = tf.placeholder(tf.int32, shape=(None), name="li")
         self.z = get_nn_layer(self.network, layer_from_top=1)
@@ -203,12 +215,17 @@ class SimpleGCN(object):
         # probability predictions
         self.preds = tf.nn.softmax(self.z)
 
-        self.init_attack_network()
+        if init_attack_network_now:
+            self.init_attack_network()
+
+    def init_network(self, init_attack_network_now=True):
+        x, y_labeled = self.prepare_input_variables()
+        self.setup_network(x=x, y_labeled=y_labeled, init_attack_network_now=init_attack_network_now)
 
         vars = tf.trainable_variables()
         for v in vars: logger.debug(v.name)
 
-    def init_attack_network(self):
+    def prepare_attack_variables(self):
         """
         Setup attack variables so that we can compute gradient of difference
         in logits wrt input attacker variables for arbitrary GCN networks.
@@ -218,35 +235,60 @@ class SimpleGCN(object):
         'label_2' would be set to the current label for the node (usually
             its best-predicted label)
 
-        The attack matrix X_attack is setup such that the attack node's row is a
+        The attack matrix x_attack is setup such that the attack node's row is a
         TensorFlow variable for which we can compute the gradient. Other rows
-        which are above it (i.e., X_above_attack_node) and below it
-        (i.e., X_below_attack_node) are setup as fixed placeholders for which
+        which are above it (i.e., x_above_attack_node) and below it
+        (i.e., x_below_attack_node) are setup as fixed placeholders for which
         TensorFlow will not compute gradients.
 
         The full attack matrix would be row-wise concatenation:
-                    [ self.X_above_attack_node ]  <- fixed placeholder
-        X_attack =  [    self.X_attack_node    ]  <- Variable
-                    [ self.X_below_attack_node ]  <- fixed placeholder
+                    [ self.x_above_attack_node ]  <- fixed placeholder
+        x_attack =  [    self.x_attack_node    ]  <- Variable
+                    [ self.x_below_attack_node ]  <- fixed placeholder
         """
-        self.target = tf.placeholder(tf.int32, shape=(), name="%s_target" % self.name)
-        self.label_1 = tf.placeholder(tf.int32, shape=(), name="%s_label_1" % self.name)
-        self.label_2 = tf.placeholder(tf.int32, shape=(), name="%s_label_2" % self.name)
+        target = tf.placeholder(tf.int32, shape=(), name="%s_target" % self.name)
+        label_1 = tf.placeholder(tf.int32, shape=(), name="%s_label_1" % self.name)
+        label_2 = tf.placeholder(tf.int32, shape=(), name="%s_label_2" % self.name)
 
-        self.X_above_attack_node = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_x_pre" % self.name)
-        self.X_attack_node = tf.Variable(tf.zeros([1, self.n_features]), name="%s_attacker" % self.name)
-        self.X_below_attack_node = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_x_pos" % self.name)
-        self.X_attack = tf.concat([self.X_above_attack_node, self.X_attack_node, self.X_below_attack_node], axis=0)
+        x_above_attack_node = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_x_pre" % self.name)
+        x_attack_node = tf.Variable(tf.zeros([1, self.n_features]), name="%s_attacker" % self.name)
+        x_below_attack_node = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_x_pos" % self.name)
+        x_attack = tf.concat([x_above_attack_node, x_attack_node, x_below_attack_node], axis=0)
 
-        with tf.variable_scope("%s_GCN" % self.name, reuse=True):
-            self.attack_network = self.dnn_construct(self.X_attack, self.A_hat, self.n_neurons,
-                                                     self.layer_names, self.activations, reuse=True)
+        return target, label_1, label_2, x_above_attack_node, x_attack_node, x_below_attack_node, x_attack
+
+    def set_attack_variables(self, target, label_1, label_2, x_above_attack_node,
+                             x_attack_node, x_below_attack_node, x_attack):
+        self.target, self.label_1, self.label_2, self.X_above_attack_node, \
+            self.X_attack_node, self.X_below_attack_node, self.X_attack = target, label_1, label_2, \
+                                                                          x_above_attack_node, x_attack_node, \
+                                                                          x_below_attack_node, x_attack
+
+    def init_attack_network(self):
+        target, label_1, label_2, x_above_attack_node, x_attack_node, \
+            x_below_attack_node, x_attack = self.prepare_attack_variables()
+        self.set_attack_variables(target, label_1, label_2, x_above_attack_node, x_attack_node,
+                                  x_below_attack_node, x_attack)
+        self.attack_network, self.attack_grad = self.setup_attack_gradient(self.X_attack, self.X_attack_node,
+                                                                           self.target, self.label_1, self.label_2)
+
+    def setup_attack_gradient(self, x, x_attack_input, target_node, label_1, label_2):
+        attack_network = self.build_gcn(x, reuse=True)
+
         # get the logits for the target node
-        attack_logits = get_nn_layer(self.attack_network, layer_from_top=1)
-        target_logits = attack_logits[self.target, :]
+        attack_logits = get_nn_layer(attack_network, layer_from_top=1)
+        target_logits = attack_logits[target_node, :]
 
         # compute gradient of the difference of target logits wrt attack node
-        self.attack_grad = tf.gradients(target_logits[self.label_1] - target_logits[self.label_2], [self.X_attack_node])
+        attack_grad = tf.gradients(target_logits[label_1] - target_logits[label_2], [x_attack_input])
+        return attack_network, attack_grad
+
+    def build_gcn(self, x, reuse=False):
+        """ Builds the Graph Convolution part of the network """
+        with tf.variable_scope("%s_GCN" % self.name, reuse=reuse):
+            gcn_network = self.dnn_construct(x, self.A_hat, self.n_neurons,
+                                             self.layer_names, self.activations, reuse=reuse)
+            return gcn_network
 
     def get_l2_regularizers(self, params):
         """ Returns L2 regularizer
@@ -265,7 +307,7 @@ class SimpleGCN(object):
         if use_adam:
             optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
         else:
-            global_step = tf.Variable(0, trainable=False)
+            global_step = tf.Variable(0, name="%s_gs" % self.name, trainable=False)
             learning_rate = tf.train.exponential_decay(self.learning_rate, global_step,
                                                        200, 0.96, staircase=True)
             optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
@@ -279,12 +321,7 @@ class SimpleGCN(object):
         if self.session is not None:
             self.session.close()
 
-    def reset_session(self):
-        """ close existing session if any and start a new one """
-        self.close_session()
-        self.init_session()
-
-    def reset_graph(self):
+    def init_tf_graph(self):
         self.graph = tf.Graph()
         with self.graph.as_default():
             tf.set_random_seed(self.rand_seed)
@@ -319,6 +356,10 @@ class SimpleGCN(object):
             self.session.run(tf.global_variables_initializer())
             self._fit(x, y, A)
 
+    def get_adjacency_variable_map(self):
+        """ Returns map of adjacency variables so that GCN can be adapted to ensembles """
+        return {self.A_hat: self.fit_A_hat}
+
     def _fit(self, x, y, A):
         """ Prepare the computation graph and train the network
 
@@ -340,26 +381,34 @@ class SimpleGCN(object):
 
         fit_tm = Timer()
         feed_dict = {self.X: self.fit_x, self.y_labeled: y_labeled_enc,
-                     self.labeled_indexes: labeled_indexes, self.A_hat: self.fit_A_hat}
+                     self.labeled_indexes: labeled_indexes}
+        feed_dict.update(self.get_adjacency_variable_map())
         prev_loss = -np.infty
-        for epoch in range(self.max_epochs):
+        epoch = 0
+        while epoch < self.max_epochs:
             tm = Timer()
             _, loss = self.session.run([self.train_loss_op, self.xentropy_loss], feed_dict=feed_dict)
             if epoch > 0 and abs(loss - prev_loss) < self.tol:
                 logger.debug("Exiting at epoch %d/%d (diff=%f)" % (epoch, self.max_epochs, abs(loss - prev_loss)))
                 break
-            if (epoch + 1) % 10 == 0:
+            if False and (epoch + 1) % 10 == 0:
                 err = self.get_prediction_error()
                 logger.debug(tm.message("[%d] loss: %f, pred_err: %f" % (epoch+1, loss, err)))
             prev_loss = loss
+            epoch += 1
 
-        logger.debug(fit_tm.message("SimpleGCN fitted (max epochs: %d)" % self.max_epochs))
+        err = self.get_prediction_error()
+        logger.debug(fit_tm.message("SimpleGCN fitted epochs %d/%d, loss: %f, err: %f" %
+                                    (epoch, self.max_epochs, prev_loss, err)))
 
     def get_x(self):
         return self.fit_x
 
     def decision_function(self):
-        feed_dict = {self.X: self.fit_x, self.A_hat: self.fit_A_hat}
+        if self.X is None:
+            raise RuntimeError("%s self.X is None" % self.name)
+        feed_dict = {self.X: self.fit_x}
+        feed_dict.update(self.get_adjacency_variable_map())
         preds = self.session.run([self.preds], feed_dict=feed_dict)[0]
         return preds
 
@@ -414,12 +463,14 @@ class SimpleGCN(object):
             # attacker node is the last node in the instance list; hence empty matrix
             X_below_attack_node = np.zeros((0, self.n_features), dtype=np.float32)
 
-        g_v = self.session.run([self.attack_grad], feed_dict={self.A_hat: self.fit_A_hat,
-                                                              self.target: target,
-                                                              self.label_1: label_1,
-                                                              self.label_2: label_2,
-                                                              self.X_above_attack_node: X_above_attack_node,
-                                                              self.X_below_attack_node: X_below_attack_node})[0]
+        feed_dict = {self.target: target,
+                     self.label_1: label_1,
+                     self.label_2: label_2,
+                     self.X_above_attack_node: X_above_attack_node,
+                     self.X_below_attack_node: X_below_attack_node}
+        feed_dict.update(self.get_adjacency_variable_map())
+
+        g_v = self.session.run([self.attack_grad], feed_dict=feed_dict)[0]
         # logger.debug(g_v)
         g_v = g_v[0][0]
         return g_v
@@ -449,6 +500,106 @@ class SimpleGCN(object):
             logger.debug("abs_grad_diffs:\n%s" % str(abs_grad_diffs))
             logger.debug("most_change_feature: %d" % most_change_feature)
         return most_change_feature, grad_diffs
+
+
+class EnsembleGCN(SimpleGCN):
+    def __init__(self, input_shape, n_neurons, activations, n_classes,
+                 n_estimators=1, name="egcn", graph=None, session=None,
+                 learning_rate=0.005, l2_lambda=0.001, train_batch_size=25,
+                 max_epochs=1, tol=1e-4, rand_seed=42, edge_sample_prob=0.75):
+        # initialize attributes but do not create network
+        SimpleGCN.__init__(self, input_shape=input_shape, n_neurons=n_neurons,
+                           activations=activations, n_classes=n_classes,
+                           name=name, graph=graph, session=session, learning_rate=learning_rate,
+                           l2_lambda=l2_lambda, train_batch_size=train_batch_size,
+                           max_epochs=max_epochs, tol=tol, rand_seed=rand_seed,
+                           init_network_now=False)
+
+        if self.graph is None or self.session is None:
+            raise RuntimeError("Failure to initialize tf.Graph/Session")
+
+        self.n_estimators = n_estimators
+        self.edge_sample_prob = edge_sample_prob
+        self.estimators = []
+        for i in range(self.n_estimators):
+            self.estimators.append(
+                SimpleGCN(input_shape=self.input_shape, n_neurons=self.n_neurons,
+                          activations=self.activations, n_classes=self.n_classes,
+                          name="gcn_%d" % i, graph=self.graph, session=self.session,
+                          learning_rate=self.learning_rate,
+                          l2_lambda=self.l2_lambda, train_batch_size=self.train_batch_size,
+                          max_epochs=self.max_epochs, tol=self.tol, rand_seed=self.rand_seed,
+                          init_network_now=False))
+
+        # below will be used to sample edges of the adjacency matrix
+        self.ga = GraphAdjacency(self_loops=True)
+
+        with self.graph.as_default():
+            self.init_network()
+
+    def init_network(self, init_attack_network_now=True):
+        self.X, self.y_labeled = self.prepare_input_variables()
+        all_z = []
+        for i, gcn in enumerate(self.estimators):
+            # all ensemble members should use the same x and y_labeled
+            # even though their adjacency matrices might be different
+            gcn.setup_network(self.X, self.y_labeled, init_attack_network_now=False)
+            all_z.append(gcn.z)
+
+        # We will average over the logits assuming that the
+        # ensemble combination method is the product of probabilities
+        self.z = tf.reduce_mean(tf.stack(all_z, axis=2), axis=2)
+        self.preds = tf.nn.softmax(self.z)
+
+        if init_attack_network_now:
+            self.init_attack_network()
+
+        vars = tf.trainable_variables()
+        for v in vars: logger.debug(v.name)
+
+    def init_attack_network(self):
+        target, label_1, label_2, x_above_attack_node, x_attack_node, \
+            x_below_attack_node, x_attack = self.prepare_attack_variables()
+        self.set_attack_variables(target, label_1, label_2, x_above_attack_node, x_attack_node,
+                                  x_below_attack_node, x_attack)
+        for i, gcn in enumerate(self.estimators):
+            # Note: even though all members use the same attack variables,
+            # they will have different adjacency matrices
+            gcn.set_attack_variables(target, label_1, label_2, x_above_attack_node, x_attack_node,
+                                     x_below_attack_node, x_attack)
+
+        self.attack_network, self.attack_grad = self.setup_attack_gradient(self.X_attack, self.X_attack_node,
+                                                                           self.target, self.label_1, self.label_2)
+
+    def setup_attack_gradient(self, x, x_attack_input, target_node, label_1, label_2):
+        all_attack_network = []
+        all_attack_grad = []
+        for i, gcn in enumerate(self.estimators):
+            # setup network such that appropriate tensorflow variables are reused across members
+            gcn.attack_network, gcn.attack_grad = gcn.setup_attack_gradient(x, x_attack_input,
+                                                                            target_node,
+                                                                            label_1, label_2)
+            all_attack_network.append(gcn.attack_network)
+            all_attack_grad.append(gcn.attack_grad)
+
+        # We will average over the logits. We are assuming that the
+        # ensemble combination method is the product of probabilities
+        attack_grad = tf.reduce_mean(tf.stack(all_attack_grad, axis=0), axis=0)
+
+        return None, attack_grad
+
+    def get_adjacency_variable_map(self):
+        A_map = {gcn.A_hat: gcn.fit_A_hat for gcn in self.estimators}
+        return A_map
+
+    def _fit(self, x, y, A):
+        self.fit_x = x
+        self.fit_y = y
+        self.fit_A = A
+        for i, gcn in enumerate(self.estimators):
+            # create each member with a random sample of edges
+            A_i = self.ga.sample_edges(A, self.edge_sample_prob)
+            gcn._fit(x, y, A_i)
 
 
 class SimpleGCNAttack(object):
@@ -590,4 +741,65 @@ class SimpleGCNAttack(object):
     def modify_structure(self):
         """ Attack by changing the graph adjacency matrix """
         raise NotImplementedError("modify_structure() not implemented yet")
+
+
+def get_gcn_option_list():
+    parser = ArgumentParser()
+    parser.add_argument("--dataset", type=str, default="airline", required=False,
+                        help="Dataset name")
+    parser.add_argument("--results_dir", action="store", default="./temp",
+                        help="Folder where the generated metrics will be stored")
+    parser.add_argument("--randseed", action="store", type=int, default=42,
+                        help="Random seed so that results can be replicated")
+    parser.add_argument("--ensemble", action="store_true", default=False,
+                        help="Whether to use EnsembleGCN")
+    parser.add_argument("--edge_sample_prob", action="store", type=float, default=0.6,
+                        help="Probability for edge sampling")
+    parser.add_argument("--n_estimators", type=int, default=1, required=False,
+                        help="Number of members in ensemble for EnsembleGCN")
+    parser.add_argument("--n_neighbors", type=int, default=5, required=False,
+                        help="Number of nearest neighbors to use for preparing graph")
+    parser.add_argument("--n_epochs", type=int, default=5000, required=False,
+                        help="Max training epochs")
+    parser.add_argument("--train_batch_size", type=int, default=25, required=False,
+                        help="Batch size for stochastic gradient descent based training methods")
+    parser.add_argument("--log_file", type=str, default="", required=False,
+                        help="File path to debug logs")
+    parser.add_argument("--debug", action="store_true", default=False,
+                        help="Whether to enable output of debug statements")
+    parser.add_argument("--plot", action="store_true", default=False,
+                        help="Whether to plot figures")
+    return parser
+
+
+class GcnOpts(object):
+    def __init__(self, args):
+        self.dataset = args.dataset
+        self.results_dir = args.results_dir
+        self.randseed = args.randseed
+        self.ensemble = args.ensemble
+        self.edge_sample_prob = args.edge_sample_prob
+        self.n_estimators = args.n_estimators
+        self.n_neighbors = args.n_neighbors
+        self.n_epochs = args.n_epochs
+        self.train_batch_size = args.train_batch_size
+        self.log_file = args.log_file
+        self.debug = args.debug
+        self.plot = args.plot
+
+    def get_opts_name_prefix(self):
+        gcn_sig = "egcn_m%d" % self.n_estimators if self.ensemble else "gcn"
+        edge_prob_sig = "_e%0.2f" % self.edge_sample_prob if self.ensemble else ""
+        edge_prob_sig = edge_prob_sig.replace(".", "")
+        algo_sig = "%s%s" % (gcn_sig, edge_prob_sig)
+        name = "%s_%s_nn%d" % (self.dataset, algo_sig, self.n_neighbors)
+        return name
+
+    def get_alad_metrics_name_prefix(self):
+        return self.get_opts_name_prefix()
+
+    def str_opts(self):
+        name = self.get_alad_metrics_name_prefix()
+        s = "%s" % name
+        return s
 

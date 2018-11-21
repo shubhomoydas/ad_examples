@@ -4,13 +4,15 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from common.gen_samples import *
-from .simple_gcn import SimpleGCN, SimpleGCNAttack, set_random_seeds
+from .simple_gcn import SimpleGCN, EnsembleGCN, SimpleGCNAttack, set_random_seeds, \
+    get_gcn_option_list, GcnOpts
 from .gcn_test_support import read_graph_dataset, get_target_and_attack_nodes, \
     plot_graph, gradients_to_arrow_texts, nodes_to_arrow_texts, \
     test_edge_sample, test_tensorflow_array_differentiation, test_marked_nodes
 
 """
-pythonw -m graph.test_gcn --debug --plot --log_file=temp/test_gcn.log --dataset=face_top
+pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top
+pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --ensemble --n_estimators=10 --edge_sample_prob=0.6
 """
 
 
@@ -92,8 +94,24 @@ def plot_model_diagnostics(attack_model, mod_node=None, attack_grads=None, pdfpa
     dp.close()
 
 
-def test_gcn(args):
-    dataset = args.dataset
+def create_gcn(input_shape, n_neurons, activations, n_classes,
+               ensemble=False, learning_rate=0.1, l2_lambda=0.001, opts=None):
+    if ensemble:
+        gcn = EnsembleGCN(input_shape=input_shape, n_neurons=n_neurons, activations=activations,
+                          n_classes=n_classes, n_estimators=opts.n_estimators,
+                          max_epochs=opts.n_epochs, learning_rate=learning_rate,
+                          l2_lambda=l2_lambda, rand_seed=opts.randseed,
+                          edge_sample_prob=opts.edge_sample_prob)
+    else:
+        gcn = SimpleGCN(input_shape=input_shape, n_neurons=n_neurons, activations=activations,
+                        n_classes=n_classes, max_epochs=opts.n_epochs,
+                        learning_rate=learning_rate, l2_lambda=l2_lambda,
+                        rand_seed=opts.randseed)
+    return gcn
+
+
+def test_gcn(opts):
+    dataset = opts.dataset
 
     # Changing the below will change the output plots as well
     sub_sample = 0.3
@@ -124,10 +142,9 @@ def test_gcn(args):
     # activations = [None, None]
     # activations = [tf.nn.sigmoid, None]
     # activations = [tf.nn.tanh, None]
-    gcn = SimpleGCN(input_shape=x.shape, n_neurons=n_neurons, activations=activations,
-                    n_classes=n_classes, max_epochs=5000,
-                    learning_rate=learning_rate, l2_lambda=l2_lambda,
-                    rand_seed=args.randseed+2)
+    gcn = create_gcn(input_shape=x.shape, n_neurons=n_neurons, activations=activations,
+                     n_classes=n_classes, ensemble=opts.ensemble,
+                     learning_rate=learning_rate, l2_lambda=l2_lambda, opts=opts)
 
     gcn.fit(x, y, A)
 
@@ -155,9 +172,9 @@ def test_gcn(args):
                 mod_node = (target_node, old_label, attack_node, mod_val)
                 logger.debug("Suggested node: %d, feature: %d, grads: %s" % (attack_node, feature, grads))
 
-        if args.plot and x.shape[1] == 2:  # plot only if 2D dataset
-            fsig = "%s_n%d_l%d" % (dataset, n_neighbors, len(n_neurons))
-            pdfpath = "temp/test_gcn_%s.pdf" % (fsig)
+        if opts.plot and x.shape[1] == 2:  # plot only if 2D dataset
+            fsig = "%s_l%d" % (opts.get_opts_name_prefix(), len(n_neurons))
+            pdfpath = "%s/%s.pdf" % (opts.results_dir, fsig)
             plot_model_diagnostics(attack_model, mod_node=mod_node, attack_grads=all_grads, pdfpath=pdfpath)
 
     gcn.close_session()
@@ -167,15 +184,17 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
-    args = get_command_args(debug=False, debug_args=["--debug",
-                                                     "--plot",
-                                                     "--log_file=temp/test_adjacency.log"])
+    dir_create("./temp/gcn")
+
+    args = get_command_args(debug=False, parser=get_gcn_option_list())
+
+    dir_create(args.results_dir)
     configure_logger(args)
 
-    set_random_seeds(args.randseed, args.randseed + 1, args.randseed + 2)
+    opts = GcnOpts(args)
+    set_random_seeds(opts.randseed, opts.randseed + 1, opts.randseed + 2)
 
     # test_tensorflow_array_differentiation()
     # test_marked_nodes(args)
-    test_gcn(args)
+    test_gcn(opts)
     # test_edge_sample(args)
-
