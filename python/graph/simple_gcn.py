@@ -181,12 +181,30 @@ class SimpleGCN(object):
         return layers
 
     def prepare_input_variables(self):
-        # separated this out of init_network so that ensembles can be supported
+        """ Returns Tensorflow variables/placeholders which store node attributes and labels
+
+        This has been separated out from other variables/placeholders such as the
+        adjacency matrix because these are common inputs across all members in an
+        ensemble and therefore simplifies ensemble implementation (see EnsembleGCN).
+        """
         x = tf.placeholder(tf.float32, shape=(None, self.n_features), name="%s_X" % self.name)
         y_labeled = tf.placeholder(tf.float32, shape=(None, self.n_classes), name="%s_y" % self.name)
         return x, y_labeled
 
     def setup_network(self, x, y_labeled, init_attack_network_now=True):
+        """ Sets up Tensorflow computation graph
+
+        :param x: Tensor
+        :param y_labeled: Tensor
+        :param init_attack_network_now: bool
+            True: Prepares variables which can be used to compute gradient
+            False: Does not prepare gradient computation variables.
+                Setting to false is useful when the GCN is a member of an ensemble.
+                The main ensemble has more control on how/when the graph will be
+                created. The inputs x, y_labeled might have to be common across
+                ensemble members.
+        :return:
+        """
         self.X = x
         self.y_labeled = y_labeled
 
@@ -219,11 +237,17 @@ class SimpleGCN(object):
             self.init_attack_network()
 
     def init_network(self, init_attack_network_now=True):
+        """ Main caller that creates all tensorflow computation graphs
+
+        This will be overridden by subclasses (such as EnsembleGCN)
+        """
         x, y_labeled = self.prepare_input_variables()
         self.setup_network(x=x, y_labeled=y_labeled, init_attack_network_now=init_attack_network_now)
 
-        vars = tf.trainable_variables()
-        for v in vars: logger.debug(v.name)
+        if True:
+            # just DEBUG
+            vars = tf.trainable_variables()
+            for v in vars: logger.debug(v.name)
 
     def prepare_attack_variables(self):
         """
@@ -326,26 +350,6 @@ class SimpleGCN(object):
         with self.graph.as_default():
             tf.set_random_seed(self.rand_seed)
 
-    def get_loss(self):
-        """ Use only for DEBUG """
-        labeled_indexes = np.where(self.fit_y >= 0)[0]
-        y_labeled = np.asarray(self.fit_y[labeled_indexes], dtype=int)
-        y_labeled_enc = self.class_enc[y_labeled]
-        feed_dict = {self.X: self.fit_x, self.A_hat: self.fit_A_hat, self.y_labeled: y_labeled_enc,
-                     self.labeled_indexes: labeled_indexes}
-        loss = self.session.run([self.xentropy_loss], feed_dict=feed_dict)[0]
-        return loss
-
-    def get_logits(self):
-        """ Use only for DEBUG """
-        with self.graph.as_default():
-            labeled_indexes = np.where(self.fit_y >= 0)[0]
-            feed_dict = {self.X: self.fit_x, self.A_hat: self.fit_A_hat,
-                         self.labeled_indexes: labeled_indexes}
-            logits_tensor = tf.gather(self.z, self.labeled_indexes, axis=0)
-            logits = self.session.run([logits_tensor], feed_dict=feed_dict)[0]
-        return logits
-
     def get_iDroot(self, A):
         D = A.sum(axis=1)
         iDroot = np.diag(np.sqrt(D) ** (-1))
@@ -357,15 +361,20 @@ class SimpleGCN(object):
             self._fit(x, y, A)
 
     def get_adjacency_variable_map(self):
-        """ Returns map of adjacency variables so that GCN can be adapted to ensembles """
+        """ Returns map of adjacency variables
+
+        Keeping this separate helps adapt GCN to ensembles by subclassing.
+        The ensemble (see EnsembleGCN) can override this method to return
+        map of adjacency matrices across members.
+        """
         return {self.A_hat: self.fit_A_hat}
 
     def _fit(self, x, y, A):
-        """ Prepare the computation graph and train the network
+        """ Train the network
 
         Note(s):
             By this point the default graph has already set to self.graph
-            (see self.fit() above)
+            (see self.fit() above) and the computation graph has been fully created.
         """
         D, iDroot = self.get_iDroot(A)
         A_hat = np.dot(np.dot(iDroot, A), iDroot)
@@ -400,9 +409,6 @@ class SimpleGCN(object):
         err = self.get_prediction_error()
         logger.debug(fit_tm.message("SimpleGCN fitted epochs %d/%d, loss: %f, err: %f" %
                                     (epoch, self.max_epochs, prev_loss, err)))
-
-    def get_x(self):
-        return self.fit_x
 
     def decision_function(self):
         if self.X is None:
@@ -501,8 +507,38 @@ class SimpleGCN(object):
             logger.debug("most_change_feature: %d" % most_change_feature)
         return most_change_feature, grad_diffs
 
+    def get_loss(self):
+        """ Use only for DEBUG """
+        labeled_indexes = np.where(self.fit_y >= 0)[0]
+        y_labeled = np.asarray(self.fit_y[labeled_indexes], dtype=int)
+        y_labeled_enc = self.class_enc[y_labeled]
+        feed_dict = {self.X: self.fit_x, self.A_hat: self.fit_A_hat, self.y_labeled: y_labeled_enc,
+                     self.labeled_indexes: labeled_indexes}
+        loss = self.session.run([self.xentropy_loss], feed_dict=feed_dict)[0]
+        return loss
+
+    def get_logits(self):
+        """ Use only for DEBUG """
+        with self.graph.as_default():
+            labeled_indexes = np.where(self.fit_y >= 0)[0]
+            feed_dict = {self.X: self.fit_x, self.A_hat: self.fit_A_hat,
+                         self.labeled_indexes: labeled_indexes}
+            logits_tensor = tf.gather(self.z, self.labeled_indexes, axis=0)
+            logits = self.session.run([logits_tensor], feed_dict=feed_dict)[0]
+        return logits
+
 
 class EnsembleGCN(SimpleGCN):
+    """ Ensemble of SimpleGCNs
+
+    Ensemble members are created by subsampling edges of graph. The nodes
+    remain the same across all members. The final ensemble score is the *product*
+    of predicted probabilities. In case another method of combination is required
+    such as average probability, then change/override the following methods as
+    appropriate (should not be hard as long as the combination is differentiable):
+        init_network() -- self.z, self.preds
+        setup_attack_gradient() -- attack_grad
+    """
     def __init__(self, input_shape, n_neurons, activations, n_classes,
                  n_estimators=1, name="egcn", graph=None, session=None,
                  learning_rate=0.005, l2_lambda=0.001, train_batch_size=25,
@@ -538,6 +574,11 @@ class EnsembleGCN(SimpleGCN):
             self.init_network()
 
     def init_network(self, init_attack_network_now=True):
+        """ Initializes the member computation graphs and combines their outputs
+
+        The members are created with common input variables and the scores
+        are combined as product/geometric mean of probabilities (mean of logits).
+        """
         self.X, self.y_labeled = self.prepare_input_variables()
         all_z = []
         for i, gcn in enumerate(self.estimators):
@@ -554,8 +595,10 @@ class EnsembleGCN(SimpleGCN):
         if init_attack_network_now:
             self.init_attack_network()
 
-        vars = tf.trainable_variables()
-        for v in vars: logger.debug(v.name)
+        if True:
+            # for DEBUG
+            vars = tf.trainable_variables()
+            for v in vars: logger.debug(v.name)
 
     def init_attack_network(self):
         target, label_1, label_2, x_above_attack_node, x_attack_node, \
