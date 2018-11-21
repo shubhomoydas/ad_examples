@@ -1,3 +1,4 @@
+from sklearn.ensemble import IsolationForest
 from .gan_test_support import *
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -104,13 +105,31 @@ def test_ano_gan(gan=None, x=None, y=None, opts=None, tol=1e-3, max_iters=100):
         dp.close()
 
 
+def get_iso_model(x, y, opts):
+    outliers_fraction = 0.1
+    ifor_random_state = opts.randseed
+    iso_model = IsolationForest(n_estimators=100, max_samples=256,
+                                contamination=outliers_fraction,
+                                random_state=ifor_random_state)
+    iso_model.fit(x)
+    r = np.reshape(iso_model.decision_function(x), (-1, 1))
+    # logger.debug("iforest r:\n%s" % str(list(r)))
+    return iso_model, r
+
+
 def test_gan(opts):
     x, _ = read_dataset(opts)
+    logger.debug("x.shape: %s" % str(x.shape))
 
     d = x.shape[1]
 
-    y = y_one_hot = class_codes = pvals = gmm = None
+    y = y_one_hot = class_codes = pvals = r = iso_model = gmm = None
     n_classes = 0
+
+    if opts.iso_gan:
+        tm = Timer()
+        iso_model, r = get_iso_model(x, None, opts)
+        logger.debug(tm.message("trained isolation forest for IsoGAN:"))
 
     if opts.conditional or opts.info_gan:
         # We will assign pseudo-classes using an unsupervised technique.
@@ -142,16 +161,17 @@ def test_gan(opts):
               gen_layer_nodes=gan_defs['gen_layer_nodes'],
               gen_layer_activations=gan_defs['gen_layer_activations'],
               label_smoothing=opts.label_smoothing, smoothing_prob=opts.smoothing_prob,
+              iso_gan=opts.iso_gan, iso_gan_lambda=opts.iso_gan_lambda, iso_model=iso_model,
               info_gan=opts.info_gan, info_gan_lambda=opts.info_gan_lambda,
-              conditional=opts.conditional, n_classes=n_classes, pvals=pvals, l2_lambda=0.001,
-              enable_ano_gan=True,
-              n_epochs=opts.n_epochs, batch_size=25, shuffle=True,
+              conditional=opts.conditional, n_classes=n_classes, pvals=pvals,
+              enable_ano_gan=True,  # always enable so that we can load the checkpoint for AnoGAN
+              n_epochs=opts.n_epochs, batch_size=25, shuffle=True, l2_lambda=0.001,
               listener=GanListener(x, y=y, ll_freq=100, plot_freq=100, opts=opts))
     gan.init_session()
 
     model_path = "%s/%s_model" % (opts.results_dir, opts.get_opts_name_prefix())
     if not gan.load_session(model_path):
-        gan.fit(x, y_one_hot)
+        gan.fit(x, y=y_one_hot, r=r)
 
     logger.debug("\n%s" % "\n".join(["%d,%f,%f" % (epoch+1, ll_mean, ll_sd) for epoch, ll_mean, ll_sd in gan.listener.lls]))
 
