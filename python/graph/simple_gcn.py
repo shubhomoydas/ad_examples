@@ -4,6 +4,16 @@ import tensorflow as tf
 from common.gen_samples import *
 
 
+ACTIVATION_NONE = "none"
+ACTIVATION_RELU = "relu"
+ACTIVATION_TANH = "tanh"
+ACTIVATION_SIGM = "sigmoid"
+ACTIVATION_LRELU = "leaky_relu"
+activation_types = {ACTIVATION_NONE: None, ACTIVATION_RELU: tf.nn.relu,
+                    ACTIVATION_SIGM: tf.nn.sigmoid, ACTIVATION_TANH: tf.nn.tanh,
+                    ACTIVATION_LRELU: tf.nn.leaky_relu}
+
+
 def set_random_seeds(py_seed=42, np_seed=42, tf_seed=42):
     """ Set random seeds for Python, numpy, TensorFlow graph """
     random.seed(py_seed)
@@ -792,6 +802,19 @@ def get_gcn_option_list():
                         help="Dataset name")
     parser.add_argument("--results_dir", action="store", default="./temp",
                         help="Folder where the generated metrics will be stored")
+    parser.add_argument("--n_layers", type=int, default=2, required=False,
+                        help="Number of layers in GCN (includes output, but excludes input)")
+    parser.add_argument("--n_neurons_per_layer", type=int, default=10, required=False,
+                        help="Number of neurons in each *hidden* GCN layer. "
+                             "For the output layer, this will be set to the number of classes.")
+    parser.add_argument("--activation_type", type=str, default=ACTIVATION_LRELU, required=False,
+                        help="The type of activation for each *hidden* GCN layer. "
+                             "Options: (none|relu|tanh|leaky_relu|sigmoid) "
+                             "Output layer will *not* have any activation")
+    parser.add_argument("--learning_rate", action="store", type=float, default=0.1,
+                        help="Learning rate for batch gradient descent")
+    parser.add_argument("--l2_lambda", action="store", type=float, default=0.001,
+                        help="L2-regularization penalty for all weight parameters.")
     parser.add_argument("--randseed", action="store", type=int, default=42,
                         help="Random seed so that results can be replicated")
     parser.add_argument("--ensemble", action="store_true", default=False,
@@ -819,6 +842,11 @@ class GcnOpts(object):
     def __init__(self, args):
         self.dataset = args.dataset
         self.results_dir = args.results_dir
+        self.n_layers = args.n_layers
+        self.n_neurons_per_layer = args.n_neurons_per_layer
+        self.activation_type = args.activation_type
+        self.learning_rate = args.learning_rate
+        self.l2_lambda = args.l2_lambda
         self.randseed = args.randseed
         self.ensemble = args.ensemble
         self.edge_sample_prob = args.edge_sample_prob
@@ -831,7 +859,11 @@ class GcnOpts(object):
         self.plot = args.plot
 
     def get_opts_name_prefix(self):
-        gcn_sig = "egcn_m%d" % self.n_estimators if self.ensemble else "gcn"
+        gcn_sig = "%s_l%d_n%d_%s_r%0.3f_p%0.4f" % \
+                  ("egcn_m%d" % self.n_estimators if self.ensemble else "gcn",
+                   self.n_layers, self.n_neurons_per_layer, self.activation_type,
+                   self.learning_rate, self.l2_lambda)
+        gcn_sig = gcn_sig.replace(".", "")
         edge_prob_sig = "_e%0.2f" % self.edge_sample_prob if self.ensemble else ""
         edge_prob_sig = edge_prob_sig.replace(".", "")
         algo_sig = "%s%s" % (gcn_sig, edge_prob_sig)

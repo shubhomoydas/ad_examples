@@ -5,7 +5,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from common.gen_samples import *
 from .simple_gcn import SimpleGCN, EnsembleGCN, SimpleGCNAttack, set_random_seeds, \
-    get_gcn_option_list, GcnOpts
+    get_gcn_option_list, GcnOpts, activation_types, ACTIVATION_LRELU
 from .gcn_test_support import read_graph_dataset, get_target_and_attack_nodes, \
     plot_graph, gradients_to_arrow_texts, nodes_to_arrow_texts, \
     test_edge_sample, test_tensorflow_array_differentiation, test_marked_nodes
@@ -94,18 +94,17 @@ def plot_model_diagnostics(attack_model, mod_node=None, attack_grads=None, pdfpa
     dp.close()
 
 
-def create_gcn(input_shape, n_neurons, activations, n_classes,
-               ensemble=False, learning_rate=0.1, l2_lambda=0.001, opts=None):
-    if ensemble:
+def create_gcn(input_shape, n_neurons, activations, n_classes, opts=None):
+    if opts.ensemble:
         gcn = EnsembleGCN(input_shape=input_shape, n_neurons=n_neurons, activations=activations,
                           n_classes=n_classes, n_estimators=opts.n_estimators,
-                          max_epochs=opts.n_epochs, learning_rate=learning_rate,
-                          l2_lambda=l2_lambda, rand_seed=opts.randseed,
+                          max_epochs=opts.n_epochs, learning_rate=opts.learning_rate,
+                          l2_lambda=opts.l2_lambda, rand_seed=opts.randseed,
                           edge_sample_prob=opts.edge_sample_prob)
     else:
         gcn = SimpleGCN(input_shape=input_shape, n_neurons=n_neurons, activations=activations,
                         n_classes=n_classes, max_epochs=opts.n_epochs,
-                        learning_rate=learning_rate, l2_lambda=l2_lambda,
+                        learning_rate=opts.learning_rate, l2_lambda=opts.l2_lambda,
                         rand_seed=opts.randseed)
     return gcn
 
@@ -116,11 +115,10 @@ def test_gcn(opts):
     # Changing the below will change the output plots as well
     sub_sample = 0.3
     labeled_frac = 0.3
-    n_neighbors = 5  # includes self
 
     x, y, y_orig, A = read_graph_dataset(dataset, sub_sample=sub_sample,
                                          labeled_frac=labeled_frac,
-                                         n_neighbors=n_neighbors,
+                                         n_neighbors=opts.n_neighbors,
                                          euclidean=False)
 
     # Number of classes includes the '0' class and excludes all marked '-1' i.e., unlabeled.
@@ -131,20 +129,18 @@ def test_gcn(opts):
 
     target_nodes, attack_nodes = get_target_and_attack_nodes(x, dataset)
 
-    learning_rate = 0.1
-    l2_lambda = 0.001
     search_along_max_grad_feature = True
 
-    # Two NN layers implies max two-hop information propagation
+    # 'L' Neural Network layers implies max L-hop information propagation
     # through graph by the GCN in each forward/backward propagation.
-    n_neurons = [10, n_classes]
-    activations = [tf.nn.leaky_relu, None]
-    # activations = [None, None]
-    # activations = [tf.nn.sigmoid, None]
-    # activations = [tf.nn.tanh, None]
+    n_neurons = [opts.n_neurons_per_layer] * (opts.n_layers-1)
+    n_neurons.append(n_classes)
+
+    activations = [activation_types[opts.activation_type]] * (opts.n_layers-1)
+    activations.append(None)  # the last layer will only return the logits
+
     gcn = create_gcn(input_shape=x.shape, n_neurons=n_neurons, activations=activations,
-                     n_classes=n_classes, ensemble=opts.ensemble,
-                     learning_rate=learning_rate, l2_lambda=l2_lambda, opts=opts)
+                     n_classes=n_classes, opts=opts)
 
     gcn.fit(x, y, A)
 
@@ -173,7 +169,7 @@ def test_gcn(opts):
                 logger.debug("Suggested node: %d, feature: %d, grads: %s" % (attack_node, feature, grads))
 
         if opts.plot and x.shape[1] == 2:  # plot only if 2D dataset
-            fsig = "%s_l%d" % (opts.get_opts_name_prefix(), len(n_neurons))
+            fsig = opts.get_opts_name_prefix()
             pdfpath = "%s/%s.pdf" % (opts.results_dir, fsig)
             plot_model_diagnostics(attack_model, mod_node=mod_node, attack_grads=all_grads, pdfpath=pdfpath)
 
