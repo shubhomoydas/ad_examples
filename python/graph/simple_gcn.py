@@ -671,10 +671,20 @@ class SimpleGCNAttack(object):
         self.max_prod = max_prod
         self.max_iters = max_iters
 
+    def get_top_two_predicted_labels(self):
+        probs = self.gcn.decision_function()
+        sorted_probs = np.argsort(-probs, axis=1)
+        best_label = sorted_probs[:, 0]  # predicted best for all nodes
+        second_best_label = sorted_probs[:, 1]  # predicted second-best for all nodes
+        return best_label, second_best_label
+
     def suggest_node_feature(self, target_node, attack_node, old_label, new_label):
         """
         Suggest best feature of attacker node that can be modified such that
         the target node's label changes from old_label to new_label.
+
+        Returns gradient wrt features so that the features can be modified
+        to change the label of target node to new_label.
 
         :param target_node: int
         :param attack_node: int
@@ -683,40 +693,47 @@ class SimpleGCNAttack(object):
         :return: int, np.array
             feature index, gradients wrt all input features
         """
-        if len(self.target_nodes) > 0 and len(self.attack_nodes) > 0:
-            best_feature, feature_grads = self.gcn.best_feature_wrt_attacker(target=target_node,
-                                                                             attacker=attack_node,
-                                                                             old_label=old_label,
-                                                                             new_label=new_label)
-            return best_feature, feature_grads
+        best_feature, feature_grads = self.gcn.best_feature_wrt_attacker(target=target_node,
+                                                                         attacker=attack_node,
+                                                                         old_label=old_label,
+                                                                         new_label=new_label)
+        return best_feature, feature_grads
 
-    def suggest_node(self):
-        """ Suggests which is the best attack node and feature for modification
+    def suggest_node(self, target_node, old_label=-1, new_label=-1):
+        """ Suggests which is the best attack node and feature for the input target node
 
-        Returns gradient wrt features so that the features can be modified
-        such that label of target node changes to its next-best label.
-
-        Note: Since this is just a simple demo, we only consider one target node.
+        :param target_node: int
+        :param old_label: int
+        :param new_label: int
+        :return: tuple, np.array
         """
-        probs = self.gcn.decision_function()
-        sorted_probs = np.argsort(-probs, axis=1)
-        y_hat = sorted_probs[:, 0]  # predicted best for all nodes
-        y_hat_2 = sorted_probs[:, 1]  # predicted second-best for all nodes
-        target_node = self.target_nodes[0]
+        if old_label < 0 or new_label < 0:
+            best_label, second_best_label = self.get_top_two_predicted_labels()
+            old_label = best_label[target_node]
+            new_label = second_best_label[target_node]
         best_grad = 0.0
-        best = None
-        all_grads = []
+        best_attack_node_details = None
+        all_attack_node_gradients = []
         for attack_node in self.attack_nodes:
-            old_label = y_hat[target_node]  # current predicted best label for target node
-            new_label = y_hat_2[target_node]  # second-best predicted label for target node
             best_feature, feature_grads = self.suggest_node_feature(target_node, attack_node, old_label, new_label)
-            all_grads.append((attack_node, best_feature, feature_grads))
+            all_attack_node_gradients.append((attack_node, best_feature, feature_grads))
             logger.debug("\nattack_node: %d, old_label: %d; new_label: %d; best_feature: %d; feature_grads: %s" %
                          (attack_node, old_label, new_label, best_feature, str(list(feature_grads))))
             if np.abs(feature_grads[best_feature]) > best_grad:
                 best_grad = np.abs(feature_grads[best_feature])
-                best = (target_node, old_label, attack_node, best_feature, feature_grads)
-        return best, all_grads
+                best_attack_node_details = (target_node, old_label, attack_node, best_feature, feature_grads)
+        return best_attack_node_details, all_attack_node_gradients
+
+    def suggest_nodes(self):
+        best_label, second_best_label = self.get_top_two_predicted_labels()
+        best_attack_for_each_target = []
+        for target_node in self.target_nodes:
+            old_label = best_label[target_node]  # current predicted best label for target node
+            new_label = second_best_label[target_node]  # second-best predicted label for target node
+            best_attack_node_details, all_attack_node_gradients = self.suggest_node(target_node, old_label=old_label,
+                                                                                    new_label=new_label)
+            best_attack_for_each_target.append((best_attack_node_details, all_attack_node_gradients))
+        return best_attack_for_each_target
 
     def modify_gcn_and_predict(self, node, node_val, retrain=False):
         """ Modifies the node in the graph and then predicts labels

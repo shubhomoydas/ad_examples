@@ -17,8 +17,8 @@ pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=tem
 
 
 def plot_labels_with_modified_node(gcn, y_hat, target_node, old_label, modified_node, node_val,
-                                   lbl_color_map=None,
-                                   marked_nodes=None, marked_colors=None, title=None, dp=None):
+                                   lbl_color_map=None, marked_nodes=None, marked_colors=None,
+                                   title=None, dp=None):
     """ Plots the annotated graph details
 
     The plotting constants such as arrow scale etc. are tuned
@@ -44,7 +44,7 @@ def plot_labels_with_modified_node(gcn, y_hat, target_node, old_label, modified_
     gcn.fit_x[modified_node, :] = old_val  # restore previous value
 
 
-def plot_model_diagnostics(attack_model, mod_node=None, attack_grads=None, pdfpath=None):
+def plot_model_diagnostics(attack_model, attack_details=None, pdfpath=None, opts=None):
     """ Plots the annotated graph details
 
     The plotting constants such as arrow scale etc. are tuned
@@ -68,6 +68,8 @@ def plot_model_diagnostics(attack_model, mod_node=None, attack_grads=None, pdfpa
                                                  head_width=0.02, head_length=0.01))
 
     y_hat = gcn.predict()
+    gcn_sig = "%s GCN, layers: %d (%s)" % ("Ensemble (%d)" % opts.n_estimators if opts.ensemble else "Single",
+                                                 opts.n_layers, opts.activation_type)
     dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2, save_tight=True)
     plot_graph(gcn.fit_x, gcn.fit_y, gcn.fit_A, lbl_color_map=lbl_color_map,
                marked_nodes=m_nodes, marked_colors=m_colors,
@@ -75,22 +77,27 @@ def plot_model_diagnostics(attack_model, mod_node=None, attack_grads=None, pdfpa
                nodes_title=r"${\bf (a)}$ Synthetic Semi-supervised Dataset",
                edges_title=r"${\bf (b)}$ Graph by Joining Nearest Neighbors", dp=dp)
 
-    grad_arrow_scale = np.array([-0.025, -0.07], dtype=np.float32)
-    node_arrow_texts = gradients_to_arrow_texts(gcn.fit_x, grads=attack_grads,
-                                                scale=grad_arrow_scale,
-                                                text_offset=grad_arrow_scale + [-0.28, -0.04],
-                                                head_width=0.02, head_length=0.01)
-    plot_graph(gcn.fit_x, y_hat, gcn.fit_A, lbl_color_map=lbl_color_map,
-               marked_nodes=m_nodes, marked_colors=m_colors,
-               nodes=False, edges=True, edges_title=r"${\bf (c)}$ Predicted Labels",
-               arrow_texts=node_arrow_texts, dp=dp)
+    if attack_details is not None:
+        for mod_node, feature_grads in attack_details:
+            target_node, old_label, modified_node, node_val = mod_node
+            target_gcn_sig = "[%d] %s" % (target_node, gcn_sig)
+            grad_arrow_scale = np.array([-0.025, -0.07], dtype=np.float32)
+            node_arrow_texts = gradients_to_arrow_texts(gcn.fit_x, grads=feature_grads,
+                                                        scale=grad_arrow_scale,
+                                                        text_offset=grad_arrow_scale + [-0.28, -0.04],
+                                                        head_width=0.02, head_length=0.01)
 
-    if mod_node is not None:
-        target_node, old_label, modified_node, node_val = mod_node
-        y_hat_mod = attack_model.modify_gcn_and_predict(node=modified_node, node_val=node_val, retrain=False)
-        plot_labels_with_modified_node(gcn, y_hat_mod, target_node, old_label, modified_node, node_val,
-                                       lbl_color_map=lbl_color_map, marked_nodes=m_nodes, marked_colors=m_colors,
-                                       title=r"${\bf (d)}$ Predicted Labels on Modified Graph", dp=dp)
+            m_nodes = [[target_node], attack_nodes]
+            plot_graph(gcn.fit_x, y_hat, gcn.fit_A, lbl_color_map=lbl_color_map,
+                       marked_nodes=m_nodes, marked_colors=m_colors,
+                       nodes=False, edges=True, edges_title=r"${\bf (c)}$ Predicted Labels" + "\n" + target_gcn_sig,
+                       arrow_texts=node_arrow_texts, dp=dp)
+
+            if node_val is not None:
+                y_hat_mod = attack_model.modify_gcn_and_predict(node=modified_node, node_val=node_val, retrain=False)
+                plot_labels_with_modified_node(gcn, y_hat_mod, target_node, old_label, modified_node, node_val,
+                                               lbl_color_map=lbl_color_map, marked_nodes=m_nodes, marked_colors=m_colors,
+                                               title=r"${\bf (d)}$ Predicted Labels on Modified Graph" + "\n" + target_gcn_sig, dp=dp)
     dp.close()
 
 
@@ -128,6 +135,7 @@ def test_gcn(opts):
     logger.debug("A:\n%s" % str(A))
 
     target_nodes, attack_nodes = get_target_and_attack_nodes(x, dataset)
+    target_nodes = target_nodes[:1]  # focus on just one target for illustration
 
     search_along_max_grad_feature = True
 
@@ -147,31 +155,33 @@ def test_gcn(opts):
     f1 = gcn.get_f1_score(y_orig)
     logger.debug("f1 score: %f" % f1)
 
-    mod_node = None
     if len(target_nodes) > 0:
         attack_model = SimpleGCNAttack(gcn=gcn, target_nodes=target_nodes,
                                        attack_nodes=attack_nodes)
-        best, all_grads = attack_model.suggest_node()
-        if best is not None:
-            target_node, old_label, attack_node, feature, grads = best
-            search_direction = np.zeros(grads.shape, dtype=grads.dtype)
-            if search_along_max_grad_feature:
-                # as in nettack paper (Zugner et al., 2018)
-                search_direction[feature] = grads[feature]
-            else:
-                search_direction[:] = grads[:]
-            mod_val = attack_model.find_minimum_modification(target_node=target_node,
-                                                             mod_node=attack_node,
-                                                             old_label=old_label,
-                                                             search_direction=search_direction)
-            if mod_val is not None:
-                mod_node = (target_node, old_label, attack_node, mod_val)
-                logger.debug("Suggested node: %d, feature: %d, grads: %s" % (attack_node, feature, grads))
+        best_attacks_for_each_target = attack_model.suggest_nodes()
 
+        all_attack_details = []
+        for best, feature_grads in best_attacks_for_each_target:
+            if best is not None:
+                target_node, old_label, attack_node, feature, grads = best
+                search_direction = np.zeros(grads.shape, dtype=grads.dtype)
+                if search_along_max_grad_feature:
+                    # as in nettack paper (Zugner et al., 2018)
+                    search_direction[feature] = grads[feature]
+                else:
+                    search_direction[:] = grads[:]
+                mod_val = attack_model.find_minimum_modification(target_node=target_node,
+                                                                 mod_node=attack_node,
+                                                                 old_label=old_label,
+                                                                 search_direction=search_direction)
+                mod_node = (target_node, old_label, attack_node, mod_val)
+                if mod_val is not None:
+                    logger.debug("Suggested node: %d, feature: %d, grads: %s" % (attack_node, feature, grads))
+                all_attack_details.append((mod_node, feature_grads))
         if opts.plot and x.shape[1] == 2:  # plot only if 2D dataset
             fsig = opts.get_opts_name_prefix()
             pdfpath = "%s/%s.pdf" % (opts.results_dir, fsig)
-            plot_model_diagnostics(attack_model, mod_node=mod_node, attack_grads=all_grads, pdfpath=pdfpath)
+            plot_model_diagnostics(attack_model, attack_details=all_attack_details, pdfpath=pdfpath, opts=opts)
 
     gcn.close_session()
 

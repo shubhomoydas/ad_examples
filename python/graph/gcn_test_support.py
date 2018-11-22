@@ -280,8 +280,9 @@ def get_target_and_attack_nodes(x, dataset):
         target_nodes = find_insts(x, [0.75, 0.8], [0.7, 0.8])[:1]
         attack_nodes = find_insts(x, [0.6, 0.95], [0.8, 0.95])
     elif dataset == "face_top":
-        target_nodes = find_insts(x, [0.4, 0.5], [0.9, 1.0])[:1]  # just one target node
-        attack_nodes = find_insts(x, [0.6, 0.95], [0.8, 0.95])[:2]  # [:1]  # just one attacker node
+        target_nodes = find_insts(x, [0.4, 0.5], [0.9, 1.0])
+        target_nodes = np.append(target_nodes, find_insts(x, [0.4, 0.6], [0.6, 0.7])[0])
+        attack_nodes = find_insts(x, [0.6, 0.95], [0.8, 0.95])
     elif dataset == "synth_graph":
         target_nodes = []
         attack_nodes = []
