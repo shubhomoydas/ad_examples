@@ -547,8 +547,12 @@ class GAN(object):
 
         if z is None:
             z, _ = self.get_gen_input_samples(n=1)
-        assign_z = self.ano_z.assign(z)
-        self.session.run(assign_z)
+
+        # assign_z = self.ano_z.assign(z)
+        # self.session.run(assign_z)
+
+        # tf.Variable.load() is less expensive than adding new ops nodes to tf.Graph
+        self.ano_z.load(z, self.session)
 
         ano_gan_G, ano_gan_D, _ = self.ano_gan_outputs()
         feed_dict = {self.x: x, self.ano_gan_lambda: ano_gan_lambda}
