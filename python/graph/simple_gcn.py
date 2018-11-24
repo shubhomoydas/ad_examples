@@ -517,7 +517,7 @@ class SimpleGCN(object):
     def if_perturb(self):
         if isinstance(self.sample_updater, NoopSampleUpdater):
             return False
-        s = np.random.binomial(1, 0.1, 1)[0]
+        s = np.random.binomial(1, self.opts.perturb_prob, 1)[0]
         return s == 1
 
     def _fit(self, x, y, A):
@@ -1029,6 +1029,8 @@ def get_gcn_option_list():
                         help="Number of nearest neighbors to use for preparing graph")
     parser.add_argument("--adversarial_train", action="store_true", default=False,
                         help="Whether to employ adversarial perturbations during training")
+    parser.add_argument("--perturb_prob", action="store", type=float, default=0.1,
+                        help="Probability of applying perturbation in each training epoch")
     parser.add_argument("--perturb_epsilon", action="store", type=float, default=0.05,
                         help="Magnitude of perturbation relative to magnitude of gradient")
     parser.add_argument("--n_vulnerable", type=int, default=1, required=False,
@@ -1063,6 +1065,7 @@ class GcnOpts(object):
         self.n_estimators = args.n_estimators
         self.n_neighbors = args.n_neighbors
         self.adversarial_train = args.adversarial_train
+        self.perturb_prob = args.perturb_prob
         self.perturb_epsilon = args.perturb_epsilon
         self.n_vulnerable = args.n_vulnerable
         self.n_sample_neighbors = args.n_sample_neighbors
