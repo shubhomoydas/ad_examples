@@ -107,6 +107,140 @@ class GraphAdjacency(object):
             A_new += np.eye(A_new.shape[0])
         return A_new
 
+    def sample_adjacent_neighbors(self, node, A, n_neighbors=-1, neighbor_cache=None):
+        if neighbor_cache is not None and node in neighbor_cache:
+            all_neighbors = neighbor_cache[node]
+            # logger.debug("Node %d from cache: %s" % (node, str(list(all_neighbors))))
+        else:
+            all_neighbors = np.where(A[node, :] > 0)[0]
+            all_neighbors = all_neighbors[all_neighbors != node]  # remove self-loops if any
+            if neighbor_cache is not None:
+                neighbor_cache[node] = all_neighbors
+
+        if n_neighbors < 0:
+            return all_neighbors
+        else:
+            n = len(all_neighbors)
+            indexes = np.arange(n)
+            np.random.shuffle(indexes)
+            return all_neighbors[:min(n_neighbors, n)]
+
+    def _all_neighbors(self, node, A, found, depth=0, max_depth=2, neighbor_cache=None):
+        if depth > max_depth:
+            return
+        found.add(node)
+        neighbors = self.sample_adjacent_neighbors(node, A, n_neighbors=-1,
+                                                   neighbor_cache=neighbor_cache)
+        # logger.debug("neighbors of %d (depth: %d): %s; found: %s" %
+        #              (node, depth, str(list(neighbors)), str(list(found))))
+        for neighbor in neighbors:
+            self._all_neighbors(neighbor, A, found, depth=depth+1, max_depth=max_depth,
+                                neighbor_cache=neighbor_cache)
+
+    def sample_neighbors(self, node, A, hops=1, n_neighbors=-1, neighbor_cache=None):
+        found = set()
+        self._all_neighbors(node, A, found, depth=0, max_depth=hops,
+                            neighbor_cache=neighbor_cache)
+        # logger.debug("final found: %s" % str(list(found)))
+        all_neighbors = np.array(list(found), dtype=np.int32)
+        all_neighbors = all_neighbors[all_neighbors != node]  # remove self-loops if any
+        if n_neighbors < 0:
+            return all_neighbors
+        else:
+            n = len(all_neighbors)
+            indexes = np.arange(n)
+            np.random.shuffle(indexes)
+            return all_neighbors[:min(n_neighbors, n)]
+
+
+class SampleUpdater(object):
+    """ Class to introduce perturbations during training in order to improve robustness """
+    def __init__(self, opts):
+        self.opts = opts
+        self.ga = GraphAdjacency(n_neighbors=opts.n_neighbors, self_loops=True)
+        self.neighbor_cache = dict()
+
+    def get_nodes_for_update(self, gcn):
+        return None
+
+    def update_nodes(self, gcn, updates):
+        return None
+
+    def select_and_update_nodes(self, gcn):
+        """ Selects nodes for update, updates them, and returns the old values """
+        return None
+
+    def restore_values(self, gcn, node_values=None):
+        """ Restore previously saved values """
+        if node_values is None:
+            return
+        nodes, values = node_values
+        for i, node in enumerate(nodes):
+            gcn.fit_x[node, :] = values[i]
+
+
+class NoopSampleUpdater(SampleUpdater):
+    """ The default no-perturbation class """
+
+    def __init__(self, opts):
+        SampleUpdater.__init__(self, opts)
+
+    def select_and_update_nodes(self, gcn):
+        return None
+
+
+class AdversarialUpdater(SampleUpdater):
+    """ Introduces adversarial perturbations
+
+    Note: This is not guaranteed to improve robustness and is merely a work-in-progress.
+
+    Perturbations are introduced during training as follows:
+        1. Find top-most uncertain nodes
+        2. Get a sample of neighbors for a node and treat them as the node's attackers
+        3. Get the best attacker neighbor by computing gradients
+        4. Add a perturbation in the direction of gradient
+    """
+    def __init__(self, attack_model, opts):
+        SampleUpdater.__init__(self, opts)
+        self.attack_model = attack_model
+
+    def get_nodes_for_update(self, gcn):
+        """ Returns attack node ids and suggested changes for most uncertain nodes """
+        # tm = Timer()
+        test_nodes = self.attack_model.get_top_uncertain_nodes(self.opts.n_vulnerable)
+        update_nodes = dict()
+        for i, test_node in enumerate(test_nodes):
+            neighbor_nodes = self.ga.sample_neighbors(test_node, gcn.fit_A, hops=self.opts.n_layers,
+                                                      n_neighbors=self.opts.n_sample_neighbors,
+                                                      neighbor_cache=self.neighbor_cache)
+            best_attacks_for_each_target = self.attack_model.suggest_nodes([test_node], neighbor_nodes)
+            best, feature_grads = best_attacks_for_each_target[0]
+            if best is not None:
+                target_node, old_label, attack_node, feature, grads = best
+                if attack_node not in update_nodes:
+                    update_nodes[attack_node] = (attack_node, grads)
+        # logger.debug(tm.message("get_nodes_for_update()"))
+        return update_nodes.values()
+
+    def update_nodes(self, gcn, updates):
+        nodes = [update[0] for update in updates]
+        old_values = np.copy(gcn.fit_x[nodes, :])
+        changes = [update[1] for update in updates]
+        for i, node in enumerate(nodes):
+            w = changes[i]  # gcn.fit_x[node, :]
+            mag = min(2.0, np.sqrt(w.dot(w)))  # clip the gradient magnitude at 2.0
+            gcn.fit_x[node, :] += self.opts.perturb_epsilon * mag * changes[i]
+        return nodes, old_values
+
+    def select_and_update_nodes(self, gcn):
+        """ Selects nodes for update, updates them, and returns the old values
+
+        :param gcn: GCN
+        :return: tuple
+        """
+        updates = self.get_nodes_for_update(gcn)
+        return self.update_nodes(gcn, updates)
+
 
 class SimpleGCN(object):
     """ Implementation of a simple Graph Convolutional Network and APIs to support attack
@@ -117,10 +251,8 @@ class SimpleGCN(object):
         [2] Adversarial Attacks on Neural Networks for Graph Data
             by Daniel Zugner, Amir Akbarnejad, and Stephan Gunnemann, KDD 2018
     """
-    def __init__(self, input_shape, n_neurons, activations, n_classes,
-                 name="gcn", graph=None, session=None,
-                 learning_rate=0.005, l2_lambda=0.001, train_batch_size=25,
-                 max_epochs=1, tol=1e-4, rand_seed=42, init_network_now=True):
+    def __init__(self, input_shape, n_neurons, activations, n_classes, name="gcn",
+                 graph=None, session=None, opts=None, init_network_now=True):
         self.input_shape = input_shape
         self.n_neurons = n_neurons
         self.activations = activations
@@ -128,12 +260,14 @@ class SimpleGCN(object):
         self.name = name
         self.graph = graph
         self.session = session
-        self.learning_rate = learning_rate
-        self.l2_lambda = l2_lambda
-        self.train_batch_size = train_batch_size
-        self.max_epochs = max_epochs
-        self.tol = tol
-        self.rand_seed = rand_seed
+        self.opts = opts
+
+        if opts.adversarial_train:
+            logger.debug("Training with adversarial perturbations")
+            self.sample_updater = AdversarialUpdater(attack_model=SimpleGCNAttack(gcn=self),
+                                                     opts=opts)
+        else:
+            self.sample_updater = NoopSampleUpdater(opts=opts)
 
         self.layer_names = None
         self.n_features = self.input_shape[1]
@@ -236,8 +370,8 @@ class SimpleGCN(object):
         if len(params) == 0:
             raise ValueError("No trainable parameters")
 
-        if self.l2_lambda > 0.0:
-            self.xentropy_loss += self.l2_lambda * self.get_l2_regularizers(params)
+        if self.opts.l2_lambda > 0.0:
+            self.xentropy_loss += self.opts.l2_lambda * self.get_l2_regularizers(params)
         self.train_loss_op = self.training_op(self.xentropy_loss, params)
 
         # probability predictions
@@ -307,6 +441,7 @@ class SimpleGCN(object):
                                                                            self.target, self.label_1, self.label_2)
 
     def setup_attack_gradient(self, x, x_attack_input, target_node, label_1, label_2):
+        """ Sets up network for: grad(target_logits[label_1] - target_logits[label_2]) wrt attacker """
         attack_network = self.build_gcn(x, reuse=True)
 
         # get the logits for the target node
@@ -339,10 +474,10 @@ class SimpleGCN(object):
 
     def training_op(self, loss, var_list=None, use_adam=False):
         if use_adam:
-            optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+            optimizer = tf.train.AdamOptimizer(learning_rate=self.opts.learning_rate)
         else:
             global_step = tf.Variable(0, name="%s_gs" % self.name, trainable=False)
-            learning_rate = tf.train.exponential_decay(self.learning_rate, global_step,
+            learning_rate = tf.train.exponential_decay(self.opts.learning_rate, global_step,
                                                        200, 0.96, staircase=True)
             optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
 
@@ -358,7 +493,7 @@ class SimpleGCN(object):
     def init_tf_graph(self):
         self.graph = tf.Graph()
         with self.graph.as_default():
-            tf.set_random_seed(self.rand_seed)
+            tf.set_random_seed(self.opts.randseed)
 
     def get_iDroot(self, A):
         D = A.sum(axis=1)
@@ -379,6 +514,12 @@ class SimpleGCN(object):
         """
         return {self.A_hat: self.fit_A_hat}
 
+    def if_perturb(self):
+        if isinstance(self.sample_updater, NoopSampleUpdater):
+            return False
+        s = np.random.binomial(1, 0.1, 1)[0]
+        return s == 1
+
     def _fit(self, x, y, A):
         """ Train the network
 
@@ -397,19 +538,33 @@ class SimpleGCN(object):
         # logger.debug("y_labeled: %d\n%s" % (len(y_labeled), str(list(y_labeled))))
         y_labeled_enc = self.class_enc[y_labeled]
         # logger.debug("y_labeled_enc: %s" % (str(y_labeled_enc.shape)))
-
+        prev_node_values = None
         fit_tm = Timer()
         feed_dict = {self.X: self.fit_x, self.y_labeled: y_labeled_enc,
                      self.labeled_indexes: labeled_indexes}
         feed_dict.update(self.get_adjacency_variable_map())
         prev_loss = -np.infty
         epoch = 0
-        while epoch < self.max_epochs:
+        while epoch < self.opts.n_epochs:
             tm = Timer()
+
+            perturb = self.if_perturb()
+            if perturb:
+                # introduce perturbations
+                # tm_p = Timer()
+                prev_node_values = self.sample_updater.select_and_update_nodes(self)
+                # if prev_node_values is not None:
+                #     logger.debug(tm_p.message("[%d] #updated nodes: %d" % (epoch, len(prev_node_values[0]))))
+
             _, loss = self.session.run([self.train_loss_op, self.xentropy_loss], feed_dict=feed_dict)
-            if epoch > 0 and abs(loss - prev_loss) < self.tol:
-                logger.debug("Exiting at epoch %d/%d (diff=%f)" % (epoch, self.max_epochs, abs(loss - prev_loss)))
+            if epoch > 0 and abs(loss - prev_loss) < self.opts.convergence_tol:
+                logger.debug("Exiting at epoch %d/%d (diff=%f)" % (epoch, self.opts.n_epochs, abs(loss - prev_loss)))
                 break
+
+            if perturb:
+                # restore original values
+                self.sample_updater.restore_values(self, node_values=prev_node_values)
+
             if False and (epoch + 1) % 10 == 0:
                 err = self.get_prediction_error()
                 logger.debug(tm.message("[%d] loss: %f, pred_err: %f" % (epoch+1, loss, err)))
@@ -418,9 +573,10 @@ class SimpleGCN(object):
 
         err = self.get_prediction_error()
         logger.debug(fit_tm.message("SimpleGCN fitted epochs %d/%d, loss: %f, err: %f" %
-                                    (epoch, self.max_epochs, prev_loss, err)))
+                                    (epoch, self.opts.n_epochs, prev_loss, err)))
 
     def decision_function(self):
+        """ Returns predicted probability per class per node (softmax output) """
         if self.X is None:
             raise RuntimeError("%s self.X is None" % self.name)
         feed_dict = {self.X: self.fit_x}
@@ -429,11 +585,13 @@ class SimpleGCN(object):
         return preds
 
     def predict(self):
+        """ Returns best class prediction for each node """
         preds = self.decision_function()
         y_hat = np.argmax(preds, axis=1)
         return y_hat
 
     def get_prediction_error(self):
+        """ Returns predicted error among labeled nodes """
         y_hat = self.predict()
         labeled_indexes = np.where(self.fit_y >= 0)[0]
         tp = np.where(self.fit_y[labeled_indexes] != y_hat[labeled_indexes])[0]
@@ -471,8 +629,12 @@ class SimpleGCN(object):
         # setup the attack X matrix where only the row corresponding to
         # the attack node is set as a variable and the rest are placeholders/fixed
         X_above_attack_node = self.fit_x[:attacker, :]
-        assign_X_attack_node = self.X_attack_node.assign(self.fit_x[[attacker], :])
-        self.session.run(assign_X_attack_node)
+
+        # Avoid session.run(ops) because it adds a node to tensorflow graph
+        # assign_X_attack_node = self.X_attack_node.assign(self.fit_x[[attacker], :])
+        # self.session.run(assign_X_attack_node)
+        self.X_attack_node.load(self.fit_x[[attacker], :], self.session)
+
         if attacker < self.fit_x.shape[0]-1:
             X_below_attack_node = self.fit_x[(attacker+1):, :]
         else:
@@ -551,31 +713,24 @@ class EnsembleGCN(SimpleGCN):
     """
     def __init__(self, input_shape, n_neurons, activations, n_classes,
                  n_estimators=1, name="egcn", graph=None, session=None,
-                 learning_rate=0.005, l2_lambda=0.001, train_batch_size=25,
-                 max_epochs=1, tol=1e-4, rand_seed=42, edge_sample_prob=0.75):
+                 opts=None):
         # initialize attributes but do not create network
         SimpleGCN.__init__(self, input_shape=input_shape, n_neurons=n_neurons,
                            activations=activations, n_classes=n_classes,
-                           name=name, graph=graph, session=session, learning_rate=learning_rate,
-                           l2_lambda=l2_lambda, train_batch_size=train_batch_size,
-                           max_epochs=max_epochs, tol=tol, rand_seed=rand_seed,
+                           name=name, graph=graph, session=session, opts=opts,
                            init_network_now=False)
 
         if self.graph is None or self.session is None:
             raise RuntimeError("Failure to initialize tf.Graph/Session")
 
         self.n_estimators = n_estimators
-        self.edge_sample_prob = edge_sample_prob
         self.estimators = []
         for i in range(self.n_estimators):
             self.estimators.append(
                 SimpleGCN(input_shape=self.input_shape, n_neurons=self.n_neurons,
                           activations=self.activations, n_classes=self.n_classes,
                           name="gcn_%d" % i, graph=self.graph, session=self.session,
-                          learning_rate=self.learning_rate,
-                          l2_lambda=self.l2_lambda, train_batch_size=self.train_batch_size,
-                          max_epochs=self.max_epochs, tol=self.tol, rand_seed=self.rand_seed,
-                          init_network_now=False))
+                          opts=self.opts, init_network_now=False))
 
         # below will be used to sample edges of the adjacency matrix
         self.ga = GraphAdjacency(self_loops=True)
@@ -651,7 +806,7 @@ class EnsembleGCN(SimpleGCN):
         self.fit_A = A
         for i, gcn in enumerate(self.estimators):
             # create each member with a random sample of edges
-            A_i = self.ga.sample_edges(A, self.edge_sample_prob)
+            A_i = self.ga.sample_edges(A, self.opts.edge_sample_prob)
             gcn._fit(x, y, A_i)
 
 
@@ -663,20 +818,24 @@ class SimpleGCNAttack(object):
             by Daniel Zugner, Amir Akbarnejad, and Stephan Gunnemann, KDD 2018
     """
 
-    def __init__(self, gcn, target_nodes, attack_nodes, min_prod=0.0, max_prod=5.0, max_iters=20):
+    def __init__(self, gcn, min_prod=0.0, max_prod=5.0, max_iters=20):
         self.gcn = gcn
-        self.target_nodes = target_nodes
-        self.attack_nodes = attack_nodes
         self.min_prod = min_prod
         self.max_prod = max_prod
         self.max_iters = max_iters
 
-    def get_top_two_predicted_labels(self):
+    def get_top_two_predicted_label_probs(self):
         probs = self.gcn.decision_function()
         sorted_probs = np.argsort(-probs, axis=1)
         best_label = sorted_probs[:, 0]  # predicted best for all nodes
         second_best_label = sorted_probs[:, 1]  # predicted second-best for all nodes
         return best_label, second_best_label
+
+    def get_top_uncertain_nodes(self, n):
+        best_label, second_best_label = self.get_top_two_predicted_label_probs()
+        probs_diff = best_label - second_best_label
+        s = np.argsort(probs_diff)
+        return s[:n]
 
     def suggest_node_feature(self, target_node, attack_node, old_label, new_label):
         """
@@ -699,7 +858,7 @@ class SimpleGCNAttack(object):
                                                                          new_label=new_label)
         return best_feature, feature_grads
 
-    def suggest_node(self, target_node, old_label=-1, new_label=-1):
+    def suggest_node(self, target_node, attack_nodes, old_label=-1, new_label=-1):
         """ Suggests which is the best attack node and feature for the input target node
 
         :param target_node: int
@@ -708,29 +867,30 @@ class SimpleGCNAttack(object):
         :return: tuple, np.array
         """
         if old_label < 0 or new_label < 0:
-            best_label, second_best_label = self.get_top_two_predicted_labels()
+            best_label, second_best_label = self.get_top_two_predicted_label_probs()
             old_label = best_label[target_node]
             new_label = second_best_label[target_node]
         best_grad = 0.0
         best_attack_node_details = None
         all_attack_node_gradients = []
-        for attack_node in self.attack_nodes:
+        for attack_node in attack_nodes:
             best_feature, feature_grads = self.suggest_node_feature(target_node, attack_node, old_label, new_label)
             all_attack_node_gradients.append((attack_node, best_feature, feature_grads))
-            logger.debug("\nattack_node: %d, old_label: %d; new_label: %d; best_feature: %d; feature_grads: %s" %
-                         (attack_node, old_label, new_label, best_feature, str(list(feature_grads))))
+            # logger.debug("\nattack_node: %d, old_label: %d; new_label: %d; best_feature: %d; feature_grads: %s" %
+            #              (attack_node, old_label, new_label, best_feature, str(list(feature_grads))))
             if np.abs(feature_grads[best_feature]) > best_grad:
                 best_grad = np.abs(feature_grads[best_feature])
                 best_attack_node_details = (target_node, old_label, attack_node, best_feature, feature_grads)
         return best_attack_node_details, all_attack_node_gradients
 
-    def suggest_nodes(self):
-        best_label, second_best_label = self.get_top_two_predicted_labels()
+    def suggest_nodes(self, target_nodes, attack_nodes):
+        best_label, second_best_label = self.get_top_two_predicted_label_probs()
         best_attack_for_each_target = []
-        for target_node in self.target_nodes:
+        for target_node in target_nodes:
             old_label = best_label[target_node]  # current predicted best label for target node
             new_label = second_best_label[target_node]  # second-best predicted label for target node
-            best_attack_node_details, all_attack_node_gradients = self.suggest_node(target_node, old_label=old_label,
+            best_attack_node_details, all_attack_node_gradients = self.suggest_node(target_node, attack_nodes,
+                                                                                    old_label=old_label,
                                                                                     new_label=new_label)
             best_attack_for_each_target.append((best_attack_node_details, all_attack_node_gradients))
         return best_attack_for_each_target
@@ -752,10 +912,9 @@ class SimpleGCNAttack(object):
         old_val = np.copy(x[node, :])  # save previous value
         x[node, :] = node_val
         if retrain:
-            mod_gcn = SimpleGCN(input_shape=self.gcn.input_shape, n_neurons=self.gcn.n_neurons,
-                                activations=self.gcn.activations,
-                                n_classes=self.gcn.n_classes, max_epochs=self.gcn.max_epochs,
-                                learning_rate=self.gcn.learning_rate, l2_lambda=self.gcn.l2_lambda)
+            mod_gcn = SimpleGCN(input_shape=self.gcn.input_shape,
+                                n_neurons=self.gcn.n_neurons, activations=self.gcn.activations,
+                                n_classes=self.gcn.n_classes, opts=self.gcn.opts)
             mod_gcn.fit(x, y, A)
         else:
             mod_gcn = self.gcn
@@ -790,7 +949,7 @@ class SimpleGCNAttack(object):
             return None
         min_prod = self.min_prod
         max_prod = self.max_prod
-        prod = 0.5
+        prod = 0.5  # just an initial value ... will be updated
         orig_val = np.copy(self.gcn.fit_x[mod_node, :])
         mod_val = None
         for i in range(self.max_iters):
@@ -811,6 +970,32 @@ class SimpleGCNAttack(object):
     def modify_structure(self):
         """ Attack by changing the graph adjacency matrix """
         raise NotImplementedError("modify_structure() not implemented yet")
+
+
+def create_gcn_default(input_shape, n_classes, opts=None):
+    """ Creates the common type of GCNs found in literature
+
+    All hidden activations are of the same type and have the same
+    number of hidden nodes. The output layer will not have any
+    activation and the number of nodes in the output layer will be
+    equal to the number of classes.
+    """
+
+    # 'L' Neural Network layers implies max L-hop information propagation
+    # through graph by the GCN in each forward/backward propagation.
+    n_neurons = [opts.n_neurons_per_layer] * (opts.n_layers-1)
+    n_neurons.append(n_classes)
+
+    activations = [activation_types[opts.activation_type]] * (opts.n_layers-1)
+    activations.append(None)  # the last layer will only return the logits
+
+    if opts.ensemble:
+        gcn = EnsembleGCN(input_shape=input_shape, n_neurons=n_neurons, activations=activations,
+                          n_classes=n_classes, n_estimators=opts.n_estimators, opts=opts)
+    else:
+        gcn = SimpleGCN(input_shape=input_shape, n_neurons=n_neurons, activations=activations,
+                        n_classes=n_classes, opts=opts)
+    return gcn
 
 
 def get_gcn_option_list():
@@ -842,6 +1027,14 @@ def get_gcn_option_list():
                         help="Number of members in ensemble for EnsembleGCN")
     parser.add_argument("--n_neighbors", type=int, default=5, required=False,
                         help="Number of nearest neighbors to use for preparing graph")
+    parser.add_argument("--adversarial_train", action="store_true", default=False,
+                        help="Whether to employ adversarial perturbations during training")
+    parser.add_argument("--perturb_epsilon", action="store", type=float, default=0.05,
+                        help="Magnitude of perturbation relative to magnitude of gradient")
+    parser.add_argument("--n_vulnerable", type=int, default=1, required=False,
+                        help="Number of most vulnerable nodes to use to analyze robustness")
+    parser.add_argument("--n_sample_neighbors", type=int, default=3, required=False,
+                        help="Number of nearest neighbors to use as attack nodes for adversarial training")
     parser.add_argument("--n_epochs", type=int, default=5000, required=False,
                         help="Max training epochs")
     parser.add_argument("--train_batch_size", type=int, default=25, required=False,
@@ -869,11 +1062,16 @@ class GcnOpts(object):
         self.edge_sample_prob = args.edge_sample_prob
         self.n_estimators = args.n_estimators
         self.n_neighbors = args.n_neighbors
+        self.adversarial_train = args.adversarial_train
+        self.perturb_epsilon = args.perturb_epsilon
+        self.n_vulnerable = args.n_vulnerable
+        self.n_sample_neighbors = args.n_sample_neighbors
         self.n_epochs = args.n_epochs
         self.train_batch_size = args.train_batch_size
         self.log_file = args.log_file
         self.debug = args.debug
         self.plot = args.plot
+        self.convergence_tol = 1e-4
 
     def get_opts_name_prefix(self):
         gcn_sig = "%s_l%d_n%d_%s_r%0.3f_p%0.4f" % \
@@ -881,10 +1079,14 @@ class GcnOpts(object):
                    self.n_layers, self.n_neurons_per_layer, self.activation_type,
                    self.learning_rate, self.l2_lambda)
         gcn_sig = gcn_sig.replace(".", "")
+        adversarial_sig = "_adv_v%d_s%d_pe%0.2f" % (self.n_vulnerable,
+                                                    self.n_sample_neighbors,
+                                                    self.perturb_epsilon) if self.adversarial_train else ""
+        adversarial_sig = adversarial_sig.replace(".", "")
         edge_prob_sig = "_e%0.2f" % self.edge_sample_prob if self.ensemble else ""
         edge_prob_sig = edge_prob_sig.replace(".", "")
         algo_sig = "%s%s" % (gcn_sig, edge_prob_sig)
-        name = "%s_%s_nn%d" % (self.dataset, algo_sig, self.n_neighbors)
+        name = "%s_%s_nn%d%s" % (self.dataset, algo_sig, self.n_neighbors, adversarial_sig)
         return name
 
     def get_alad_metrics_name_prefix(self):

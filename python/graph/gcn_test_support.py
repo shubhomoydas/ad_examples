@@ -181,6 +181,19 @@ def read_graph_dataset(dataset, sub_sample=1.0, labeled_frac=1.0, n_neighbors=5,
     return x, y, y_orig, A
 
 
+def read_datasets_for_illustration(opts):
+    """ Reads datasets used to create illlustrative figures """
+    # Changing the below will change the output plots as well
+    sub_sample = 0.3
+    labeled_frac = 0.3
+
+    x, y, y_orig, A = read_graph_dataset(opts.dataset, sub_sample=sub_sample,
+                                         labeled_frac=labeled_frac,
+                                         n_neighbors=opts.n_neighbors,
+                                         euclidean=False)
+    return x, y, y_orig, A
+
+
 def gradients_to_arrow_texts(x, grads=None, scale=None, text_offset=None, head_width=0.02, head_length=0.01):
     """ Annotates gradients with arrow pointers """
     if grads is None or len(grads) == 0:
@@ -276,6 +289,7 @@ def plot_graph(x, y, A, lbl_color_map=None,
 
 
 def get_target_and_attack_nodes(x, dataset):
+    """ Returns list of target and attack nodes for synthetic test datasets """
     if dataset == "face":
         target_nodes = find_insts(x, [0.75, 0.8], [0.7, 0.8])[:1]
         attack_nodes = find_insts(x, [0.6, 0.95], [0.8, 0.95])
@@ -326,19 +340,17 @@ def test_tensorflow_array_differentiation():
     logger.debug("grad_XA_all:\n%s" % str(grad_XA_all))
 
 
-def test_marked_nodes(args):
-    dataset = args.dataset
-    x, y, y_orig, A = read_graph_dataset(dataset, sub_sample=0.3,
-                                         labeled_frac=0.3, n_neighbors=5,
-                                         euclidean=False)
+def test_marked_nodes(opts):
+    x, y, y_orig, A = read_datasets_for_illustration(opts)
+
     n_classes = len(np.unique(y[y >= 0]))
     logger.debug("n_classes: %d" % n_classes)
 
-    target_nodes, attack_nodes = get_target_and_attack_nodes(x, dataset)
+    target_nodes, attack_nodes = get_target_and_attack_nodes(x, opts.dataset)
 
-    fsig = "marked_nodes"
+    fsig = opts.get_opts_name_prefix()
     lbl_color_map = {-1: "grey", 0: "blue", 1: "red", 2: "green", 3: "orange"}
-    pdfpath = "temp/test_gcn_%s_%s.pdf" % (dataset, fsig)
+    pdfpath = "%s/%s_marked_nodes.pdf" % (opts.results_dir, fsig)
     dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2)
     plot_graph(x, y, A=None, lbl_color_map=lbl_color_map,
                marked_nodes=[target_nodes, attack_nodes],
@@ -346,30 +358,21 @@ def test_marked_nodes(args):
     dp.close()
 
 
-def test_edge_sample(args):
-    dataset = args.dataset
+def test_edge_sample(opts):
+    x, y, y_orig, A = read_datasets_for_illustration(opts)
 
-    # Changing the below will change the output plots as well
-    sub_sample = 0.3
-    labeled_frac = 0.3
-    n_neighbors = 5  # includes self
-
-    x, y, y_orig, A = read_graph_dataset(dataset, sub_sample=sub_sample,
-                                         labeled_frac=labeled_frac,
-                                         n_neighbors=n_neighbors,
-                                         euclidean=False)
     n_classes = len(np.unique(y[y >= 0]))
     logger.debug("n_classes: %d" % n_classes)
 
-    target_nodes, attack_nodes = get_target_and_attack_nodes(x, dataset)
+    target_nodes, attack_nodes = get_target_and_attack_nodes(x, opts.dataset)
 
-    fsig = "marked_nodes"
     lbl_color_map = {-1: "grey", 0: "blue", 1: "red", 2: "green", 3: "orange"}
 
     # logger.debug("\n%s" % str(A))
-    ga = GraphAdjacency(n_neighbors, self_loops=True)
+    ga = GraphAdjacency(opts.n_neighbors, self_loops=True)
 
-    pdfpath = "temp/test_gcn_edge_samples_%s_%s.pdf" % (dataset, fsig)
+    fsig = opts.get_opts_name_prefix()
+    pdfpath = "%s/%s_edge_samples.pdf" % (opts.results_dir, fsig)
     dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2)
     for i in range(4):
         A_new = ga.sample_edges(A, prob=0.75)
@@ -378,3 +381,164 @@ def test_edge_sample(args):
                    marked_nodes=[target_nodes, attack_nodes],
                    marked_colors=['green', 'magenta'], nodes=False, edges=True, dp=dp)
     dp.close()
+
+
+def plot_labels_with_modified_node(gcn, y_hat, target_node, old_label, modified_node, node_val,
+                                   lbl_color_map=None, marked_nodes=None, marked_colors=None,
+                                   title=None, dp=None):
+    """ Plots the annotated graph details
+
+    The plotting constants such as arrow scale etc. are tuned
+    for the 'face_top' dataset.
+    """
+    old_val = np.copy(gcn.fit_x[modified_node, :])  # save previous value
+    gcn.fit_x[modified_node, :] = node_val
+
+    changed = y_hat[target_node] != old_label
+    scale = np.array([-0.05, 0.08], dtype=np.float32)
+    start_pos = gcn.fit_x[target_node]
+    text_pos = start_pos + scale + [-0.18, 0.04]
+    arrow_texts = [{"start_pos": start_pos, "text_pos": text_pos,
+                    "scale": scale,
+                    "text": "label changed" if changed else "label unchanged",
+                    "head_width": 0.01,
+                    "head_length": 0.02}]
+
+    plot_graph(gcn.fit_x, y_hat, gcn.fit_A, lbl_color_map=lbl_color_map,
+               marked_nodes=marked_nodes, marked_colors=marked_colors,
+               nodes=False, edges=True, edges_title=title, arrow_texts=arrow_texts, dp=dp)
+
+    gcn.fit_x[modified_node, :] = old_val  # restore previous value
+
+
+def plot_model_diagnostics(attack_model, target_nodes, attack_nodes, attack_details=None, pdfpath=None, opts=None):
+    """ Plots the annotated graph details
+
+    The plotting constants such as arrow scale etc. are tuned
+    for the 'face_top' dataset.
+    """
+    gcn = attack_model.gcn
+
+    lbl_color_map = {-1: "grey", 0: "blue", 1: "red", 2: "green", 3: "orange"}
+    m_nodes = [target_nodes, attack_nodes]
+    m_colors = ['green', 'magenta']
+
+    node_arrow_scale = np.array([-0.08, 0.04], dtype=np.float32)
+    text_offset = node_arrow_scale + [-0.10, 0.02]
+    node_arrow_texts = nodes_to_arrow_texts(gcn.fit_x, nodes=target_nodes, scale=node_arrow_scale,
+                                            text="target", text_offset=text_offset,
+                                            head_width=0.02, head_length=0.01)
+    node_arrow_texts.extend(nodes_to_arrow_texts(gcn.fit_x, nodes=attack_nodes, scale=node_arrow_scale,
+                                                 text="attacker", text_offset=text_offset,
+                                                 head_width=0.02, head_length=0.01))
+
+    y_hat = gcn.predict()
+    gcn_sig = "%s GCN, layers: %d (%s)" % ("Ensemble (%d)" % opts.n_estimators if opts.ensemble else "Single",
+                                                 opts.n_layers, opts.activation_type)
+    dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2, save_tight=True)
+    plot_graph(gcn.fit_x, gcn.fit_y, gcn.fit_A, lbl_color_map=lbl_color_map,
+               marked_nodes=m_nodes, marked_colors=m_colors,
+               nodes=True, edges=True, arrow_texts=node_arrow_texts,
+               nodes_title=r"${\bf (a)}$ Synthetic Semi-supervised Dataset",
+               edges_title=r"${\bf (b)}$ Graph by Joining Nearest Neighbors", dp=dp)
+
+    if attack_details is not None:
+        for mod_node, feature_grads in attack_details:
+            target_node, old_label, modified_node, node_val = mod_node
+            target_gcn_sig = "[%d] %s" % (target_node, gcn_sig)
+            grad_arrow_scale = np.array([-0.025, -0.07], dtype=np.float32)
+            node_arrow_texts = gradients_to_arrow_texts(gcn.fit_x, grads=feature_grads,
+                                                        scale=grad_arrow_scale,
+                                                        text_offset=grad_arrow_scale + [-0.28, -0.04],
+                                                        head_width=0.02, head_length=0.01)
+
+            m_nodes = [[target_node], attack_nodes]
+            plot_graph(gcn.fit_x, y_hat, gcn.fit_A, lbl_color_map=lbl_color_map,
+                       marked_nodes=m_nodes, marked_colors=m_colors,
+                       nodes=False, edges=True, edges_title=r"${\bf (c)}$ Predicted Labels" + "\n" + target_gcn_sig,
+                       arrow_texts=node_arrow_texts, dp=dp)
+
+            if node_val is not None:
+                y_hat_mod = attack_model.modify_gcn_and_predict(node=modified_node, node_val=node_val, retrain=False)
+                plot_labels_with_modified_node(gcn, y_hat_mod, target_node, old_label, modified_node, node_val,
+                                               lbl_color_map=lbl_color_map, marked_nodes=m_nodes, marked_colors=m_colors,
+                                               title=r"${\bf (d)}$ Predicted Labels on Modified Graph" + "\n" + target_gcn_sig, dp=dp)
+    dp.close()
+
+
+def test_neighbor_gradients(opts):
+
+    x, y, y_orig, A = read_datasets_for_illustration(opts)
+
+    # Number of classes includes the '0' class and excludes all marked '-1' i.e., unlabeled.
+    n_classes = np.max(y)+1  # len(np.unique(y[y >= 0]))
+    logger.debug("n_classes: %d" % n_classes)
+
+    gcn = create_gcn_default(input_shape=x.shape, n_classes=n_classes, opts=opts)
+
+    gcn.fit(x, y, A)
+
+    f1 = gcn.get_f1_score(y_orig)
+    logger.debug("f1 score: %f" % f1)
+
+    ga = GraphAdjacency(n_neighbors=opts.n_neighbors, self_loops=True)
+    attack_model = SimpleGCNAttack(gcn)
+
+    test_nodes = attack_model.get_top_uncertain_nodes(opts.n_vulnerable)
+    logger.debug(test_nodes)
+
+    attack_model = SimpleGCNAttack(gcn=gcn)
+
+    neighbor_cache = dict()
+    for i, test_node in enumerate(test_nodes):
+        tm = Timer()
+        neighbor_nodes = ga.sample_neighbors(test_node, gcn.fit_A, hops=opts.n_layers,
+                                             n_neighbors=opts.n_sample_neighbors,
+                                             neighbor_cache=neighbor_cache)
+        # logger.debug(neighbor_nodes)
+        best_attacks_for_each_target = attack_model.suggest_nodes([test_node], neighbor_nodes)
+
+        all_attack_details = []
+        for best, feature_grads in best_attacks_for_each_target:
+            if best is not None:
+                target_node, old_label, attack_node, feature, grads = best
+                mod_node = (target_node, old_label, attack_node, None)
+                all_attack_details.append((mod_node, feature_grads))
+        logger.debug(tm.message("[%d/%d] node: %d, #neighbors: %d" %
+                                (i+1, len(test_nodes), test_node, len(neighbor_nodes))))
+        fsig = opts.get_opts_name_prefix()
+        pdfpath = "%s/%s_vulnerable_nodes_%d.pdf" % (opts.results_dir, fsig, i)
+        plot_model_diagnostics(attack_model, target_nodes=[test_node],
+                               attack_nodes=neighbor_nodes,
+                               attack_details=all_attack_details,
+                               pdfpath=pdfpath, opts=opts)
+
+
+def test_robust_training_helper(opts):
+    x, y, y_orig, A = read_datasets_for_illustration(opts)
+
+    # Number of classes includes the '0' class and excludes all marked '-1' i.e., unlabeled.
+    n_classes = np.max(y) + 1  # len(np.unique(y[y >= 0]))
+    logger.debug("n_classes: %d" % n_classes)
+
+    gcn = create_gcn_default(input_shape=x.shape, n_classes=n_classes, opts=opts)
+
+    gcn.fit(x, y, A)
+
+    f1 = gcn.get_f1_score(y_orig)
+    logger.debug("f1 score: %f" % f1)
+
+    rh = AdversarialUpdater(attack_model=SimpleGCNAttack(gcn=gcn), opts=opts)
+
+    prev_node_values = rh.select_and_update_nodes(gcn)
+    if prev_node_values is not None:
+        logger.debug("#updates: %d" % len(prev_node_values[0]))
+
+    nodes = [node for node in prev_node_values[0]]
+    logger.debug("before update:\n%s" % str(prev_node_values[1]))
+
+    logger.debug("after update:\n%s" % str(gcn.fit_x[nodes, :]))
+
+    rh.restore_values(gcn, node_values=prev_node_values)
+    logger.debug("after restore:\n%s" % str(gcn.fit_x[nodes, :]))
+
