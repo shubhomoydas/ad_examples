@@ -213,6 +213,13 @@ class AdversarialUpdater(SampleUpdater):
             neighbor_nodes = self.ga.sample_neighbors(test_node, gcn.fit_A, hops=self.opts.n_layers,
                                                       n_neighbors=self.opts.n_sample_neighbors,
                                                       neighbor_cache=self.neighbor_cache)
+
+            """
+            Remove all attack nodes which have already been added to update_nodes
+            because we only apply at most one adversarial perturbation per attack node.
+            """
+            neighbor_nodes = np.array([v for v in neighbor_nodes if v not in update_nodes], dtype=np.int32)
+
             best_attacks_for_each_target = self.attack_model.suggest_nodes([test_node], neighbor_nodes)
             best, feature_grads = best_attacks_for_each_target[0]
             if best is not None:
@@ -548,7 +555,8 @@ class SimpleGCN(object):
         feed_dict = {self.X: self.fit_x, self.y_labeled: y_labeled_enc,
                      self.labeled_indexes: labeled_indexes}
         feed_dict.update(self.get_adjacency_variable_map())
-        prev_loss = -np.infty
+        loss_history_window = 20
+        prev_losses = []
         epoch = 0
         while epoch < self.opts.n_epochs:
             tm = Timer()
@@ -562,9 +570,11 @@ class SimpleGCN(object):
                 #     logger.debug(tm_p.message("[%d] #updated nodes: %d" % (epoch, len(prev_node_values[0]))))
 
             _, loss = self.session.run([self.train_loss_op, self.xentropy_loss], feed_dict=feed_dict)
-            if epoch > 0 and abs(loss - prev_loss) < self.opts.convergence_tol:
-                logger.debug("Exiting at epoch %d/%d (diff=%f)" % (epoch, self.opts.n_epochs, abs(loss - prev_loss)))
-                break
+            if epoch >= loss_history_window:
+                diff_losses = abs(loss - np.mean(prev_losses))
+                if diff_losses < self.opts.convergence_tol:
+                    logger.debug("Exiting at epoch %d/%d (diff=%f)" % (epoch, self.opts.n_epochs, diff_losses))
+                    break
 
             if perturb:
                 # restore original values
@@ -573,12 +583,14 @@ class SimpleGCN(object):
             if False and (epoch + 1) % 10 == 0:
                 err = self.get_prediction_error()
                 logger.debug(tm.message("[%d] loss: %f, pred_err: %f" % (epoch+1, loss, err)))
-            prev_loss = loss
+            prev_losses.append(loss)
+            if len(prev_losses) > loss_history_window:
+                del prev_losses[0]
             epoch += 1
 
         err = self.get_prediction_error()
         logger.debug(fit_tm.message("SimpleGCN fitted epochs %d/%d, loss: %f, err: %f" %
-                                    (epoch, self.opts.n_epochs, prev_loss, err)))
+                                    (epoch, self.opts.n_epochs, np.mean(prev_losses), err)))
 
     def decision_function(self):
         """ Returns predicted probability per class per node (softmax output) """
