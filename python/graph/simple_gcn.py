@@ -503,6 +503,11 @@ class SimpleGCN(object):
     def fit(self, x, y, A):
         with self.graph.as_default():
             self.session.run(tf.global_variables_initializer())
+
+            # make sure that this graph cannot be modified later
+            # so that we can avoid adding extra nodes to it by accident
+            tf.get_default_graph().finalize()
+
             self._fit(x, y, A)
 
     def get_adjacency_variable_map(self):

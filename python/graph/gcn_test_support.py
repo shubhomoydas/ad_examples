@@ -433,8 +433,9 @@ def plot_model_diagnostics(attack_model, target_nodes, attack_nodes, attack_deta
                                                  head_width=0.02, head_length=0.01))
 
     y_hat = gcn.predict()
-    gcn_sig = "%s GCN, layers: %d (%s)" % ("Ensemble (%d)" % opts.n_estimators if opts.ensemble else "Single",
-                                                 opts.n_layers, opts.activation_type)
+    gcn_sig = "%s GCN, layers: %d (%s)" % ("Adversarial" if opts.adversarial_train else
+                                           "Ensemble (%d)" % opts.n_estimators if opts.ensemble else "Single",
+                                           opts.n_layers, opts.activation_type)
     dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2, save_tight=True)
     plot_graph(gcn.fit_x, gcn.fit_y, gcn.fit_A, lbl_color_map=lbl_color_map,
                marked_nodes=m_nodes, marked_colors=m_colors,
