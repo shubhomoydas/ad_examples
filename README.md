@@ -65,7 +65,8 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
   - [Generative Adversarial Nets (GAN) based Anomaly Detection](#gan-based-anomaly-detection)
     - [AnoGAN](#anogan)
   - [Anomaly injection by adversarial behavior and Graph Convolutional Networks](#graph-convolutional-network)
-    - [Robustness with ensembles](#robustness-with-ensembles)
+    - [Ensembles](#robustness-with-ensembles)
+    - [Adversarial training](#robustness-with-adversarial-training)
   - [Reducing activity sequences to i.i.d](ActivitySequences.md#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
 
@@ -446,7 +447,7 @@ Figure **(c)** shows the gradients for the two attack nodes. In this example set
 
 **Increasing the number of layers**
 
-The following command adds **6** layers to the GCN. This implies a 6-hop neighborhood. As a result, the target node (in the figure below) is now within the neighborhood of the right-most attack node; this makes the attack nodes's gradients non-zero. *Note that having more than two layers has not been found to be very useful (Kipf and Welling, 2017).* The implications of having more layers on properties such as robustness are probably worth exploring. While increasing complexity of deep networks (e.g., by adding layers) sometimes adds more robustness, the situation for GCNs is a bit different because adding GCN layers implies a different model assumption (neighborhood distance) rather than just a different feature representation.
+The following command adds **6** layers to the GCN. This implies a 6-hop neighborhood. As a result, the target node (in the figure below) is now within the neighborhood of the right-most attack node; this makes the attack nodes's gradients non-zero. *Note that having more than two layers has not been found to be very useful (Kipf and Welling, 2017).* The implications of having more layers on properties such as robustness are probably worth exploring. Having more layers probably increases the **attack surface** for a target node for the specific type of attack described above since more neighbors can now be used for attack. While increasing complexity of deep networks (e.g., by adding layers) sometimes adds more robustness, the situation for GCNs is a bit different because adding GCN layers implies a different model assumption (neighborhood distance) rather than just a different feature representation.
 
     pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=6
 

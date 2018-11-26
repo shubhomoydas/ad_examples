@@ -647,7 +647,14 @@ class SimpleGCN(object):
         # the attack node is set as a variable and the rest are placeholders/fixed
         X_above_attack_node = self.fit_x[:attacker, :]
 
-        # Avoid session.run(ops) because it adds a node to tensorflow graph
+        """
+        Variable.assign() adds an ops node to the TensorFlow computation graph.
+        Avoid session.run(ops) because it implies adding a computation node every time it is run.
+        Some discussion on the issues arising out of this (and solutions) can be found at:
+            https://stackoverflow.com/questions/36230559/processing-time-gets-longer-and-longer-after-each-iteration-tensorflow
+            https://stackoverflow.com/questions/37472420/tensorflow-each-iteration-in-training-for-loop-slower
+        Instead, use tf.Variable.load() to avoid creating new computation graph nodes.
+        """
         # assign_X_attack_node = self.X_attack_node.assign(self.fit_x[[attacker], :])
         # self.session.run(assign_X_attack_node)
         self.X_attack_node.load(self.fit_x[[attacker], :], self.session)
