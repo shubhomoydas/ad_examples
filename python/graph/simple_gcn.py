@@ -309,24 +309,60 @@ class SimpleGCN(object):
             with self.graph.as_default():
                 self.init_network()
 
-    def dnn_layer(self, x, A, n_neurons, name, activation=None, reuse=False):
+    def dnn_layer(self, x, A, n_neurons, name, activation=None,
+                  is_gcn_layer_input=False, reuse=False):
         with tf.variable_scope(name, reuse=reuse):
             n_inputs = int(x.get_shape()[1])
             stddev = 2. / np.sqrt(n_inputs)
             init = tf.truncated_normal((n_inputs, n_neurons), stddev=stddev)
             W = tf.get_variable("W", initializer=init)
-            Z = tf.matmul(A, tf.matmul(x, W))
+            if is_gcn_layer_input:
+                Z = tf.matmul(A, tf.matmul(x, W))
+            else:
+                b = tf.get_variable("b", initializer=tf.zeros([n_neurons]))
+                Z = tf.matmul(x, W) + b
             if activation is not None:
                 return activation(Z)
             else:
                 return Z
 
+    def gcn_layer(self, x, A, n_neurons, name, activations=None, reuse=False):
+        layer_input = x
+        layers = list()
+        hidden = None
+        for i in range(len(n_neurons)):
+            layer_name = "%s_sub_%d" % (name, i)
+            hidden = self.dnn_layer(layer_input, A, n_neurons=n_neurons[i],
+                                    name=layer_name, activation=activations[i],
+                                    is_gcn_layer_input=(i == 0), reuse=reuse)
+            layers.append(hidden)
+            layer_input = hidden
+        return hidden
+
     def dnn_construct(self, x, A, n_neurons, names, activations, reuse=False):
+        """ Constructs composite GCN layers
+
+        Each GCN layer might have one or more hidden layers. Therefore,
+        some of the inputs are list of lists. The lists first iterate over
+        the GCN layer parameters and then iterate over the sub-layer parameters.
+
+        :param x: tf.Tensor
+        :param A: tf.Tensor
+        :param n_neurons: list of lists
+            Each element in n_neurons is a list of ints
+        :param names: list of str
+            The name of the GCN layer
+        :param activations: list of lists
+            Each element in activations is a list of activations
+        :param reuse: bool
+            Whether to reuse the tf.Graph variables
+        :return: tf.Tensor
+        """
         layer_input = x
         layers = list()
         for i, name in enumerate(names):
-            hidden = self.dnn_layer(layer_input, A, n_neurons=n_neurons[i],
-                                    name=names[i], activation=activations[i], reuse=reuse)
+            hidden = self.gcn_layer(layer_input, A, n_neurons=n_neurons[i],
+                                    name=names[i], activations=activations[i], reuse=reuse)
             layers.append(hidden)
             layer_input = hidden
         return layers
@@ -373,7 +409,9 @@ class SimpleGCN(object):
         self.xentropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits_tensor,
                                                                                        labels=self.y_labeled))
         vars = tf.trainable_variables()
-        params = [v for v in vars if v.name.startswith("%s" % self.name) and v.name.endswith('/W:0')]
+        # params = [v for v in vars if v.name.startswith("%s" % self.name) and v.name.endswith('/W:0')]
+        params = [v for v in vars if v.name.startswith("%s" % self.name) and (v.name.endswith('/W:0')
+                                                                              or v.name.endswith('/b:0'))]
         if len(params) == 0:
             raise ValueError("No trainable parameters")
 
@@ -1003,15 +1041,33 @@ def create_gcn_default(input_shape, n_classes, opts=None):
     number of hidden nodes. The output layer will not have any
     activation and the number of nodes in the output layer will be
     equal to the number of classes.
+
+    Note: This is just a convenience method. For custom architectures,
+        setup the variable n_neurons, activations as appropriate.
     """
 
     # 'L' Neural Network layers implies max L-hop information propagation
     # through graph by the GCN in each forward/backward propagation.
-    n_neurons = [opts.n_neurons_per_layer] * (opts.n_layers-1)
-    n_neurons.append(n_classes)
+    n_neurons = []
+    activations = []
 
-    activations = [activation_types[opts.activation_type]] * (opts.n_layers-1)
-    activations.append(None)  # the last layer will only return the logits
+    for l in range(opts.n_layers-1):
+        n_sub_neurons = [opts.n_neurons_per_layer] * opts.n_sub_layers
+        n_neurons.append(n_sub_neurons)
+
+        sub_activations = [activation_types[opts.activation_type]] * opts.n_sub_layers
+        activations.append(sub_activations)
+
+    n_last_neurons = [opts.n_neurons_per_layer] * (opts.n_sub_layers-1)
+    n_last_neurons.append(n_classes)
+    n_neurons.append(n_last_neurons)
+
+    last_activations = [activation_types[opts.activation_type]] * (opts.n_sub_layers-1)
+    last_activations.append(None)  # the last layer will only return the logits
+    activations.append(last_activations)
+
+    # logger.debug("n_neurons: %s" % str(n_neurons))
+    # logger.debug("activations: %s" % str(activations))
 
     if opts.ensemble:
         gcn = EnsembleGCN(input_shape=input_shape, n_neurons=n_neurons, activations=activations,
@@ -1029,7 +1085,10 @@ def get_gcn_option_list():
     parser.add_argument("--results_dir", action="store", default="./temp",
                         help="Folder where the generated metrics will be stored")
     parser.add_argument("--n_layers", type=int, default=2, required=False,
-                        help="Number of layers in GCN (includes output, but excludes input)")
+                        help="Number of GCN layers  (includes output, but excludes input)")
+    parser.add_argument("--n_sub_layers", type=int, default=1, required=False,
+                        help="Number of layers within each GCN layer "
+                             "(the last sub-layer of last GCN layer will not have any activation)")
     parser.add_argument("--n_neurons_per_layer", type=int, default=10, required=False,
                         help="Number of neurons in each *hidden* GCN layer. "
                              "For the output layer, this will be set to the number of classes.")
@@ -1079,6 +1138,7 @@ class GcnOpts(object):
         self.dataset = args.dataset
         self.results_dir = args.results_dir
         self.n_layers = args.n_layers
+        self.n_sub_layers = args.n_sub_layers
         self.n_neurons_per_layer = args.n_neurons_per_layer
         self.activation_type = args.activation_type
         self.learning_rate = args.learning_rate
@@ -1101,10 +1161,10 @@ class GcnOpts(object):
         self.convergence_tol = 1e-4
 
     def get_opts_name_prefix(self):
-        gcn_sig = "%s_l%d_n%d_%s_r%0.3f_p%0.4f" % \
+        gcn_sig = "%s_l%ds%d_n%d_%s_r%0.3f_p%0.4f" % \
                   ("egcn_m%d" % self.n_estimators if self.ensemble else "gcn",
-                   self.n_layers, self.n_neurons_per_layer, self.activation_type,
-                   self.learning_rate, self.l2_lambda)
+                   self.n_layers, self.n_sub_layers, self.n_neurons_per_layer,
+                   self.activation_type, self.learning_rate, self.l2_lambda)
         gcn_sig = gcn_sig.replace(".", "")
         adversarial_sig = "_adv_v%d_s%d_pe%0.2f" % (self.n_vulnerable,
                                                     self.n_sample_neighbors,

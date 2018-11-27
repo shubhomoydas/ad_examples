@@ -467,6 +467,22 @@ def plot_model_diagnostics(attack_model, target_nodes, attack_nodes, attack_deta
     dp.close()
 
 
+def test_create_gcn_default(opts):
+    x, y, y_orig, A = read_datasets_for_illustration(opts)
+
+    # Number of classes includes the '0' class and excludes all marked '-1' i.e., unlabeled.
+    n_classes = np.max(y) + 1  # len(np.unique(y[y >= 0]))
+    logger.debug("n_classes: %d" % n_classes)
+
+    gcn = create_gcn_default(input_shape=x.shape, n_classes=n_classes, opts=opts)
+
+    if True:
+        gcn.fit(x, y, A)
+
+        f1 = gcn.get_f1_score(y_orig)
+        logger.debug("f1 score: %f" % f1)
+
+
 def test_neighbor_gradients(opts):
 
     x, y, y_orig, A = read_datasets_for_illustration(opts)

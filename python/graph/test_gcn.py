@@ -7,7 +7,7 @@ from common.gen_samples import *
 from .simple_gcn import SimpleGCNAttack, AdversarialUpdater, set_random_seeds, \
     get_gcn_option_list, GcnOpts, GraphAdjacency, create_gcn_default
 from .gcn_test_support import read_datasets_for_illustration, get_target_and_attack_nodes, \
-    plot_graph, gradients_to_arrow_texts, nodes_to_arrow_texts, \
+    plot_graph, gradients_to_arrow_texts, nodes_to_arrow_texts, test_create_gcn_default, \
     test_edge_sample, test_tensorflow_array_differentiation, test_marked_nodes, \
     test_neighbor_gradients, test_robust_training_helper, plot_model_diagnostics
 
@@ -89,6 +89,7 @@ if __name__ == "__main__":
     # test_tensorflow_array_differentiation()
     # test_marked_nodes(opts)
     # test_edge_sample(opts)
+    # test_create_gcn_default(opts)
     # test_neighbor_gradients(opts)
     # test_robust_training_helper(opts)
     test_gcn(opts)
