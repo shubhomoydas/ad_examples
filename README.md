@@ -477,7 +477,7 @@ Robustness with adversarial training
 ------------------------------------
 Most adversarial attacks assume that the model will not be retrained soon (whether or not this is true, is anyone's guess). The attacks are then carried out with the model parameters kept fixed after initial training. The effect of the attack modification might be nullified when the model is retrained even after the attack modifications. To make the model robust, we could then try introducing the adversarial perturbations during training.
 
-For this, one approach might involve the following in each training iteration:
+For this, one approach might be to train the GCN in the following manner in each epoch: with probability `1 - perturb_prob` train as usual; and with `perturb_prob` perform the following:
   1. Select the most uncertain instances as targets
   2. Treat a subset of their neighboring nodes as attackers
   3. Find the best attack node for each target and compute the corresponding attack node gradient (i.e., gradient of difference between logits of the best and second-best target node labels)
@@ -486,7 +486,7 @@ For this, one approach might involve the following in each training iteration:
 
 The below command executes this approach and the corresponding results are plotted below.
 
-    pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --adversarial_train --n_vulnerable=25 --n_sample_neighbors=3 --perturb_epsilon=0.2
+    pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --adversarial_train --n_vulnerable=25 --n_sample_neighbors=3 --perturb_prob=0.1 --perturb_epsilon=0.2
 
 **Important:** The approach mentioned here is **EXPERIMENTAL**. There are possibly many other principled ways to implement robustness. The objective here is to make APIs available in order to try out various techniques. Other techniques include:
   1. Random perturbations to the uncertain nodes/edges
