@@ -222,10 +222,9 @@ class AdversarialUpdater(SampleUpdater):
 
             best_attacks_for_each_target = self.attack_model.suggest_nodes([test_node], neighbor_nodes)
             best, feature_grads = best_attacks_for_each_target[0]
-            if best is not None:
-                target_node, old_label, attack_node, feature, grads = best
-                if attack_node not in update_nodes:
-                    update_nodes[attack_node] = (attack_node, grads)
+            target_node, old_label, attack_node, feature, grads = best
+            if attack_node is not None and attack_node not in update_nodes:
+                update_nodes[attack_node] = (attack_node, grads)
         # logger.debug(tm.message("get_nodes_for_update()"))
         return update_nodes.values()
 
@@ -565,6 +564,12 @@ class SimpleGCN(object):
         return {self.A_hat: self.fit_A_hat}
 
     def if_perturb(self):
+        """ Checks whether the sample should be perturbed
+
+        IMPORTANT: This is a stochastic function! Each call to this could potentially
+        return a different result. When calling this in a training epoch, make sure
+        to store the result into a variable if the same value needs to be used later.
+        """
         if isinstance(self.sample_updater, NoopSampleUpdater):
             return False
         s = np.random.binomial(1, self.opts.perturb_prob, 1)[0]
@@ -933,7 +938,10 @@ class SimpleGCNAttack(object):
             old_label = best_label[target_node]
             new_label = second_best_label[target_node]
         best_grad = 0.0
-        best_attack_node_details = None
+
+        # initially, no attack node found for the target node...
+        best_attack_node_details = (target_node, old_label, None, None, None)
+
         all_attack_node_gradients = []
         for attack_node in attack_nodes:
             best_feature, feature_grads = self.suggest_node_feature(target_node, attack_node, old_label, new_label)

@@ -517,14 +517,16 @@ def test_neighbor_gradients(opts):
 
         all_attack_details = []
         for best, feature_grads in best_attacks_for_each_target:
-            if best is not None:
-                target_node, old_label, attack_node, feature, grads = best
+            target_node, old_label, attack_node, feature, grads = best
+            if attack_node is not None:
                 mod_node = (target_node, old_label, attack_node, None)
                 all_attack_details.append((mod_node, feature_grads))
-        logger.debug(tm.message("[%d/%d] node: %d, #neighbors: %d" %
+            else:
+                logger.debug("No attack node found for a target node %d (%s)" % (target_node, str(x[target_node, :])))
+        logger.debug(tm.message("[%d/%d] node: %d, #neighbors: %d; time" %
                                 (i+1, len(test_nodes), test_node, len(neighbor_nodes))))
         fsig = opts.get_opts_name_prefix()
-        pdfpath = "%s/%s_vulnerable_nodes_%d.pdf" % (opts.results_dir, fsig, i)
+        pdfpath = "%s/%s_vulnerable_nodes_%d.pdf" % (opts.results_dir, fsig, i+1)
         plot_model_diagnostics(attack_model, target_nodes=[test_node],
                                attack_nodes=neighbor_nodes,
                                attack_details=all_attack_details,

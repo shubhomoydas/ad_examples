@@ -43,10 +43,14 @@ def test_gcn(opts):
         attack_model = SimpleGCNAttack(gcn=gcn)
         best_attacks_for_each_target = attack_model.suggest_nodes(target_nodes, attack_nodes)
 
+        if best_attacks_for_each_target is None or len(best_attacks_for_each_target) == 0:
+            logger.debug("No suitable attack vectors were found...")
+            print("No suitable attack vectors were found...")
+
         all_attack_details = []
         for best, feature_grads in best_attacks_for_each_target:
-            if best is not None:
-                target_node, old_label, attack_node, feature, grads = best
+            target_node, old_label, attack_node, feature, grads = best
+            if attack_node is not None:
                 search_direction = np.zeros(grads.shape, dtype=grads.dtype)
                 if search_along_max_grad_feature:
                     # as in nettack paper (Zugner et al., 2018)
@@ -61,6 +65,10 @@ def test_gcn(opts):
                 if mod_val is not None:
                     logger.debug("Suggested node: %d, feature: %d, grads: %s" % (attack_node, feature, grads))
                 all_attack_details.append((mod_node, feature_grads))
+            else:
+                logger.debug("No attack node found for a target node %d (%s)" % (target_node, str(x[target_node, :])))
+                print("No attack node found for a target node %d (%s)" % (target_node, str(x[target_node, :])))
+
         if opts.plot and x.shape[1] == 2:  # plot only if 2D dataset
             fsig = opts.get_opts_name_prefix()
             pdfpath = "%s/%s.pdf" % (opts.results_dir, fsig)
@@ -90,6 +98,6 @@ if __name__ == "__main__":
     # test_marked_nodes(opts)
     # test_edge_sample(opts)
     # test_create_gcn_default(opts)
-    # test_neighbor_gradients(opts)
+    test_neighbor_gradients(opts)
     # test_robust_training_helper(opts)
-    test_gcn(opts)
+    # test_gcn(opts)
