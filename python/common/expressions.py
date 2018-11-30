@@ -917,9 +917,12 @@ class ConjunctiveRule(object):
         return ConjunctiveRule(predicates, meta)
 
     def evaluate_inst(self, inst, label):
+        """ Checks if the instance satisfies all the predicates (i.e., 'And') """
         result = True
-        for predicate in self.predicates:
-            result = result and predicate.evaluate(inst, label, self.meta)
+        i = 0
+        while result and i < len(self.predicates):
+            result = result and self.predicates[i].evaluate(inst, label, self.meta)
+            i += 1
         return result
 
     def where_satisfied(self, insts, labels):
@@ -1123,18 +1126,40 @@ def test_rule_apis():
     """
 
     predicate_strs = [
+        # internal representation:
+        #   CmpEq(Var(label<-1>), Lit(0.0<0>))
+        # Var(label<-1>) : <-1> means that the variable 'label' is not a regular feature
+        # Lit(0.0<0>) : the label '0' got changed to 0.0 because it was numeric.
+        #     To make label '0', change the label to string.
+        #     <0> means that '0' is at the 0-th position of the label Factor
         "label = 0",  # all 0 labeled
+
+        # internal representation:
+        #   CmpEq(Var(label<-1>), Lit(1.0<1>))
         "label = 1",  # all 1 labeled
+
+        # internal representation:
+        #   And(Or(Or(CmpGE(Var(F1<0>), Lit(0.0<-1>)), CmpLr(Var(F2<1>), Lit(2.0<-1>))), CmpLr(Var(F1<0>), Lit(-5.0<-1>))), CmpGr(Var(F2<1>), Lit(0.0<-1>)))
+        # Var(F1<0>) : feature 'F1' is the 0-th feature
+        # Var(F2<1>) : feature 'F1' is the 1-st feature
+        # Lit(0.0<-1>) : <-1> here means 0.0 is numeric, and not categorical
+        # ... and so on ...
         "(F1 >= 0 | F2 < 2 | F1 < -5) & F2 > 0",  # just an arbitrary predicate
+
+        # internal representation:
+        #   Or(Not(CmpGE(Var(F2<1>), Lit(2.0<-1>))), CmpEq(Var(label<-1>), Lit(1.0<1>)))
         "(~(F2 >= 2) | (label = 1))",  # a Horn clause: (F2 >= 2) => (label = 1)
+
+        # internal representation:
+        #   And(And(And(CmpGE(Var(F1<0>), Lit(1.0<-1>)), CmpLr(Var(F1<0>), Lit(5.0<-1>))), CmpGE(Var(F2<1>), Lit(0.0<-1>))), CmpLr(Var(F2<1>), Lit(6.0<-1>)))
         "F1 >= 1 & F1 < 5 & (F2 >= 0) & (F2 < 6)",  # conjunctive predicate
     ]
 
     for predicate_str in predicate_strs:
         predicate = parser.parse(predicate_str)
-        predicate.compile(meta)
+        predicate.compile(meta)  # bind feature indexes to feature names
         matches = evaluate_instances_for_predicate(predicate, x, y, meta)
-        print("%s matched: %d" % (predicate.expr(meta), len(matches)))
+        print("%s matched: %d\n  repr: %s" % (predicate.expr(meta), len(matches), str(predicate)))
 
     # the rule(s) below are conjunctive
     # conjunctive_str = "(F1 >= 1) & (F1 < 5) & (F2 >= 0) & (F2 < 6)"
