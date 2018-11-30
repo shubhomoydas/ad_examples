@@ -19,8 +19,8 @@ Reference:
     
 This code is based on: https://github.com/zli37/bayesianRuleSet
 
-Bugs in this adaptation, if any, were introduced entirely during the
-adaptation and are *NOT* due to the original authors Want, Tong, et al.
+Bugs in *this* adaptation, if any, were introduced entirely during the
+adaptation and are *NOT* due to the original authors Wang, Rudin, et al.
 
 To run tests:
     pythonw -m bayesian_ruleset.bayesian_ruleset --log_file=./temp/bayesian_ruleset.log --debug
