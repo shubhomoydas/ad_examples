@@ -235,7 +235,8 @@ def test_aad_rules(opts):
         path = os.path.join(opts.resultsdir, "%s_rulesets.pdf" % opts.dataset)
         dp = DataPlotter(pdfpath=path, rows=2, cols=2, save_tight=True)
         plot_selected_regions(x, y, regions=top_ranges, query_instances=queried,
-                              title="Candidate Regions (Most Anomalous)\nAfter AAD (budget: %d)" % opts.budget, dp=dp)
+                              title="Candidate Regions (Most Anomalous)\nAfter AAD (budget: %d, #regions: %d)" %
+                                    (opts.budget, len(top_ranges)), dp=dp)
         plot_selected_regions(x, y, regions=compact_ranges, query_instances=queried,
                               title="Compact Descriptions\nMinimum volume subspaces", dp=dp)
         plot_selected_regions(x, y, regions=bayesian_ruleset_ranges, query_instances=queried,
