@@ -1,10 +1,7 @@
 from common.gen_samples import *
-from common.expressions import *
 from .aad_globals import *
-from aad.forest_description import get_regions_for_description, is_forest_detector
 from .demo_aad import detect_anomalies_and_describe
-from bayesian_ruleset.bayesian_ruleset import BayesianRuleset, get_max_len_in_rules
-
+from .aad_ruleset_support import *
 
 """
 pythonw -m aad.test_rulesets
@@ -40,44 +37,6 @@ def get_debug_args(budget=30, detector_type=AAD_IFOREST):
             "--resultsdir=./temp",
             "--log_file=./temp/test_rulesets.log",
             "--debug"]
-
-
-def get_top_regions(x, instance_indexes=None, model=None, opts=None):
-    """ Gets the regions having highest anomaly scores
-
-    :param x: np.ndarray
-        The instance matrix with ALL instances
-    :param instance_indexes: np.array(dtype=int)
-        Indexes for the instances which need to be described
-    :param model: Aad
-        Trained Aad model
-    :param opts: AadOpts
-    :return: tuple, list(map)
-        tuple: (region indexes, #instances among instance_indexes that fall in the region)
-        list(map): list of region extents where each region extent is a
-            map {feature index: feature range}
-    """
-    if not is_forest_detector(opts.detector_type):
-        raise ValueError("Descriptions only supported by forest-based detectors")
-
-    # get top region indexes which will be candidates for rule sets
-    reg_idxs = get_regions_for_description(x, instance_indexes=instance_indexes,
-                                           model=model, n_top=opts.describe_n_top)
-    desc_regions = [model.all_regions[ridx].region for ridx in reg_idxs]
-    return reg_idxs, desc_regions
-
-
-def test_rulesets(x, y, meta, region_extents=None, str_rules=None, opts=None):
-    if region_extents is not None:
-        rules, str_rules = convert_feature_ranges_to_rules(region_extents, meta)
-    else:
-        rules = convert_strings_to_conjunctive_rules(str_rules, meta)
-    for i, rule in enumerate(rules):
-        idxs = rule.where_satisfied(x, y)
-        rule.set_confusion_matrix(idxs, y)
-        n_anom = np.sum(y[idxs])
-        logger.debug("Rule %d: %d/%d; %s" % (i, n_anom, len(idxs), str(rule)))
-    return rules, [str(rule) for rule in rules]
 
 
 def plot_selected_regions(x, y, regions, query_instances=None,
@@ -117,42 +76,6 @@ def plot_rule_annotations(str_compact_rules, str_bayesian_rules, dp):
             fontsize=4, color="black")
 
 
-def get_subset_for_rule_mining(x, y, must_include=None, frac_more=1.0, negative_label=0):
-    """ Returns a subset of instances
-
-    The output will set the labels of must_include instances to
-    the original labels. Labels on other sampled instances will
-    be assumed to be the negative class.
-
-    The returned instances will be input to a fully supervised;
-    therefore, we are assigning the negative class to unlabeled
-    instances. We assume that labeling instances as negative
-    (i.e., nominal) is reasonable for anomaly detection.
-
-    :param x:
-    :param y:
-    :param must_include:
-    :param frac_more:
-    :param negative_label:
-    :return:
-    """
-    idxs = np.zeros(len(y), dtype=np.int32)
-    idxs[must_include] = 1
-    idxs_to_select = np.where(idxs == 0)[0]
-    np.random.shuffle(idxs_to_select)
-    n_more = min(len(idxs_to_select), int(len(must_include) * frac_more))
-    more_select = idxs_to_select[:n_more]
-    selected = list(must_include)
-    selected.extend(more_select)
-
-    # assume that labels of must_select instances are known,
-    # while others are negative
-    y_o = np.ones(len(y), dtype=y.dtype) * negative_label
-    y_o[must_include] = y[must_include]
-
-    return x[selected], y_o[selected]
-
-
 def test_aad_rules(opts):
 
     plot = True
@@ -167,6 +90,7 @@ def test_aad_rules(opts):
     file_path_top = os.path.join(opts.resultsdir, "%s_top_rules.txt" % opts.dataset)
     file_path_bayesian = os.path.join(opts.resultsdir, "%s_bayesian_rules.txt" % opts.dataset)
     file_path_queried = os.path.join(opts.resultsdir, "%s_queried.txt" % opts.dataset)
+
     load_rules_from_file = (os.path.isfile(file_path_compact)
                             and os.path.isfile(file_path_top)
                             and os.path.isfile(file_path_queried))
@@ -174,58 +98,43 @@ def test_aad_rules(opts):
     if not load_rules_from_file:
         logger.debug("Rules file(s) not found ... regenerating rules")
 
-        model, x_transformed, queried, ridxs_counts, region_extents_compact = \
-            detect_anomalies_and_describe(x, y, opts)
-        queried = np.array(queried, dtype=np.int32)
+        # reuse code from demo_aad.py
+        model, _, queried, _, _ = detect_anomalies_and_describe(x, y, opts)
 
-        ha = queried[np.where(y[queried] == 1)[0]]
-        _, region_extents_top = get_top_regions(x, ha, model, opts)
+        # we will recompute the Bayesian ruleset every time just for DEBUG
+        r_top, r_compact, _ = get_rulesets(x, y, queried=queried, model=model,
+                                           meta=meta, opts=opts, bayesian=False)
 
-        rules_compact, str_compact_rules = test_rulesets(x, y, meta=meta, region_extents=region_extents_compact, opts=opts)
-        save_strings_to_file(str_compact_rules, file_path_compact)
+        rules_top, regions_top, str_rules_top = r_top
+        rules_compact, regions_compact, str_rules_compact = r_compact
 
-        rules_top, str_top_rules = test_rulesets(x, y, meta=meta, region_extents=region_extents_top, opts=opts)
-        save_strings_to_file(str_top_rules, file_path_top)
+        save_strings_to_file(str_rules_compact, file_path_compact)
+        save_strings_to_file(str_rules_top, file_path_top)
 
         save_strings_to_file([",".join([str(v) for v in queried])], file_path_queried)
     else:
         logger.debug("Rules file(s) found ... reading rules from file")
 
-        str_compact_rules = load_strings_from_file(file_path_compact)
-        str_top_rules = load_strings_from_file(file_path_top)
+        str_rules_top = load_strings_from_file(file_path_top)
+        str_rules_compact = load_strings_from_file(file_path_compact)
         str_queried = load_strings_from_file(file_path_queried)[0]
 
         queried = [int(v) for v in str_queried.split(",")]
         logger.debug("queried:\n%s" % str(queried))
-        rules_compact, str_compact_rules = test_rulesets(x, y, meta=meta, str_rules=str_compact_rules, opts=opts)
-        rules_top, str_top_rules = test_rulesets(x, y, meta=meta, str_rules=str_top_rules, opts=opts)
+        rules_compact, str_rules_compact = prepare_conjunctive_rulesets(x, y, meta=meta, str_rules=str_rules_compact, opts=opts)
+        rules_top, str_rules_top = prepare_conjunctive_rulesets(x, y, meta=meta, str_rules=str_rules_top, opts=opts)
 
-    compact_ranges = convert_conjunctive_rules_to_feature_ranges(rules_compact, meta)
-    top_ranges = convert_conjunctive_rules_to_feature_ranges(rules_top, meta)
+        regions_top = convert_conjunctive_rules_to_feature_ranges(rules_top, meta)
+        regions_compact = convert_conjunctive_rules_to_feature_ranges(rules_compact, meta)
 
-    logger.debug("Compact ranges:\n%s" % str(compact_ranges))
-    logger.debug("Top ranges:\n%s" % str(top_ranges))
+    logger.debug("Top regions:\n%s" % str(regions_top))
+    logger.debug("Compact regions:\n%s" % str(regions_compact))
 
-    # rules = rules_compact
-    rules = rules_top
+    rules_bayesian, regions_bayesian, str_rules_bayesian = get_bayesian_rulesets(x, y, queried, rules_top, meta, opts)
+    logger.debug("Bayesian regions:\n%s" % str(regions_bayesian))
+    logger.debug("Bayesian ruleset:\n  %s" % "\n  ".join(str_rules_bayesian))
 
-    x_br, y_br = get_subset_for_rule_mining(x, y, queried, frac_more=1.0)
-
-    br = BayesianRuleset(meta=meta, opts=None,  max_iter=200,
-                         maxlen=get_max_len_in_rules(rules),
-                         n_min_support_stop=int(0.1 * len(y_br)))
-    br.fit(x_br, y_br, rules)
-
-    logger.debug("predicted_rules:")
-    for idx in br.predicted_rules:
-        logger.debug("rule %d: %s" % (idx, str(br.rules[idx])))
-
-    rules_bayesian = [br.rules[idx] for idx in br.predicted_rules]
-    str_bayesian_rules = convert_conjunctive_rules_to_strings(rules_bayesian)
-    save_strings_to_file(str_bayesian_rules, file_path_bayesian)
-
-    bayesian_ruleset_ranges = convert_conjunctive_rules_to_feature_ranges(rules_bayesian, meta)
-    logger.debug("Predicted ranges:\n%s" % str(bayesian_ruleset_ranges))
+    save_strings_to_file(str_rules_bayesian, file_path_bayesian)
 
     f1_compact = evaluate_ruleset(x, y, rules_compact, average="weighted")
     f1_bayesian = evaluate_ruleset(x, y, rules_bayesian, average="weighted")
@@ -234,15 +143,15 @@ def test_aad_rules(opts):
     if plot:
         path = os.path.join(opts.resultsdir, "%s_rulesets.pdf" % opts.dataset)
         dp = DataPlotter(pdfpath=path, rows=2, cols=2, save_tight=True)
-        plot_selected_regions(x, y, regions=top_ranges, query_instances=queried,
+        plot_selected_regions(x, y, regions=regions_top, query_instances=queried,
                               title="Candidate Regions (Most Anomalous)\nAfter AAD (budget: %d, #regions: %d)" %
-                                    (opts.budget, len(top_ranges)), dp=dp)
-        plot_selected_regions(x, y, regions=compact_ranges, query_instances=queried,
+                                    (opts.budget, len(regions_top)), dp=dp)
+        plot_selected_regions(x, y, regions=regions_compact, query_instances=queried,
                               title="Compact Descriptions\nMinimum volume subspaces", dp=dp)
-        plot_selected_regions(x, y, regions=bayesian_ruleset_ranges, query_instances=queried,
+        plot_selected_regions(x, y, regions=regions_bayesian, query_instances=queried,
                               title="Bayesian Rulesets\nWang, Rudin, et al. (2016)", dp=dp)
         # plot the inferred rules
-        plot_rule_annotations(str_compact_rules, str_bayesian_rules, dp)
+        plot_rule_annotations(str_rules_compact, str_rules_bayesian, dp)
         dp.close()
 
 
