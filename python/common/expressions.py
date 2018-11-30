@@ -1055,9 +1055,29 @@ def get_rule_satisfaction_matrix(x, y, rules):
     return satisfaction_matrix
 
 
+def check_if_at_least_one_rule_satisfied(x, y, rules):
+    """ For each input instance, check if it satisfies at least one rule
+
+    Basically performs a disjunction of rules.
+    Can be applied to rules in DNF format.
+
+    :param x: np.ndarray
+    :param y: np.array
+        This could be None if unsupervised and if it is not required to evaluate any rule
+    :param rules: list of rules
+    :return: np.array
+        Binary indicator for each instance
+    """
+    sat_vec = np.zeros(x.shape[0], dtype=np.int32)
+    for rule in rules:
+        idxs = rule.where_satisfied(x, y)
+        sat_vec[idxs] += 1
+    return np.minimum(sat_vec, 1)
+
+
 def evaluate_ruleset(x, y, rules, average="binary"):
-    r_mat = get_rule_satisfaction_matrix(x, y, rules)
-    y_hat = np.minimum(np.sum(r_mat, axis=1), 1)
+    """ For each input instance, check if it satisfies at least one rule and computes F1 """
+    y_hat = check_if_at_least_one_rule_satisfied(x, y, rules)
     f1 = f1_score(y_true=y, y_pred=y_hat, average=average)
     return f1
 

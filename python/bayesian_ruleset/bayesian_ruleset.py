@@ -14,7 +14,7 @@ from common.utils import logger, get_command_args, configure_logger
 Bayesian Rule Set mining By Tong Wang and Peter (Zhen) Li
 
 Reference:
-    Tong, Rudin, et al. "Bayesian rule sets for interpretable classification." 
+    Wang, Rudin, et al. "Bayesian rule sets for interpretable classification." 
     Data Mining (ICDM), 2016 IEEE 16th International Conference on. IEEE, 2016.
     
 This code is based on: https://github.com/zli37/bayesianRuleSet
@@ -82,7 +82,7 @@ class BayesianRuleset(object):
         https://github.com/zli37/bayesianRuleSet
 
     Reference:
-        Tong, Rudin, et al. "Bayesian rule sets for interpretable classification."
+        Wang, Rudin, et al. "Bayesian rule sets for interpretable classification."
         Data Mining (ICDM), 2016 IEEE 16th International Conference on. IEEE, 2016.
     """
     def __init__(self, meta=None, opts=None,
