@@ -1149,7 +1149,7 @@ def test_rule_apis():
         # internal representation:
         #   And(Or(Or(CmpGE(Var(F1<0>), Lit(0.0<-1>)), CmpLr(Var(F2<1>), Lit(2.0<-1>))), CmpLr(Var(F1<0>), Lit(-5.0<-1>))), CmpGr(Var(F2<1>), Lit(0.0<-1>)))
         # Var(F1<0>) : feature 'F1' is the 0-th feature
-        # Var(F2<1>) : feature 'F1' is the 1-st feature
+        # Var(F2<1>) : feature 'F2' is the 1-st feature
         # Lit(0.0<-1>) : <-1> here means 0.0 is numeric, and not categorical
         # ... and so on ...
         "(F1 >= 0 | F2 < 2 | F1 < -5) & F2 > 0",  # just an arbitrary predicate
