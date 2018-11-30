@@ -77,7 +77,7 @@ def test_rulesets(x, y, meta, region_extents=None, str_rules=None, opts=None):
         rule.set_confusion_matrix(idxs, y)
         n_anom = np.sum(y[idxs])
         logger.debug("Rule %d: %d/%d; %s" % (i, n_anom, len(idxs), str(rule)))
-    return rules, str_rules
+    return rules, [str(rule) for rule in rules]
 
 
 def plot_selected_regions(x, y, regions, query_instances=None,
@@ -111,10 +111,10 @@ def plot_rule_annotations(str_compact_rules, str_bayesian_rules, dp):
     plt.yticks([])
     plt.xlim([0, 1])
     plt.ylim([-2, 2])
-    pl.text(0.01, 1, r"${\bf Compact Descriptions:}$" + "\n  " + "\n  ".join(str_compact_rules),
-            fontsize=5, color="black")
-    pl.text(0.01, -1, r"${\bf Bayesian Rulesets:}$" + "\n  " + "\n  ".join(str_bayesian_rules),
-            fontsize=5, color="black")
+    pl.text(0.01, 1, r"${\bf Compact\ Descriptions:}$ Predict 'anomaly' if:" + "\n " + "\n or ".join(str_compact_rules),
+            fontsize=4, color="black")
+    pl.text(0.01, -1, r"${\bf Bayesian\ Rulesets:}$ Predict 'anomaly' if:" + "\n " + "\n or ".join(str_bayesian_rules),
+            fontsize=4, color="black")
 
 
 def get_subset_for_rule_mining(x, y, must_include=None, frac_more=1.0, negative_label=0):
@@ -197,8 +197,8 @@ def test_aad_rules(opts):
 
         queried = [int(v) for v in str_queried.split(",")]
         logger.debug("queried:\n%s" % str(queried))
-        rules_compact, _ = test_rulesets(x, y, meta=meta, str_rules=str_compact_rules, opts=opts)
-        rules_top, _ = test_rulesets(x, y, meta=meta, str_rules=str_top_rules, opts=opts)
+        rules_compact, str_compact_rules = test_rulesets(x, y, meta=meta, str_rules=str_compact_rules, opts=opts)
+        rules_top, str_top_rules = test_rulesets(x, y, meta=meta, str_rules=str_top_rules, opts=opts)
 
     compact_ranges = convert_conjunctive_rules_to_feature_ranges(rules_compact, meta)
     top_ranges = convert_conjunctive_rules_to_feature_ranges(rules_top, meta)
