@@ -220,11 +220,16 @@ def test_aad_rules(opts):
     for idx in br.predicted_rules:
         logger.debug("rule %d: %s" % (idx, str(br.rules[idx])))
 
-    str_bayesian_rules = convert_conjunctive_rules_to_strings([br.rules[idx] for idx in br.predicted_rules])
+    rules_bayesian = [br.rules[idx] for idx in br.predicted_rules]
+    str_bayesian_rules = convert_conjunctive_rules_to_strings(rules_bayesian)
     save_strings_to_file(str_bayesian_rules, file_path_bayesian)
 
-    bayesian_ruleset_ranges = convert_conjunctive_rules_to_feature_ranges([br.rules[idx] for idx in br.predicted_rules], meta)
+    bayesian_ruleset_ranges = convert_conjunctive_rules_to_feature_ranges(rules_bayesian, meta)
     logger.debug("Predicted ranges:\n%s" % str(bayesian_ruleset_ranges))
+
+    f1_compact = evaluate_ruleset(x, y, rules_compact, average="weighted")
+    f1_bayesian = evaluate_ruleset(x, y, rules_bayesian, average="weighted")
+    print("F1 scores: compact descriptions: %f; bayesian: %f" % (f1_compact, f1_bayesian))
 
     if plot:
         path = os.path.join(opts.resultsdir, "%s_rulesets.pdf" % opts.dataset)

@@ -2,6 +2,7 @@ import tokenize
 import re
 import os
 import numpy as np
+from sklearn.metrics import f1_score
 
 """
 General Rule-parsing functions. We might use only a subset of the features available.
@@ -1052,6 +1053,13 @@ def get_rule_satisfaction_matrix(x, y, rules):
         idxs = rule.where_satisfied(x, y)
         satisfaction_matrix[idxs, i] = 1
     return satisfaction_matrix
+
+
+def evaluate_ruleset(x, y, rules, average="binary"):
+    r_mat = get_rule_satisfaction_matrix(x, y, rules)
+    y_hat = np.minimum(np.sum(r_mat, axis=1), 1)
+    f1 = f1_score(y_true=y, y_pred=y_hat, average=average)
+    return f1
 
 
 def save_strings_to_file(strs, file_path):
