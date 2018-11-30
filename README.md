@@ -51,6 +51,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
       - [Cite this work](#cite-this-work)
       - **Jump right in:** [General instructions on running AAD](#running-aad)
       - **Explanations and Interpretability:** [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
+      - [Bayesian Rulesets with AAD](#bayesian-rulesets-with-aad)
       - **Query strategies:** [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
       - **GLAD: GLocalized Anomaly Detection** ([glad_batch.py](python/glad/glad_batch.py))
         - [Approach and architecture](#glocalized-anomaly-detection)
@@ -252,9 +253,25 @@ To generate the below, use the command:
 ![Descriptions](figures/aad/description.png)
 
 
+Bayesian Rulesets with AAD
+-------------------------------------------
+As we saw above, AAD helped infer the true relevance of subspaces and the most relevant subspaces were then employed as candidates for compact descriptions. This approach can be applied with other rule-mining algorithms such as (Wang, Rudin, et al. 2016) as well. (Wang, Rudin, et al. 2016) is a supervised algorithm that is first initialized with a [modestly] large set of classification rules. It then infers a much smaller subset of interpretable rules from the initial set of rules using a Bayesian framework. We will refer to these rules as **Bayesian Rulesets** (in contrast with our *Compact Descriptions*). The following command generates the plots below and illustrates both *Compact Descriptions* and *Bayesian Rulesets*. Here, we first run AAD with a budget of 30 and retrieve the top subspaces which cover all *discovered* anomalies. These subspaces (top left plot) are used as candidates for both *Compact Descriptions* (top right plot) as well as *Bayesian Rulesets* (bottom left plot). The discovered rules which imply **Anomaly** are shown in the bottom right plot. Since *Bayesian Rulesets* is supervised, we take the set of queried instances, and another set of randomly sampled unlabeled instances (having same size as queried) as the training set. The sampled unlabeled instances selected for training are assumed to be **nominal**.
+
+    pythonw -m aad.test_rulesets
+
+![Bayesian Rulesets](figures/aad/rulesets.png)
+
+**Rule expressions**
+
+The codebase encapsulates predicate based rules into the `Predicate` class in `common/expressions.py`. The conjunctive rules are composed of a series of `Predicate`s, and operations on these are encapsulated in `ConjunctiveRule`. In order to understand and debug these data structures, please see `test_rule_apis()` in `common/expressions.py`.
+
+**Reference(s)**:
+  - Wang, T., Rudin, C., Velez-Doshi, F., Liu, Y., Klampfl, E., MacNeille, P. (2016). *Bayesian Rule Sets for Interpretable Classification* in the Proceedings of the IEEE International Conference on Data Mining.
+
+
 Applications of compact descriptions
 ------------------------------------
-Compact descriptions have multiple uses including:
+Compact descriptions (or Bayesian rulesets) have multiple uses including:
   - Discovery of diverse classes of anomalies very quickly by querying instances from different subspaces of the description
   - Improved interpretability and explainability of anomalous instances
 

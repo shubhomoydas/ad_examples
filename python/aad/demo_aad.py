@@ -137,12 +137,15 @@ def detect_anomalies_and_describe(x, y, opts):
     print("AAD found:\n%s" % (str(list(found))))
 
     # generate compact descriptions for the detected anomalies
+    ridxs_counts, region_extents = None, None
     if len(ha) > 0:
         ridxs_counts, region_extents = describe_instances(x, np.array(ha), model=model, opts=opts)
         logger.debug("selected region indexes and corresponding instance counts (among %d):\n%s" %
                      (len(ha), str(list(ridxs_counts))))
         logger.debug("region_extents: these are of the form [{feature_index: (feature range), ...}, ...]\n%s" %
                      (str(region_extents)))
+
+    return model, x_transformed, queried, ridxs_counts, region_extents
 
 
 if __name__ == "__main__":
