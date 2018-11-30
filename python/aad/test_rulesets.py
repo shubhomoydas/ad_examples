@@ -234,7 +234,7 @@ def test_aad_rules(opts):
         plot_selected_regions(x, y, regions=compact_ranges, query_instances=queried,
                               title="Compact Descriptions\nMinimum volume subspaces", dp=dp)
         plot_selected_regions(x, y, regions=bayesian_ruleset_ranges, query_instances=queried,
-                              title="Bayesian Rulesets\nTong, Rudin, et al. (2016)", dp=dp)
+                              title="Bayesian Rulesets\nWang, Rudin, et al. (2016)", dp=dp)
         # plot the inferred rules
         plot_rule_annotations(str_compact_rules, str_bayesian_rules, dp)
         dp.close()
