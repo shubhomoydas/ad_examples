@@ -396,7 +396,7 @@ MAX_WINDOWS=30
 TILL_BUDGET_IND=1
 ALLOW_STREAM_UPDATE_IND=1
 
-RULES_IND=1
+RULES_IND=0
 RULE_OUTPUT_INTERVAL="--rule_output_interval=5"
 if [[ "$RULES_IND" == "1" ]]; then
     COMPACT_RULES="--compact_rules"
