@@ -396,6 +396,16 @@ MAX_WINDOWS=30
 TILL_BUDGET_IND=1
 ALLOW_STREAM_UPDATE_IND=1
 
+RULES_IND=1
+RULE_OUTPUT_INTERVAL="--rule_output_interval=5"
+if [[ "$RULES_IND" == "1" ]]; then
+    COMPACT_RULES="--compact_rules"
+    BAYESIAN_RULES="--bayesian_rules"
+else
+    COMPACT_RULES=""
+    BAYESIAN_RULES=""
+fi
+
 # =====================================================
 # TREE_UPDATE_TYPE_VAL - applies only to HS Trees and RD Forest
 #   0 - Replace the old sample node counts with new
@@ -551,13 +561,19 @@ elif [[ "$STREAMING_IND" == "0" ]]; then
     STREAMING_FLAGS=
     PYSCRIPT=aad_batch.py
     PYMODULE=aad.aad_batch
-else
+elif [[ "$STREAMING_IND" == "2" ]]; then
     OPERATION="angles"
     STREAMING=""
     STREAMING_SIG=""
     STREAMING_FLAGS="_angle"
     PYSCRIPT=test_hyperplane_angles.py
     PYMODULE=aad.test_hyperplane_angles
+elif [[ "$STREAMING_IND" == "3" ]]; then
+    STREAMING=""
+    STREAMING_SIG=""
+    STREAMING_FLAGS=
+    PYSCRIPT=analyze_rules.py
+    PYMODULE=aad.analyze_rules
 fi
 
 # ===================================================================
@@ -649,4 +665,5 @@ ${PYTHON_CMD} ${SCRIPT_PATH} --startcol=$STARTCOL --labelindex=$LABELINDEX --hea
     ${CHECK_KL} --kl_alpha=${KL_ALPHA} \
     ${PRETRAIN} --n_pretrain=${N_PRETRAIN} --n_pretrain_nominals=${N_PRETRAIN_NOMINALS} \
     --n_weight_updates_after_stream_window=${N_WEIGHT_UPDATES_AFTER_STREAM} \
+    ${COMPACT_RULES} ${BAYESIAN_RULES} ${RULE_OUTPUT_INTERVAL} \
     ${PLOT2D} --debug

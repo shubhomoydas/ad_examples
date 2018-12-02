@@ -80,9 +80,10 @@ class AadForest(Aad, StreamingSupport):
                  tree_update_type=TREE_UPD_OVERWRITE,
                  tree_incremental_update_weight=0.5,
                  forest_replace_frac=0.2,
-                 feature_partitions=None):
+                 feature_partitions=None, event_listener=None):
 
-        Aad.__init__(self, detector_type, ensemble_score, random_state)
+        Aad.__init__(self, detector_type=detector_type, ensemble_score=ensemble_score,
+                     random_state=random_state, event_listener=event_listener)
 
         self.n_estimators = n_estimators
         self.max_samples = max_samples

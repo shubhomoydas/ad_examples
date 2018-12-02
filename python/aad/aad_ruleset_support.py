@@ -68,7 +68,7 @@ def prepare_conjunctive_rulesets(x, y, meta, region_extents=None, str_rules=None
         idxs = rule.where_satisfied(x, y)
         rule.set_confusion_matrix(idxs, y)
         n_anom = np.sum(y[idxs])
-        logger.debug("Rule %d: %d/%d; %s" % (i, n_anom, len(idxs), str(rule)))
+        # logger.debug("Rule %d: %d/%d; %s" % (i, n_anom, len(idxs), str(rule)))
     return rules, [str(rule) for rule in rules]
 
 
@@ -124,7 +124,8 @@ def get_bayesian_rulesets(x, y, queried, rules, meta, opts):
     regions_bayesian = convert_conjunctive_rules_to_feature_ranges(rules_bayesian, meta)
     str_rules_bayesian = convert_conjunctive_rules_to_strings(rules_bayesian)
 
-    return rules_bayesian, regions_bayesian, str_rules_bayesian
+    regids_bayesian = [rule.id for rule in rules_bayesian]
+    return rules_bayesian, regions_bayesian, str_rules_bayesian, regids_bayesian
 
 
 def get_rulesets(x, y, queried, model, meta, opts, bayesian=False):
@@ -134,8 +135,11 @@ def get_rulesets(x, y, queried, model, meta, opts, bayesian=False):
     queried = np.array(queried, dtype=np.int32)
     discovered_anomalies = queried[np.where(y[queried] == 1)[0]]
 
-    _, regions_top = get_top_regions(x, instance_indexes=discovered_anomalies, model=model, opts=opts)
-    _, regions_compact = get_compact_descriptions(x, instance_indexes=discovered_anomalies, model=model, opts=opts)
+    if len(discovered_anomalies) == 0:
+        return None, None, None
+
+    regids_top, regions_top = get_top_regions(x, instance_indexes=discovered_anomalies, model=model, opts=opts)
+    regids_compact, regions_compact = get_compact_descriptions(x, instance_indexes=discovered_anomalies, model=model, opts=opts)
 
     rules_top, str_rules_top = prepare_conjunctive_rulesets(x, y, meta=meta, region_extents=regions_top, opts=opts)
 
@@ -146,7 +150,7 @@ def get_rulesets(x, y, queried, model, meta, opts, bayesian=False):
     if bayesian:
         r_bayesian = get_bayesian_rulesets(x, y, queried, rules_top, meta, opts)
 
-    return ((rules_top, regions_top, str_rules_top),
-            (rules_compact, regions_compact, str_rules_compact),
+    return ((rules_top, regions_top, str_rules_top, regids_top),
+            (rules_compact, regions_compact, str_rules_compact, regids_compact),
             r_bayesian)
 

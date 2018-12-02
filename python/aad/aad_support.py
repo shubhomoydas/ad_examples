@@ -11,7 +11,7 @@ from aad.loda_aad import *
 from aad.precomputed_aad import *
 
 
-def get_aad_model(x, opts, random_state=None):
+def get_aad_model(x, opts, random_state=None, event_listener=None):
     if opts.detector_type == LODA:
         model = AadLoda(sparsity=opts.sparsity, mink=opts.mink, maxk=opts.maxk)
     elif is_forest_detector(opts.detector_type):
@@ -24,7 +24,8 @@ def get_aad_model(x, opts, random_state=None):
                           detector_type=opts.detector_type, n_jobs=opts.n_jobs,
                           tree_update_type=opts.tree_update_type,
                           forest_replace_frac=opts.forest_replace_frac,
-                          feature_partitions=opts.feature_partitions)
+                          feature_partitions=opts.feature_partitions,
+                          event_listener=event_listener)
     elif opts.detector_type == PRECOMPUTED_SCORES:
         model = AadPrecomputed(opts, random_state=random_state)
     else:

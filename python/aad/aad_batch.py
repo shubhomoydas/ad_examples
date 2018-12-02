@@ -12,6 +12,76 @@ from aad.aad_test_support import aad_unit_tests_battery, \
     evaluate_forest_original, debug_qvals, check_random_vector_angle, \
     plot_tsne_queries
 from aad.forest_description import *
+from aad.aad_ruleset_support import *
+
+
+class AadListenerForRules(AadEventListener):
+    def __init__(self, x, y):
+        AadEventListener.__init__(self)
+        self.x = x
+        self.y = y
+        self.r_top = []
+        self.r_compact = []
+        self.r_bayesian = []
+        self.all_queried = []
+
+    def __call__(self, event_type, x, y, iter, queried, model, opts):
+        if event_type != EVT_AFTER_FEEDBACK or not is_forest_detector(opts.detector_type):
+            return
+
+        if (iter+1) % opts.rule_output_interval == 0:
+            if opts.compact_rules or opts.bayesian_rules:
+                # in the below, we do *NOT* use the input x, y because that x is transformed.
+                # instead, we will use self.x, self.y where self.x has the original features.
+                r_top, r_compact, r_bayesian = get_rulesets(self.x, self.y, queried=queried,
+                                                            model=model, meta=None,
+                                                            opts=opts,
+                                                            bayesian=opts.bayesian_rules)
+
+                self.all_queried.append((iter, np.array(queried, dtype=np.int32)))
+                self.r_top.append((iter, r_top))
+                self.r_compact.append((iter, r_compact))
+
+                if r_compact is not None:
+                    _, _, str_rules_compact, _ = r_compact
+                    logger.debug("Compact rules:\n  %s" % "\n  ".join(str_rules_compact))
+
+                if r_bayesian is not None:
+                    self.r_bayesian.append((iter, r_bayesian))
+
+                    _, _, str_rules_bayesian, _ = r_bayesian
+                    logger.debug("Bayesian ruleset:\n  %s" % "\n  ".join(str_rules_bayesian))
+
+    def write_rules_to_file(self, rules_data, fileprefix, out_dir):
+        if len(rules_data) == 0:
+            return
+        for i, r_info in enumerate(rules_data):
+            iter, r_rules = r_info
+            if r_rules is not None:
+                _, _, str_rules, _ = r_rules
+            else:
+                str_rules = []
+            filepath = os.path.join(out_dir, "%s_%d.txt" % (fileprefix, iter+1))
+            save_strings_to_file(str_rules, file_path=filepath)
+
+    def write_all_queries_to_file(self, fileprefix, out_dir):
+        if len(self.all_queried) == 0:
+            return
+
+        for iter, queried in self.all_queried:
+            filepath = os.path.join(out_dir, "%s_%d.txt" % (fileprefix, iter+1))
+            save_strings_to_file([",".join([str(v) for v in queried])], file_path=filepath)
+
+    def output_all_data(self, opts):
+        fileprefix_top = "%s_top_rules" % opts.get_alad_metrics_name_prefix()
+        fileprefix_compact = "%s_compact_rules" % opts.get_alad_metrics_name_prefix()
+        fileprefix_bayesian = "%s_bayesian_rules" % opts.get_alad_metrics_name_prefix()
+        fileprefix_queries = "%s_queried" % opts.get_alad_metrics_name_prefix()
+
+        self.write_rules_to_file(self.r_top, fileprefix_top, out_dir=opts.resultsdir)
+        self.write_rules_to_file(self.r_compact, fileprefix_compact, out_dir=opts.resultsdir)
+        self.write_rules_to_file(self.r_bayesian, fileprefix_bayesian, out_dir=opts.resultsdir)
+        self.write_all_queries_to_file(fileprefix_queries, out_dir=opts.resultsdir)
 
 
 def aad_batch():
@@ -73,7 +143,8 @@ def aad_batch():
             random_state = np.random.RandomState(args.randseed + opts.fid * opts.reruns + runidx)
 
             # fit the model
-            model = get_aad_model(X_train, opts, random_state)
+            event_listener = AadListenerForRules(X_train, labels)
+            model = get_aad_model(X_train, opts, random_state, event_listener=event_listener)
             model.fit(X_train)
 
             if is_forest_detector(opts.detector_type) and \
@@ -142,6 +213,7 @@ def aad_batch():
                 n_found = np.cumsum(labels[queried[np.arange(60)]])
                 all_orig_iforest = all_orig_iforest + ",".join([str(v) for v in n_found]) + os.linesep
 
+            event_listener.output_all_data(opts)
             logger.debug(tm_run.message("Completed runidx: %d" % runidx))
 
             if runidx == 1 and False:

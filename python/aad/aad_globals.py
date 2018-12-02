@@ -392,6 +392,13 @@ def get_aad_option_list():
                         help="Number of initial labeled nominal instances to retain after pretraining when "
                              "pretrain is enabled.")
 
+    parser.add_argument("--rule_output_interval", action="store", type=int, default=5,
+                        help="Feedback intervals at which to output rulesets")
+    parser.add_argument("--compact_rules", action="store_true", default=False,
+                        help="Whether to output compact descriptions as rules")
+    parser.add_argument("--bayesian_rules", action="store_true", default=False,
+                        help="Whether to output bayesian rulesets")
+
     return parser
 
 
@@ -543,6 +550,10 @@ class AadOpts(object):
         if args.feature_partitions is not None:
             str_features = args.feature_partitions.split(',')
             self.feature_partitions = [int(f) for f in str_features]
+
+        self.rule_output_interval = args.rule_output_interval
+        self.compact_rules = args.compact_rules
+        self.bayesian_rules = args.bayesian_rules
 
         self.modelfile = args.modelfile
         self.load_model = args.load_model

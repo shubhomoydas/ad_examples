@@ -142,7 +142,7 @@ class BayesianRuleset(object):
         if self.beta_l is None:
             self.beta_l = [(self.pattern_space[i] * 100 + 1) for i in range(self.maxlen + 1)]
 
-        logger.debug("pattern_space: %s" % str(self.pattern_space))
+        # logger.debug("pattern_space: %s" % str(self.pattern_space))
         # logger.debug("alpha_l: %s" % str(self.alpha_l))
         # logger.debug("beta_l: %s" % str(self.beta_l))
 
@@ -319,7 +319,7 @@ class BayesianRuleset(object):
                     'old is {}, pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n '.format(
                         self.chains, ith_iter, (cfmatrix[0] + cfmatrix[2] + 0.0) / len(y), cfmatrix[0], cfmatrix[1],
                         cfmatrix[2], cfmatrix[3], sum(self.maps[0][-1][1]) + 0.1, sum(prob), prob[0], prob[1], prob[2]))
-                logger.debug("rules_new: %s" % str(rules_new))
+                # logger.debug("rules_new: %s" % str(rules_new))
                 # logger.debug("const_denominator: %s" % str(self.const_denominator))
                 self.Asize.append([np.floor(min(self.Asize[-1][l],
                                                 (-pt_new + self.Lup + self.P0) / max(1., self.const_denominator[l])))
@@ -342,26 +342,26 @@ class BayesianRuleset(object):
 
     def screen_rules(self, x, y):
         r_matrix = get_rule_satisfaction_matrix(x, y, self.rules)
-        logger.debug(r_matrix.shape)
+        # logger.debug(r_matrix.shape)
 
         r_matrix_pos = r_matrix[np.where(y == 1)[0]]
-        logger.debug(r_matrix_pos.shape)
+        # logger.debug(r_matrix_pos.shape)
 
         TP = np.asarray(np.sum(r_matrix_pos, axis=0))
-        logger.debug(TP)
+        # logger.debug(TP)
 
         # supp is threshold percentile of how TP a rule is
         supp_select = np.where(TP >= self.support * sum(y) / 100)[0]
-        logger.debug(supp_select)
+        # logger.debug(supp_select)
 
         self.rules = [self.rules[ridx] for ridx in supp_select]
         sub_r_matrix = r_matrix[:, supp_select]
-        logger.debug(sub_r_matrix.shape)
+        # logger.debug(sub_r_matrix.shape)
 
         self.rules_len = [len(rule) for rule in self.rules]
         self.supp = np.sum(sub_r_matrix, axis=0)
-        logger.debug("rules_len: %s" % str(self.rules_len))
-        logger.debug("supp: %s" % str(self.supp))
+        # logger.debug("rules_len: %s" % str(self.rules_len))
+        # logger.debug("supp: %s" % str(self.supp))
         return sub_r_matrix
 
     def greedy_init(self, r_matrix):

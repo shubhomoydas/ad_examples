@@ -134,6 +134,8 @@ def get_region_memberships(x, model=None,
         to the regions. '1' indicates that an instance belongs to the corresponding region,
         '0' otherwise.
     """
+    if instance_indexes is None or len(instance_indexes) == 0:
+        return None, None
     nregions = len(region_indexes)
     member_insts = list()
     region_membership_indicators = list()
@@ -147,6 +149,8 @@ def get_region_memberships(x, model=None,
         else:
             logger.debug("No region selected for instance %d" % i)
     member_insts = np.array(member_insts, dtype=int)
+    # logger.debug("#region_indexes: %d, #instance_indexes: %d, #region_membership_indicators: %d" %
+    #              (len(region_indexes), len(instance_indexes), len(region_membership_indicators)))
     region_membership_indicators = np.vstack(region_membership_indicators)
     return member_insts, region_membership_indicators
 

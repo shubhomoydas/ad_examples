@@ -95,12 +95,25 @@ def get_aad_metrics_structure(budget, opts):
     return metrics
 
 
+EVT_BEFORE_FEEDBACK = 0
+EVT_AFTER_FEEDBACK = 1
+
+
+class AadEventListener(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, event_type, x, y, iter, queried, model, opts):
+        pass
+
+
 class Aad(object):
     def __init__(self, detector_type,
                  ensemble_score=ENSEMBLE_SCORE_LINEAR,
-                 random_state=None):
+                 random_state=None, event_listener=None):
         self.detector_type = detector_type
         self.ensemble_score = ensemble_score
+        self.event_listener = event_listener
         if random_state is None:
             self.random_state = np.random.RandomState(42)
         else:
@@ -393,6 +406,7 @@ class Aad(object):
             logger.debug("Using fixed estimated tau val: %f" % est_tau_val)
 
         i = 0
+        feedback_iter = 0
         while len(xis) < bt.budget:
 
             starttime_iter = timer()
@@ -434,6 +448,12 @@ class Aad(object):
 
             if not opts.do_not_update_weights:
                 self.update_weights(x, y, ha=ha, hn=hn, opts=opts, tau_score=est_tau_val)
+
+            if self.event_listener is not None:
+                self.event_listener(event_type=EVT_AFTER_FEEDBACK, x=x, y=y,
+                                    iter=feedback_iter, queried=xis, model=self, opts=opts)
+
+            feedback_iter += 1
 
             if np.mod(i, 1) == 0:
                 endtime_iter = timer()

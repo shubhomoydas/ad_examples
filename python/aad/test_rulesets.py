@@ -36,7 +36,7 @@ def get_debug_args(budget=30, detector_type=AAD_IFOREST):
             "--ensemble_score=%d" % ENSEMBLE_SCORE_LINEAR,
             "--resultsdir=./temp",
             "--log_file=./temp/test_rulesets.log",
-            "--debug"]
+            "--debug", "--plot2D"]
 
 
 def plot_selected_regions(x, y, regions, query_instances=None,
@@ -78,8 +78,6 @@ def plot_rule_annotations(str_compact_rules, str_bayesian_rules, dp):
 
 def test_aad_rules(opts):
 
-    plot = True
-
     x, y = read_anomaly_dataset(opts.dataset)
     y = np.asarray(y, dtype=np.int32)
     logger.debug(x.dtype.names)
@@ -105,8 +103,8 @@ def test_aad_rules(opts):
         r_top, r_compact, _ = get_rulesets(x, y, queried=queried, model=model,
                                            meta=meta, opts=opts, bayesian=False)
 
-        rules_top, regions_top, str_rules_top = r_top
-        rules_compact, regions_compact, str_rules_compact = r_compact
+        rules_top, regions_top, str_rules_top, _ = r_top
+        rules_compact, regions_compact, str_rules_compact, _ = r_compact
 
         save_strings_to_file(str_rules_compact, file_path_compact)
         save_strings_to_file(str_rules_top, file_path_top)
@@ -130,7 +128,7 @@ def test_aad_rules(opts):
     logger.debug("Top regions:\n%s" % str(regions_top))
     logger.debug("Compact regions:\n%s" % str(regions_compact))
 
-    rules_bayesian, regions_bayesian, str_rules_bayesian = get_bayesian_rulesets(x, y, queried, rules_top, meta, opts)
+    rules_bayesian, regions_bayesian, str_rules_bayesian, _ = get_bayesian_rulesets(x, y, queried, rules_top, meta, opts)
     logger.debug("Bayesian regions:\n%s" % str(regions_bayesian))
     logger.debug("Bayesian ruleset:\n  %s" % "\n  ".join(str_rules_bayesian))
 
@@ -140,7 +138,7 @@ def test_aad_rules(opts):
     f1_bayesian = evaluate_ruleset(x, y, rules_bayesian, average="weighted")
     print("F1 scores: compact descriptions: %f; bayesian: %f" % (f1_compact, f1_bayesian))
 
-    if plot:
+    if opts.plot2D:
         path = os.path.join(opts.resultsdir, "%s_rulesets.pdf" % opts.dataset)
         dp = DataPlotter(pdfpath=path, rows=2, cols=2, save_tight=True)
         plot_selected_regions(x, y, regions=regions_top, query_instances=queried,
