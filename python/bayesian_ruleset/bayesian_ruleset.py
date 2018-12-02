@@ -466,7 +466,8 @@ def test_bayesian_ruleset():
     ]
 
     rules = convert_strings_to_conjunctive_rules(compact_rules, meta)
-    logger.debug(rules)
+    print("Candidate rules:")
+    print("  %s" % "\n  ".join([str(rule) for rule in rules]))
 
     # sanity_check_bayesian_ruleset(x, y, rules, meta)
 
@@ -474,9 +475,9 @@ def test_bayesian_ruleset():
                          maxlen=get_max_len_in_rules(rules), max_iter=200,
                          n_min_support_stop=20)
     br.fit(x, y, rules)
-    logger.debug("predicted_rules:")
+    print("Selected rules:")
     for idx in br.predicted_rules:
-        logger.debug("rule %d: %s" % (idx, str(br.rules[idx])))
+        print("  rule %d: %s" % (idx, str(br.rules[idx])))
 
 
 if __name__ == "__main__":
