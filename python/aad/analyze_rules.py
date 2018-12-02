@@ -146,8 +146,8 @@ def analyze_rules():
         legend_handles = []
         pl = dp.get_next_plot()
         plt.xlabel('Feedback iterations', fontsize=8)
-        plt.ylabel('Rule Length', fontsize=8)
-        plt.title("Comparison of Rule lengths", fontsize=8)
+        plt.ylabel('# Rules', fontsize=8)
+        plt.title("Comparison of Number of Rules", fontsize=8)
 
         ln, = pl.plot(agg_top["lengths"][:, 0], agg_top["lengths"][:, 1],
                       "-", color="grey", linewidth=1, label="Candidate Rules")
