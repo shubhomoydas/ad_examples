@@ -44,13 +44,13 @@ class AadListenerForRules(AadEventListener):
 
                 if r_compact is not None:
                     _, _, str_rules_compact, _ = r_compact
-                    logger.debug("Compact rules:\n  %s" % "\n  ".join(str_rules_compact))
+                    # logger.debug("Compact rules:\n  %s" % "\n  ".join(str_rules_compact))
 
                 if r_bayesian is not None:
                     self.r_bayesian.append((iter, r_bayesian))
 
                     _, _, str_rules_bayesian, _ = r_bayesian
-                    logger.debug("Bayesian ruleset:\n  %s" % "\n  ".join(str_rules_bayesian))
+                    # logger.debug("Bayesian ruleset:\n  %s" % "\n  ".join(str_rules_bayesian))
 
     def write_rules_to_file(self, rules_data, fileprefix, out_dir):
         if len(rules_data) == 0:

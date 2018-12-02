@@ -304,6 +304,7 @@ class BayesianRuleset(object):
         self.maps[0].append([-1, [pt_curr / 3, pt_curr / 3, pt_curr / 3],
                              rules_curr, [self.rules[i] for i in rules_curr],
                              []])
+        alpha = np.inf
         for ith_iter in range(self.max_iter):
             rules_new = self.propose(rules_curr, y, r_matrix)
             cfmatrix, prob = self.compute_prob(r_matrix, y, rules_new)
@@ -311,8 +312,13 @@ class BayesianRuleset(object):
             pt_new = sum(prob)
             # logger.debug("pt_new: %f, pt_curr: %f, T: %f, float(pt_new - pt_curr): %f" %
             #              (pt_new, pt_curr, T, float(pt_new - pt_curr)))
-            alpha = np.exp(float(pt_new - pt_curr) / T)
-
+            if ith_iter > 0:
+                # The original Wang et al. code did not have this check
+                # and was resulting in RuntimeWarning because we were
+                # passing np.exp() a very large number (-pt_curr = 1000000000 in 0-th iter).
+                # We do not expect the algorithm performance to change with this check
+                # and we can avoid the RuntimeWarning
+                alpha = np.exp(float(pt_new - pt_curr) / T)
             if pt_new > sum(self.maps[0][-1][1]):
                 logger.debug(
                     '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n '
