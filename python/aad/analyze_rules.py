@@ -6,6 +6,7 @@ import logging
 from aad.aad_ruleset_support import *
 import matplotlib.pyplot as plt
 from common.data_plotter import DataPlotter
+from aad.anomaly_dataset_support import dataset_configs
 
 
 def load_rules(x, y, meta, fileprefix, out_dir, opts, evaluate_f1=True):
@@ -153,7 +154,7 @@ def plot_f1s(agg_top, agg_compact, agg_bayesian, dp, opts):
     plt.xlabel('Feedback iterations', fontsize=8)
     plt.ylabel('F1 Score', fontsize=8)
     plt.ylim([0, 1])
-    plt.title("%s F1 scores" % opts.dataset, fontsize=8)
+    plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
 
     ln, = pl.plot(agg_compact["f1s"][:, 0], agg_compact["f1s"][:, 1],
                   "-", color="red", linewidth=1, label="Compact Descriptions")
@@ -172,7 +173,9 @@ def plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts):
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
     plt.ylabel('Rule length', fontsize=8)
-    plt.title("Comparison of Rule lengths", fontsize=8)
+    max_rule_length = max(np.max(agg_compact["lengths"][:, 1]), np.max(agg_bayesian["lengths"][:, 1]))
+    plt.ylim([0, max_rule_length+1])
+    plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
 
     ln, = pl.plot(agg_compact["lengths"][:, 0], agg_compact["lengths"][:, 1],
                   "-", color="red", linewidth=1, label="Compact Descriptions")
@@ -191,7 +194,7 @@ def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts):
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
     plt.ylabel('# Rules', fontsize=8)
-    plt.title("Comparison of Number of Rules", fontsize=8)
+    plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
 
     ln, = pl.plot(agg_top["num_rules"][:, 0], agg_top["num_rules"][:, 1],
                   "-", color="grey", linewidth=1, label="Candidate Rules")
@@ -211,11 +214,11 @@ def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts):
 
 def analyze_rules_dataset(opts, dp):
 
-    X_train, labels = read_data_as_matrix(opts)
-    meta = get_feature_meta_default(X_train, labels)
-
     if not found_precomputed_summaries(opts):
         logger.debug("Precomputed summaries not found. Regenerating...")
+        X_train, labels = read_data_as_matrix(opts)
+        meta = get_feature_meta_default(X_train, labels)
+
         agg_top, agg_compact, agg_bayesian = load_all_rule_data(X_train, labels, meta, opts)
 
         write_all_summaries(agg_top, "top", opts)
