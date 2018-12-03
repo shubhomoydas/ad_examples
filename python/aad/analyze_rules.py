@@ -130,6 +130,7 @@ def load_summary(name, opts):
     for rname in ["f1s", "lengths", "num_rules"]:
         filename = "%s-all_%s_%s.csv" % (opts.dataset, name, rname)
         filepath = os.path.join(opts.resultsdir, filename)
+        logger.debug("loading %s" % filepath)
         summ = np.asmatrix(read_csv(file=filepath, header=None, sep=","))
         summary[rname] = summ
     return summary
@@ -146,13 +147,13 @@ def found_precomputed_summaries(opts):
     return True
 
 
-def plot_f1s(agg_top, agg_compact, agg_bayesian, dp):
+def plot_f1s(agg_top, agg_compact, agg_bayesian, dp, opts):
     legend_handles = []
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
     plt.ylabel('F1 Score', fontsize=8)
     plt.ylim([0, 1])
-    plt.title("Comparison of F1 scores", fontsize=8)
+    plt.title("%s F1 scores" % opts.dataset, fontsize=8)
 
     ln, = pl.plot(agg_compact["f1s"][:, 0], agg_compact["f1s"][:, 1],
                   "-", color="red", linewidth=1, label="Compact Descriptions")
@@ -162,10 +163,11 @@ def plot_f1s(agg_top, agg_compact, agg_bayesian, dp):
                   "-", color="blue", linewidth=1, label="Bayesian Rulesets")
     legend_handles.append(ln)
 
-    pl.legend(handles=legend_handles, loc='lower right', prop={'size': 8})
+    if opts.dataset == "abalone":
+        pl.legend(handles=legend_handles, loc='lower right', prop={'size': 6})
 
 
-def plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp):
+def plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts):
     legend_handles = []
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
@@ -180,10 +182,11 @@ def plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp):
                   "-", color="blue", linewidth=1, label="Bayesian Rulesets")
     legend_handles.append(ln)
 
-    pl.legend(handles=legend_handles, loc='upper right', prop={'size': 8})
+    if opts.dataset == "abalone":
+        pl.legend(handles=legend_handles, loc='upper right', prop={'size': 6})
 
 
-def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp):
+def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts):
     legend_handles = []
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
@@ -202,19 +205,11 @@ def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp):
                   "-", color="blue", linewidth=1, label="Bayesian Rulesets")
     legend_handles.append(ln)
 
-    pl.legend(handles=legend_handles, loc='upper right', prop={'size': 8})
+    if opts.dataset == "abalone":
+        pl.legend(handles=legend_handles, loc='upper right', prop={'size': 6})
 
 
-def analyze_rules():
-
-    logger = logging.getLogger(__name__)
-
-    args = get_aad_command_args(debug=False)
-    # print "log file: %s" % args.log_file
-    configure_logger(args)
-
-    opts = AadOpts(args)
-    logger.debug(opts.str_opts())
+def analyze_rules_dataset(opts, dp):
 
     X_train, labels = read_data_as_matrix(opts)
     meta = get_feature_meta_default(X_train, labels)
@@ -233,15 +228,48 @@ def analyze_rules():
         agg_bayesian = load_summary("bayesian", opts)
 
     if opts.plot2D:
+        plot_f1s(agg_top, agg_compact, agg_bayesian, dp, opts)
+        plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts)
+        plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts)
+
+
+def analyze_rules(opts):
+    if opts.dataset != "Xall":
         pdfpath = "%s/%s-f1_scores.pdf" % (opts.resultsdir, opts.dataset)
-        dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2, save_tight=True)
-
-        plot_f1s(agg_top, agg_compact, agg_bayesian, dp)
-        plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp)
-        plot_num_rules(agg_top, agg_compact, agg_bayesian, dp)
-
+        dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=3, save_tight=True)
+        analyze_rules_dataset(opts, dp=dp)
         dp.close()
+        return
+
+    datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1', 'covtype',
+                'mammography', 'kddcup', 'shuttle_1v23567', 'weather', 'electricity'
+                ]
+    pdfpath = "%s/all-rule_analysis.pdf" % (opts.resultsdir)
+    dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=3, save_tight=True)
+    datafile = opts.datafile
+    resultsdir = opts.resultsdir
+    for dataset in datasets:
+        opts.dataset = dataset
+        if opts.dataset in ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1']:
+            opts.budget = 300
+        else:
+            opts.budget = 500
+        opts.datafile = datafile.replace("Xall", dataset)
+        opts.resultsdir = resultsdir.replace("Xall", dataset)
+        opts.resultsdir = opts.resultsdir.replace("bd500", "bd%d" % opts.budget)
+        print("Analyzing %s" % opts.dataset)
+        analyze_rules_dataset(opts, dp=dp)
+    dp.close()
 
 
 if __name__ == "__main__":
-    analyze_rules()
+    logger = logging.getLogger(__name__)
+
+    args = get_aad_command_args(debug=False)
+    # print "log file: %s" % args.log_file
+    configure_logger(args)
+
+    opts = AadOpts(args)
+    logger.debug(opts.str_opts())
+
+    analyze_rules(opts)
