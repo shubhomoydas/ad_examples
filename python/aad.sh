@@ -397,8 +397,9 @@ TILL_BUDGET_IND=1
 ALLOW_STREAM_UPDATE_IND=1
 
 RULES_IND=0
-RULE_OUTPUT_INTERVAL="--rule_output_interval=5"
+RULE_OUTPUT_INTERVAL="--rule_output_interval=20"
 if [[ "$RULES_IND" == "1" ]]; then
+    OPERATION="aad_rules"
     COMPACT_RULES="--compact_rules"
     BAYESIAN_RULES="--bayesian_rules"
 else

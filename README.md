@@ -263,7 +263,9 @@ As we saw above, AAD helped infer the true relevance of subspaces and the most r
 
 A comparison of the rules found by *Compact Descriptions* and *Bayesian Rulesets* is shown below for the *toy2* dataset. We generate the rules by both techniques at regular points in the feedback cycle and compute the F1 score on the entire dataset (left plot below). These results were averaged over 10 independent runs. On this metric, *Compact Descriptions* performs better than *Bayesian Rulesets*. The plot on the right shows the average number of rules used to explain/describe the anomalies by both techniques. **A smaller value is desired for this metric since it reduces the cognitive burden on the analyst.** The grey curve (labeled 'Candidate Rules') is the total number of rules available in a feedback cycle. Both *Compact Descriptions* and *Bayesian Rulesets* use the same set of candidate rules. However, a smaller subset of the candidate rules were identified by *Bayesian Rulesets* than *Compact Descriptions* to explain most anomalies.
 
-In order to generate these plots, first set `RULES_IND=1` in `aad.sh`, and then execute the following commands:
+**Important:** The results have been presented here only for the *toy2* dataset because we have used this as the running example. The results differ by the dataset. *Bayesian Rulesets* usually selects smaller a smaller set of rules. *Compact Descriptions* usually has a better performance initially when the number of labeled **anomalies** is very small. However, as the number of labeled anomalies increases, *Bayesian Rulesets* often improves its performance to better than *Compact Descriptions*. The results on real-world datasets can be found [here](documentation/rules).
+
+In order to generate the plots below, first set `RULES_IND=1` in `aad.sh`, and then execute the following commands:
 
     bash ./aad.sh toy2 40 10 0.03 7 1 0 0 512 0 1 1
     bash ./aad.sh toy2 40 10 0.03 7 1 0 3 512 0 1 1

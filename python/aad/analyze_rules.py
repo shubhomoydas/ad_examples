@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from common.data_plotter import DataPlotter
 
 
-def load_rules(x, y, meta, fileprefix, out_dir, opts):
+def load_rules(x, y, meta, fileprefix, out_dir, opts, evaluate_f1=True):
     rule_scores = dict()
     rule_lengths = dict()
     rules_data = []
@@ -20,7 +20,10 @@ def load_rules(x, y, meta, fileprefix, out_dir, opts):
             if len(rules) == 0:
                 logger.debug("No rules found in iter %d of %s" % (iter, fileprefix))
             else:
-                f1 = evaluate_ruleset(x, y, rules, average="binary")
+                if evaluate_f1:
+                    f1 = evaluate_ruleset(x, y, rules, average="binary")
+                else:
+                    f1 = 0.
                 logger.debug("Iter %d, F1 score: %f" % (iter, f1))
                 # logger.debug("\n  " + "\n  ".join(str_rules))
                 rules_data.append((iter, rules, str_rules, f1))
@@ -84,7 +87,9 @@ def load_all_rule_data(x, y, meta, opts):
         fileprefix_queries = "%s_queried" % opts.get_alad_metrics_name_prefix()
 
         logger.debug("Loading top rules\n")
-        top_data = load_rules(x, y, meta, fileprefix_top, out_dir=opts.resultsdir, opts=opts)
+        # do not evaluate F1 scores for Top because it is expensive and we do not plot these
+        top_data = load_rules(x, y, meta, fileprefix_top, out_dir=opts.resultsdir,
+                              opts=opts, evaluate_f1=False)
         acc_top.append(top_data)
 
         logger.debug("Loading compact rules\n")
@@ -124,13 +129,13 @@ def analyze_rules():
     agg_top, agg_compact, agg_bayesian = load_all_rule_data(X_train, labels, meta, opts)
 
     if opts.plot2D:
-        pdfpath = "%s/%s.pdf" % (opts.resultsdir, "f1_scores")
+        pdfpath = "%s/%s-f1_scores.pdf" % (opts.resultsdir, opts.dataset)
         legend_handles = []
         dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2, save_tight=True)
         pl = dp.get_next_plot()
         plt.xlabel('Feedback iterations', fontsize=8)
         plt.ylabel('F1 Score', fontsize=8)
-        # plt.ylim([0.5, 1])
+        plt.ylim([0, 1])
         plt.title("Comparison of F1 scores", fontsize=8)
 
         ln, = pl.plot(agg_compact["f1s"][:, 0], agg_compact["f1s"][:, 1],
