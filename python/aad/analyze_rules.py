@@ -9,8 +9,15 @@ from common.data_plotter import DataPlotter
 from aad.anomaly_dataset_support import dataset_configs
 
 
+dataset_feature_names = {'abalone': ["Sex_1", "Sex_2", "Length", "Diameter", "Height",
+                                     "Whole weight", "Shucked weight", "Viscera weight",
+                                     "Shell weight"]}
+
+
 def load_rules(x, y, meta, fileprefix, out_dir, opts, evaluate_f1=True):
-    rule_scores = dict()
+    f1s = dict()
+    precisions = dict()
+    recalls = dict()
     rule_lengths = dict()
     num_rules = dict()
     rules_data = []
@@ -23,21 +30,23 @@ def load_rules(x, y, meta, fileprefix, out_dir, opts, evaluate_f1=True):
                 logger.debug("No rules found in iter %d of %s" % (iter, fileprefix))
             else:
                 if evaluate_f1:
-                    f1 = evaluate_ruleset(x, y, rules, average="binary")
+                    precision, recall, f1 = evaluate_ruleset(x, y, rules, average="binary")
                     logger.debug("Iter %d, F1 score: %f" % (iter, f1))
                 else:
-                    f1 = 0.
+                    precision = recall = f1 = 0.
                 # logger.debug("\n  " + "\n  ".join(str_rules))
-                rules_data.append((iter, rules, str_rules, f1))
-                rule_scores[iter] = f1
+                rules_data.append((opts.runidx, iter, rules, str_rules, f1))
+                f1s[iter] = f1
+                precisions[iter] = precision
+                recalls[iter] = recall
                 num_rules[iter] = len(rules)
                 rule_lengths[iter] = np.mean([len(rule) for rule in rules])
                 logger.debug("iter: %d, rule_lengths: %f" % (iter, rule_lengths[iter]))
         else:
             logger.debug("file not found:\n%s" % filepath)
-            rules_data.append((iter, None, None, 0))
-    return {"f1s": rule_scores, "lengths": rule_lengths,
-            "num_rules": num_rules, "data": rules_data}
+            rules_data.append((opts.runidx, iter, None, None, 0))
+    return {"f1s": f1s, "recalls": recalls, "precisions": precisions,
+            "lengths": rule_lengths, "num_rules": num_rules, "data": rules_data}
 
 
 def accumulate_values(all_values, acc_values):
@@ -60,13 +69,21 @@ def summarize_values(values):
 
 def aggregate_rules_data(values):
     f1s = summarize_values(accumulate_values([v["f1s"] for v in values], dict()))
+    precisions = summarize_values(accumulate_values([v["precisions"] for v in values], dict()))
+    recalls = summarize_values(accumulate_values([v["recalls"] for v in values], dict()))
     lengths = summarize_values(accumulate_values([v["lengths"] for v in values], dict()))
     num_rules = summarize_values(accumulate_values([v["num_rules"] for v in values], dict()))
+    rules_data = []
+    for v in values:
+        rules_data.extend(v["data"])
     logger.debug("f1s:\n%s" % str(f1s))
+    logger.debug("precisions:\n%s" % str(precisions))
+    logger.debug("recalls:\n%s" % str(recalls))
     logger.debug("lengths:\n%s" % str(lengths))
     logger.debug("num_rules:\n%s" % str(num_rules))
 
-    return {"f1s": f1s, "lengths": lengths, "num_rules": num_rules}
+    return {"f1s": f1s, "recalls": recalls, "precisions": precisions,
+            "lengths": lengths, "num_rules": num_rules, "data": rules_data}
 
 
 def string_agg_scores(agg_scores):
@@ -120,7 +137,7 @@ def load_all_rule_data(x, y, meta, opts):
 
 
 def write_all_summaries(summary, name, opts):
-    for rname in ["f1s", "lengths", "num_rules"]:
+    for rname in ["f1s", "precisions", "recalls", "lengths", "num_rules"]:
         filename = "%s-all_%s_%s.csv" % (opts.dataset, name, rname)
         filepath = os.path.join(opts.resultsdir, filename)
         np.savetxt(filepath, summary[rname], fmt='%0.4f', delimiter=',')
@@ -128,7 +145,7 @@ def write_all_summaries(summary, name, opts):
 
 def load_summary(name, opts):
     summary = dict()
-    for rname in ["f1s", "lengths", "num_rules"]:
+    for rname in ["f1s", "precisions", "recalls", "lengths", "num_rules"]:
         filename = "%s-all_%s_%s.csv" % (opts.dataset, name, rname)
         filepath = os.path.join(opts.resultsdir, filename)
         logger.debug("loading %s" % filepath)
@@ -139,7 +156,7 @@ def load_summary(name, opts):
 
 def found_precomputed_summaries(opts):
     for name in ["top", "compact", "bayesian"]:
-        for rname in ["f1s", "lengths", "num_rules"]:
+        for rname in ["f1s", "precisions", "recalls", "lengths", "num_rules"]:
             filename = "%s-all_%s_%s.csv" % (opts.dataset, name, rname)
             filepath = os.path.join(opts.resultsdir, filename)
             if not os.path.exists(filepath):
@@ -148,19 +165,20 @@ def found_precomputed_summaries(opts):
     return True
 
 
-def plot_f1s(agg_top, agg_compact, agg_bayesian, dp, opts):
+def plot_scores(agg_top, agg_compact, agg_bayesian, score_type, dp, opts):
+    score_name = {"f1s": "F1 Score", "precisions": "Precision", "recalls": "Recall"}
     legend_handles = []
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
-    plt.ylabel('F1 Score', fontsize=8)
+    plt.ylabel(score_name[score_type], fontsize=8)
     plt.ylim([0, 1])
     plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
 
-    ln, = pl.plot(agg_compact["f1s"][:, 0], agg_compact["f1s"][:, 1],
+    ln, = pl.plot(agg_compact[score_type][:, 0], agg_compact[score_type][:, 1],
                   "-", color="red", linewidth=1, label="Compact Descriptions")
     legend_handles.append(ln)
 
-    ln, = pl.plot(agg_bayesian["f1s"][:, 0], agg_bayesian["f1s"][:, 1],
+    ln, = pl.plot(agg_bayesian[score_type][:, 0], agg_bayesian[score_type][:, 1],
                   "-", color="blue", linewidth=1, label="Bayesian Rulesets")
     legend_handles.append(ln)
 
@@ -212,14 +230,35 @@ def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts):
         pl.legend(handles=legend_handles, loc='upper right', prop={'size': 6})
 
 
+def swap_metadata(rules_data, meta):
+    for rl in rules_data:
+        for rule in rl[2]:
+            rule.meta = meta
+        logger.debug("runidx: %d, iter: %d\n  %s" % (rl[0], rl[1], "\n  ".join([str(v) for v in rl[2]])))
+
+
 def analyze_rules_dataset(opts, dp):
 
     if not found_precomputed_summaries(opts):
         logger.debug("Precomputed summaries not found. Regenerating...")
         X_train, labels = read_data_as_matrix(opts)
-        meta = get_feature_meta_default(X_train, labels)
+        meta = get_feature_meta_default(X_train, labels, feature_names=None)
 
         agg_top, agg_compact, agg_bayesian = load_all_rule_data(X_train, labels, meta, opts)
+
+        feature_names = dataset_feature_names.get(opts.dataset, None)
+        if feature_names is not None:
+            # put in user-friendly column names
+            new_meta = get_feature_meta_default(x=X_train, y=labels, feature_names=feature_names)
+
+            logger.debug("Swapping metadata of candidate rules")
+            swap_metadata(agg_top["data"], new_meta)
+
+            logger.debug("Swapping metadata of compact rules")
+            swap_metadata(agg_compact["data"], new_meta)
+
+            logger.debug("Swapping metadata of bayesian rules")
+            swap_metadata(agg_bayesian["data"], new_meta)
 
         write_all_summaries(agg_top, "top", opts)
         write_all_summaries(agg_compact, "compact", opts)
@@ -231,9 +270,12 @@ def analyze_rules_dataset(opts, dp):
         agg_bayesian = load_summary("bayesian", opts)
 
     if opts.plot2D:
-        plot_f1s(agg_top, agg_compact, agg_bayesian, dp, opts)
+        plot_scores(agg_top, agg_compact, agg_bayesian, "f1s", dp, opts)
+        plot_scores(agg_top, agg_compact, agg_bayesian, "precisions", dp, opts)
+        plot_scores(agg_top, agg_compact, agg_bayesian, "recalls", dp, opts)
         plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts)
         plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts)
+        dp.get_next_plot()  # blank placeholder for alignment
 
 
 def analyze_rules(opts):

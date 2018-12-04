@@ -134,8 +134,8 @@ def test_aad_rules(opts):
 
     save_strings_to_file(str_rules_bayesian, file_path_bayesian)
 
-    f1_compact = evaluate_ruleset(x, y, rules_compact, average="weighted")
-    f1_bayesian = evaluate_ruleset(x, y, rules_bayesian, average="weighted")
+    _, _, f1_compact = evaluate_ruleset(x, y, rules_compact, average="weighted")
+    _, _, f1_bayesian = evaluate_ruleset(x, y, rules_bayesian, average="weighted")
     print("F1 scores: compact descriptions: %f; bayesian: %f" % (f1_compact, f1_bayesian))
 
     if opts.plot2D:

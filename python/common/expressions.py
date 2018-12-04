@@ -2,7 +2,8 @@ import tokenize
 import re
 import os
 import numpy as np
-from sklearn.metrics import f1_score
+# from sklearn.metrics import f1_score
+from sklearn.metrics import precision_recall_fscore_support
 
 """
 General Rule-parsing functions. We might use only a subset of the features available.
@@ -1078,8 +1079,8 @@ def check_if_at_least_one_rule_satisfied(x, y, rules):
 def evaluate_ruleset(x, y, rules, average="binary"):
     """ For each input instance, check if it satisfies at least one rule and computes F1 """
     y_hat = check_if_at_least_one_rule_satisfied(x, y, rules)
-    f1 = f1_score(y_true=y, y_pred=y_hat, average=average)
-    return f1
+    precision, recall, f1, _ = precision_recall_fscore_support(y_true=y, y_pred=y_hat, average=average)
+    return precision, recall, f1
 
 
 def save_strings_to_file(strs, file_path):
@@ -1100,7 +1101,8 @@ def load_strings_from_file(file_path):
     return strs
 
 
-def get_feature_meta_default(x, y, feature_names=None, label_name='label', labels=None):
+def get_feature_meta_default(x, y, feature_names=None,
+                             label_name='label', labels=None, featuredefs=None):
     """ A simple convenience method that creates a default FeatureMetadata
 
     In the default metadata:
@@ -1118,11 +1120,12 @@ def get_feature_meta_default(x, y, feature_names=None, label_name='label', label
         if x.shape[1] != len(feature_names):
             raise ValueError("feature_names should have same length as columns in x")
         f_names = Factor(feature_names, sort=False)
-    f_defs = [NumericContinuous(x[:, i]) for i in range(x.shape[1])]
+    if featuredefs is None:
+        featuredefs = [NumericContinuous(x[:, i]) for i in range(x.shape[1])]
     if labels is None:
         labels = np.unique(y)
     meta = FeatureMetadata(lblname=label_name, lbldef=Factor(labels),
-                           featurenames=f_names, featuredefs=f_defs)
+                           featurenames=f_names, featuredefs=featuredefs)
     return meta
 
 
