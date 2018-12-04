@@ -188,9 +188,6 @@ def aad_batch():
 
             metrics = model.aad_learn_ensemble_weights_with_budget(ensemble, opts)
 
-            if metrics is not None and opts.describe_anomalies and is_forest_detector(opts.detector_type):
-                descriptions = get_anomaly_descriptions(X_train, labels, model, metrics, opts)
-
             if metrics is not None:
                 num_seen, num_seen_baseline, queried_indexes, queried_indexes_baseline = \
                     summarize_ensemble_num_seen(ensemble, metrics, fid=opts.fid)
