@@ -1,33 +1,6 @@
 from common.expressions import *
 from .aad_globals import *
-from aad.forest_description import get_regions_for_description, is_forest_detector, \
-    get_region_volumes, get_compact_regions, CompactDescriber, PositivesOnlyCompactDescriber
-from bayesian_ruleset.bayesian_ruleset import BayesianRuleset, get_max_len_in_rules
-
-
-def get_top_regions(x, instance_indexes=None, model=None, opts=None):
-    """ Gets the regions having highest anomaly scores
-
-    :param x: np.ndarray
-        The instance matrix with ALL instances
-    :param instance_indexes: np.array(dtype=int)
-        Indexes for the instances which need to be described
-    :param model: Aad
-        Trained Aad model
-    :param opts: AadOpts
-    :return: tuple, list(map)
-        tuple: (region indexes, #instances among instance_indexes that fall in the region)
-        list(map): list of region extents where each region extent is a
-            map {feature index: feature range}
-    """
-    if not is_forest_detector(opts.detector_type):
-        raise ValueError("Descriptions only supported by forest-based detectors")
-
-    # get top region indexes which will be candidates for rule sets
-    reg_idxs = get_regions_for_description(x, instance_indexes=instance_indexes,
-                                           model=model, n_top=opts.describe_n_top)
-    desc_regions = [model.all_regions[ridx].region for ridx in reg_idxs]
-    return reg_idxs, desc_regions
+from aad.forest_description import CompactDescriber, BayesianRulesetsDescriber
 
 
 def prepare_conjunctive_rulesets(x, y, meta, region_extents=None, str_rules=None, opts=None):
@@ -53,62 +26,6 @@ def prepare_conjunctive_rulesets(x, y, meta, region_extents=None, str_rules=None
     return rules, [str(rule) for rule in rules]
 
 
-def get_subset_for_rule_mining(x, y, must_include=None, frac_more=1.0, negative_label=0):
-    """ Returns a subset of instances
-
-    The output will set the labels of must_include instances to
-    the original labels. Labels on other sampled instances will
-    be assumed to be the negative class.
-
-    The returned instances will be input to a fully supervised;
-    therefore, we are assigning the negative class to unlabeled
-    instances. We assume that labeling instances as negative
-    (i.e., nominal) is reasonable for anomaly detection.
-
-    :param x:
-    :param y:
-    :param must_include: np.array
-        Indexes of instances which *must* be included in the output.
-        These instances are likely labeled. Other sub-sampled instances
-        are probably unlabeled.
-    :param frac_more:
-    :param negative_label:
-    :return:
-    """
-    idxs = np.zeros(len(y), dtype=np.int32)
-    idxs[must_include] = 1
-    idxs_to_select = np.where(idxs == 0)[0]
-    np.random.shuffle(idxs_to_select)
-    n_more = min(len(idxs_to_select), int(len(must_include) * frac_more))
-    more_select = idxs_to_select[:n_more]
-    selected = list(must_include)
-    selected.extend(more_select)
-
-    # assume that labels of must_select instances are known,
-    # while others are negative
-    y_o = np.ones(len(y), dtype=y.dtype) * negative_label
-    y_o[must_include] = y[must_include]
-
-    return x[selected], y_o[selected]
-
-
-def get_bayesian_rulesets(x, y, queried, rules, meta, opts):
-    queried = np.array(queried, dtype=np.int32)
-    x_br, y_br = get_subset_for_rule_mining(x, y, queried, frac_more=1.0)
-
-    br = BayesianRuleset(meta=meta, opts=None, max_iter=200,
-                         maxlen=get_max_len_in_rules(rules),
-                         n_min_support_stop=int(0.1 * len(y_br)))
-    br.fit(x_br, y_br, rules)
-
-    rules_bayesian = [br.rules[idx] for idx in br.predicted_rules]
-    regions_bayesian = convert_conjunctive_rules_to_feature_ranges(rules_bayesian, meta)
-    str_rules_bayesian = convert_conjunctive_rules_to_strings(rules_bayesian)
-
-    regids_bayesian = [rule.id for rule in rules_bayesian]
-    return rules_bayesian, regions_bayesian, str_rules_bayesian, regids_bayesian
-
-
 def get_rulesets(x, y, queried, model, meta, opts, bayesian=False):
     if meta is None:
         meta = get_feature_meta_default(x, y)
@@ -120,9 +37,8 @@ def get_rulesets(x, y, queried, model, meta, opts, bayesian=False):
         return None, None, None
 
     compact_describer = CompactDescriber(x, y, model, opts, sample_negative=True)
-    # compact_describer = PositivesOnlyCompactDescriber(x, y, model, opts)
 
-    regids_top, regions_top = get_top_regions(x, instance_indexes=discovered_anomalies, model=model, opts=opts)
+    regids_top, regions_top = compact_describer.get_top_regions(instance_indexes=discovered_anomalies)
 
     regids_compact, regions_compact, _ = compact_describer.describe(instance_indexes=queried)
 
@@ -133,7 +49,11 @@ def get_rulesets(x, y, queried, model, meta, opts, bayesian=False):
 
     r_bayesian = None
     if bayesian:
-        r_bayesian = get_bayesian_rulesets(x, y, queried, rules_top, meta, opts)
+        bayesian_describer = BayesianRulesetsDescriber(x, y, model=model, opts=opts,
+                                                       meta=meta, candidate_rules=rules_top)
+        regids_bayesian, regions_bayesian, rules_bayesian = bayesian_describer.describe(instance_indexes=queried)
+        str_rules_bayesian = convert_conjunctive_rules_to_strings(rules_bayesian)
+        r_bayesian = rules_bayesian, regions_bayesian, str_rules_bayesian, regids_bayesian
 
     return ((rules_top, regions_top, str_rules_top, regids_top),
             (rules_compact, regions_compact, str_rules_compact, regids_compact),

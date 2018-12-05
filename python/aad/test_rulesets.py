@@ -137,7 +137,10 @@ def test_aad_rules(opts):
     logger.debug("Compact regions:\n%s" % str(regions_compact))
     logger.debug("Compact ruleset:\n  %s" % "\n  ".join(str_rules_compact))
 
-    rules_bayesian, regions_bayesian, str_rules_bayesian, _ = get_bayesian_rulesets(x, y, queried, rules_top, meta, opts)
+    bayesian_describer = BayesianRulesetsDescriber(x, y, model=None, opts=opts, meta=meta, candidate_rules=rules_top)
+    regids_bayesian, regions_bayesian, rules_bayesian = bayesian_describer.describe(instance_indexes=queried)
+    str_rules_bayesian = convert_conjunctive_rules_to_strings(rules_bayesian)
+
     logger.debug("Bayesian regions:\n%s" % str(regions_bayesian))
     logger.debug("Bayesian ruleset:\n  %s" % "\n  ".join(str_rules_bayesian))
 

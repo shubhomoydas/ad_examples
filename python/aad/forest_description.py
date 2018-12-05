@@ -5,7 +5,9 @@ import logging
 
 from aad.aad_globals import *
 from aad.aad_support import *
-from common.expressions import get_feature_meta_default, convert_feature_ranges_to_rules
+from common.expressions import get_feature_meta_default, convert_feature_ranges_to_rules, \
+    get_max_len_in_rules, convert_conjunctive_rules_to_feature_ranges
+from bayesian_ruleset.bayesian_ruleset import BayesianRuleset
 
 
 def get_most_anomalous_subspace_indexes(model, n_top=30):
@@ -215,7 +217,70 @@ def get_compact_regions(x, model=None, instance_indexes=None, region_indexes=Non
         return None
 
 
-class CompactDescriber(object):
+class InstancesDescriber(object):
+    def __init__(self, x, y, model, opts, sample_negative=False):
+        """
+
+        :param x: np.ndarray
+            The instance matrix with ALL instances
+        :param y: np.array
+        :param model: Aad
+        :param opts: AadOpts
+        :param sample_negative: bool
+        """
+        self.x = x
+        self.y = y
+        self.model = model
+        self.opts = opts
+        self.sample_negative = sample_negative
+
+        self.meta = None
+
+    def sample_instances(self, exclude, n):
+        s = np.ones(self.x.shape[0], dtype=np.int32)
+        s[exclude] = 0
+        s = np.where(s == 1)[0]
+        np.random.shuffle(s)
+        return s[:n]
+
+    def convert_regions_to_rules(self, regions, region_indexes=None):
+        if self.meta is None:
+            raise ValueError("must set metadata before calling this function")
+        rules, str_rules = convert_feature_ranges_to_rules(regions, self.meta)
+        if region_indexes is not None:
+            for rule, index in zip(rules, region_indexes):
+                rule.id = index
+        return rules, str_rules
+
+    def get_top_regions(self, instance_indexes):
+        """ Gets the regions having highest anomaly scores
+
+        :param instance_indexes: np.array
+        :return: tuple, list(map)
+            tuple: (region indexes, #instances among instance_indexes that fall in the region)
+            list(map): list of region extents where each region extent is a
+                map {feature index: feature range}
+        """
+        region_indexes = get_regions_for_description(self.x, instance_indexes=instance_indexes,
+                                                     model=self.model,
+                                                     n_top=self.opts.describe_n_top
+                                                     )
+        regions = [self.model.all_regions[ridx].region for ridx in region_indexes]
+        return region_indexes, regions
+
+    def describe(self, instance_indexes):
+        """ Generates descriptions for positive instances among those passed as input
+
+        :param instance_indexes: indexes of instances
+        :param sample_negative: Sample random instances and mark them as negative
+            Might help in avoiding false positives.
+            Number of sampled instances will be len(instance_indexes)
+        :return: Rules
+        """
+        pass
+
+
+class CompactDescriber(InstancesDescriber):
     """ Generates compact descriptions for instances
 
     This is different from the method get_compact_regions() in that it
@@ -223,11 +288,7 @@ class CompactDescriber(object):
     including positive examples.
     """
     def __init__(self, x, y, model, opts, sample_negative=False):
-        self.x = x
-        self.y = y
-        self.model = model
-        self.opts = opts
-        self.sample_negative = sample_negative
+        InstancesDescriber.__init__(self, x, y, model, opts, sample_negative)
 
         self.prec_threshold = 0.4
         self.neg_penalty = 1.0
@@ -236,13 +297,6 @@ class CompactDescriber(object):
 
         # will be used to compute volumes
         self.feature_ranges = get_sample_feature_ranges(self.x)
-
-    def sample_instances(self, exclude, n):
-        s = np.ones(self.x.shape[0], dtype=np.int32)
-        s[exclude] = 0
-        s = np.where(s == 1)[0]
-        np.random.shuffle(s)
-        return s[:n]
 
     def get_complexity(self, regions):
         """ Gets the complexity of rules derived from feature ranges that define the regions
@@ -292,44 +346,38 @@ class CompactDescriber(object):
             negative_indexes = np.append(negative_indexes, neg_samples)
 
         # get most anomalous regions that cover the positives
-        region_indexes = get_regions_for_description(self.x, instance_indexes=positive_indexes,
-                                                     model=self.model,
-                                                     n_top=self.opts.describe_n_top
-                                                     )
+        region_indexes, _ = self.get_top_regions(positive_indexes)
+
         volumes = get_region_volumes(self.model, region_indexes, self.feature_ranges)
         total_vol = np.sum(volumes)
-        logger.debug("Total vol: %f" % total_vol)
+        # logger.debug("Total vol: %f" % total_vol)
         if total_vol > 0:
             volumes = volumes / np.sum(volumes)
 
         complexities = self.get_complexity([self.model.all_regions[ridx].region for ridx in region_indexes])
-        logger.debug("complexities: %s" % str(list(complexities)))
+        # logger.debug("complexities: %s" % str(list(complexities)))
 
+        # solve the set-covering problem where every positive instance is
+        # covered by *some* region.
         ordered_compact_idxs, n_pos, n_neg, vol = self.find_compact(positive_indexes=positive_indexes,
                                                                     negative_indexes=negative_indexes,
                                                                     region_indexes=region_indexes,
                                                                     volumes=volumes, complexities=complexities)
 
+        # filter out less precise regions which probably arose due to noise
         prec = n_pos / (n_pos + n_neg)
         selected = np.where(prec >= self.prec_threshold)[0]
         if len(selected) == 0:
             selected = np.where(prec == max(prec))[0]
         if len(selected) < len(prec):
-            logger.debug("prec: %s" % str(list(prec[selected])))
+            # logger.debug("prec: %s" % str(list(prec[selected])))
             ordered_compact_idxs, n_pos, n_neg, vol = \
                 ordered_compact_idxs[selected], n_pos[selected], n_neg[selected], vol[selected]
-        # logger.debug("ordered_compact_idxs: %s" % str(list(ordered_compact_idxs)))
-        # logger.debug("n_pos: %s" % str(list(n_pos)))
-        # logger.debug("n_neg: %s" % str(list(n_neg)))
-        # logger.debug("prec: %s" % str(list(prec)))
-        # logger.debug("vol: %s" % str(list(vol)))
 
         if ordered_compact_idxs is not None:
             feature_ranges = [self.model.all_regions[ridx].region for ridx in ordered_compact_idxs]
-            rules, str_rules = convert_feature_ranges_to_rules(feature_ranges, self.meta)
+            rules, str_rules = self.convert_regions_to_rules(feature_ranges, region_indexes=ordered_compact_idxs)
             # logger.debug("logging compact descriptions: (%d/%d)" % (len(feature_ranges), len(rules)))
-            # for range, rule in zip(feature_ranges, rules):
-            #     logger.debug("\nRange:\n%s\nRule:\n%s" % (str(range), str(rule)))
         else:
             # logger.debug("No description found")
             feature_ranges = rules = None
@@ -413,7 +461,7 @@ class PositivesOnlyCompactDescriber(CompactDescriber):
     def __init__(self, x, y, model, opts):
         CompactDescriber.__init__(self, x, y, model, opts)
 
-    def describe(self, instance_indexes, sample_negative=False):
+    def describe(self, instance_indexes):
 
         instance_indexes = np.array(instance_indexes)
         # get most anomalous regions that cover the positives
@@ -429,7 +477,69 @@ class PositivesOnlyCompactDescriber(CompactDescriber):
                                                   instance_indexes=instance_indexes,
                                                   region_indexes=region_indexes,
                                                   volumes=volumes, p=self.opts.describe_volume_p)
-        feature_ranges = [self.model.all_regions[ridx].region for ridx in compact_region_idxs]
-        rules, str_rules = convert_feature_ranges_to_rules(feature_ranges, self.meta)
-        return compact_region_idxs, feature_ranges, rules
+        regions = [self.model.all_regions[ridx].region for ridx in compact_region_idxs]
+        rules, str_rules = self.convert_regions_to_rules(regions, region_indexes=compact_region_idxs)
+        return compact_region_idxs, regions, rules
+
+
+class BayesianRulesetsDescriber(InstancesDescriber):
+    def __init__(self, x, y, model=None, opts=None, meta=None, candidate_rules=None):
+        InstancesDescriber.__init__(self, x, y, model, opts, sample_negative=True)
+        self.meta = meta
+        if self.meta is None:
+            self.meta = get_feature_meta_default(x, y)
+        self.candidate_rules = candidate_rules
+
+    def describe(self, instance_indexes):
+        instance_indexes = np.array(instance_indexes, dtype=np.int32)
+
+        if self.sample_negative:
+            frac_more = 1.0
+        else:
+            frac_more = 0.0
+
+        if self.sample_negative and frac_more > 0:
+            # add additional unlabeled instances as negative examples
+            n_neg_samples = int(frac_more * len(instance_indexes))
+            neg_samples = self.sample_instances(exclude=instance_indexes, n=n_neg_samples)
+            selected_indexes = np.append(instance_indexes, neg_samples)
+            x_br = self.x[selected_indexes]
+            y_br = np.zeros(len(selected_indexes), dtype=self.y.dtype)  # all negative by default
+            y_br[0:len(instance_indexes)] = self.y[instance_indexes]  # known labels
+        else:
+            x_br = self.x[instance_indexes]
+            y_br = self.y[instance_indexes]
+
+        if self.candidate_rules is not None:
+            # If candidate rules were provided, use them
+            rules = self.candidate_rules
+        else:
+            # If candidate rule were not provided, then get the top anomalous
+            # regions which cover all positive instances and create candidate
+            # rules from them.
+
+            # separate positive and negative instances
+            positive_indexes = instance_indexes[np.where(self.y[instance_indexes] == 1)[0]]
+
+            # get most anomalous regions that cover the positives
+            region_indexes, regions = self.get_top_regions(positive_indexes)
+
+            rules, str_rules = self.convert_regions_to_rules(regions, region_indexes=region_indexes)
+
+        br = BayesianRuleset(meta=self.meta, opts=None, max_iter=200,
+                             maxlen=get_max_len_in_rules(rules),
+                             n_min_support_stop=int(0.1 * len(y_br)))
+        br.fit(x_br, y_br, rules)
+
+        bayesian_rules = [br.rules[idx] for idx in br.predicted_rules]
+        if self.candidate_rules is not None:
+            bayesian_region_idxs = np.array([br.rules[idx].id if br.rules[idx].id is not None else -1
+                                                for idx in br.predicted_rules],
+                                            dtype=np.int32)
+            feature_ranges = convert_conjunctive_rules_to_feature_ranges(bayesian_rules, self.meta)
+        else:
+            bayesian_region_idxs = np.array([br.rules[idx].id for idx in br.predicted_rules], dtype=np.int32)
+            feature_ranges = [self.model.all_regions[ridx].region for ridx in bayesian_region_idxs]
+
+        return bayesian_region_idxs, feature_ranges, bayesian_rules
 
