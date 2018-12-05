@@ -320,11 +320,12 @@ class BayesianRuleset(object):
                 # and we can avoid the RuntimeWarning
                 alpha = np.exp(float(pt_new - pt_curr) / T)
             if pt_new > sum(self.maps[0][-1][1]):
-                logger.debug(
-                    '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n '
-                    'old is {}, pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n '.format(
-                        self.chains, ith_iter, (cfmatrix[0] + cfmatrix[2] + 0.0) / len(y), cfmatrix[0], cfmatrix[1],
-                        cfmatrix[2], cfmatrix[3], sum(self.maps[0][-1][1]) + 0.1, sum(prob), prob[0], prob[1], prob[2]))
+                if False:
+                    logger.debug(
+                        '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n '
+                        'old is {}, pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n '.format(
+                            self.chains, ith_iter, (cfmatrix[0] + cfmatrix[2] + 0.0) / len(y), cfmatrix[0], cfmatrix[1],
+                            cfmatrix[2], cfmatrix[3], sum(self.maps[0][-1][1]) + 0.1, sum(prob), prob[0], prob[1], prob[2]))
                 # logger.debug("rules_new: %s" % str(rules_new))
                 # logger.debug("const_denominator: %s" % str(self.const_denominator))
                 self.Asize.append([np.floor(min(self.Asize[-1][l],

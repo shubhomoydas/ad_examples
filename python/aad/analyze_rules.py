@@ -6,12 +6,7 @@ import logging
 from aad.aad_ruleset_support import *
 import matplotlib.pyplot as plt
 from common.data_plotter import DataPlotter
-from aad.anomaly_dataset_support import dataset_configs
-
-
-dataset_feature_names = {'abalone': ["Sex_1", "Sex_2", "Length", "Diameter", "Height",
-                                     "Whole weight", "Shucked weight", "Viscera weight",
-                                     "Shell weight"]}
+from aad.anomaly_dataset_support import dataset_configs, dataset_feature_names
 
 
 def load_rules(x, y, meta, fileprefix, out_dir, opts, evaluate_f1=True):
@@ -182,7 +177,12 @@ def plot_scores(agg_top, agg_compact, agg_bayesian, score_type, dp, opts):
                   "-", color="blue", linewidth=1, label="Bayesian Rulesets")
     legend_handles.append(ln)
 
-    if opts.dataset == "abalone":
+    if opts.dataset == "toy2":
+        # just for adding a legend for candidate rules, add a dummy curve
+        ln, = pl.plot([0, 0], [0, 0], "-", color="grey", linewidth=1, label="Candidate Rules")
+        legend_handles.append(ln)
+
+    if opts.dataset == "abalone" or (opts.dataset == "toy2" and score_type == "precisions"):
         pl.legend(handles=legend_handles, loc='lower right', prop={'size': 6})
 
 
@@ -230,8 +230,20 @@ def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts):
         pl.legend(handles=legend_handles, loc='upper right', prop={'size': 6})
 
 
+def plot_blank_image(dp, message="Intentionally Blank"):
+    pl = dp.get_next_plot()
+    plt.xticks([])
+    plt.yticks([])
+    plt.xlim([-1, 1])
+    plt.ylim([-1, 1])
+    pl.text(-0.3, 0, message, fontsize=6, color="black")
+
+
 def swap_metadata(rules_data, meta):
     for rl in rules_data:
+        if rl[2] is None:
+            # possibly the rule file was missing at time of load (see load_rules() above)
+            continue
         for rule in rl[2]:
             rule.meta = meta
         logger.debug("runidx: %d, iter: %d\n  %s" % (rl[0], rl[1], "\n  ".join([str(v) for v in rl[2]])))
@@ -275,7 +287,7 @@ def analyze_rules_dataset(opts, dp):
         plot_scores(agg_top, agg_compact, agg_bayesian, "recalls", dp, opts)
         plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts)
         plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts)
-        dp.get_next_plot()  # blank placeholder for alignment
+        plot_blank_image(dp, message="Intentionally\nBlank")  # placeholder for alignment
 
 
 def analyze_rules(opts):

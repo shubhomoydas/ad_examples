@@ -94,11 +94,20 @@ dataset_configs = {
     'toy2': [45, 35, 512, 30, "Toy-2"]
 }
 
+
+dataset_feature_names = {'abalone': ["Sex_1", "Sex_2",  # '1,0': M, '0,1': I, '0,0': F
+                                     "Length", "Diameter", "Height",
+                                     "Whole_weight", "Shucked_weight", "Viscera_weight",
+                                     "Shell_weight"],
+                         'toy2': ["x", "y"]}
+
+
 dataset_colors = {"abalone": "red", "yeast": "green", "ann_thyroid_1v3": "blue",
                       "cardiotocography_1": "orange", "covtype": "magenta",
                       "mammography": "pink", "kddcup": "grey", "shuttle_1v23567": "brown",
                       "weather": "black", "electricity": "cyan",
                       "toy2": "black"}
+
 
 def get_result_defs(args):
     budget = dataset_configs[args.dataset][0]

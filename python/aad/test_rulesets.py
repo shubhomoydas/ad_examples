@@ -2,15 +2,17 @@ from common.gen_samples import *
 from .aad_globals import *
 from .demo_aad import detect_anomalies_and_describe
 from .aad_ruleset_support import *
+from .forest_description import CompactDescriber
+from .anomaly_dataset_support import dataset_feature_names
 
 """
 pythonw -m aad.test_rulesets
 """
 
 
-def get_debug_args(budget=30, detector_type=AAD_IFOREST):
+def get_debug_args(dataset="toy2", budget=30, detector_type=AAD_IFOREST):
     # return the AAD parameters what will be parsed later
-    return ["--resultsdir=./temp", "--dataset=toy2", "--randseed=42",
+    return ["--resultsdir=./temp", "--dataset=%s" % dataset, "--randseed=42",
             "--reruns=1",
             "--detector_type=%d" % detector_type,
             "--forest_score_type=%d" %
@@ -81,7 +83,8 @@ def test_aad_rules(opts):
     x, y = read_anomaly_dataset(opts.dataset)
     y = np.asarray(y, dtype=np.int32)
     logger.debug(x.dtype.names)
-    meta = get_feature_meta_default(x, y, feature_names=["x", "y"], label_name="label")
+    feature_names = dataset_feature_names.get(opts.dataset)
+    meta = get_feature_meta_default(x, y, feature_names=feature_names, label_name="label")
     logger.debug(meta)
 
     file_path_compact = os.path.join(opts.resultsdir, "%s_compact_rules.txt" % opts.dataset)
@@ -98,6 +101,11 @@ def test_aad_rules(opts):
 
         # reuse code from demo_aad.py
         model, _, queried, _, _ = detect_anomalies_and_describe(x, y, opts)
+
+        describer = CompactDescriber(x, y, model, opts, sample_negative=True)
+        _, _, rules = describer.describe(np.array(queried, dtype=np.int32))
+        precision, recall, f1 = evaluate_ruleset(x, y, rules, average="binary")
+        logger.debug("precision: %f, recall: %f, f1: %f" % (precision, recall, f1))
 
         # we will recompute the Bayesian ruleset every time just for DEBUG
         r_top, r_compact, _ = get_rulesets(x, y, queried=queried, model=model,
@@ -127,6 +135,7 @@ def test_aad_rules(opts):
 
     logger.debug("Top regions:\n%s" % str(regions_top))
     logger.debug("Compact regions:\n%s" % str(regions_compact))
+    logger.debug("Compact ruleset:\n  %s" % "\n  ".join(str_rules_compact))
 
     rules_bayesian, regions_bayesian, str_rules_bayesian, _ = get_bayesian_rulesets(x, y, queried, rules_top, meta, opts)
     logger.debug("Bayesian regions:\n%s" % str(regions_bayesian))
@@ -138,7 +147,7 @@ def test_aad_rules(opts):
     _, _, f1_bayesian = evaluate_ruleset(x, y, rules_bayesian, average="weighted")
     print("F1 scores: compact descriptions: %f; bayesian: %f" % (f1_compact, f1_bayesian))
 
-    if opts.plot2D:
+    if x.shape[1] == 2 and opts.plot2D:
         path = os.path.join(opts.resultsdir, "%s_rulesets.pdf" % opts.dataset)
         dp = DataPlotter(pdfpath=path, rows=2, cols=2, save_tight=True)
         plot_selected_regions(x, y, regions=regions_top, query_instances=queried,
@@ -157,7 +166,7 @@ if __name__ == "__main__":
 
     # Prepare the aad arguments. It is easier to first create the parsed args and
     # then create the actual AadOpts from the args
-    args = get_aad_command_args(debug=True, debug_args=get_debug_args())
+    args = get_aad_command_args(debug=True, debug_args=get_debug_args(dataset="toy2"))
     configure_logger(args)
 
     opts = AadOpts(args)

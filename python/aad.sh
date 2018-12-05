@@ -604,9 +604,9 @@ if [ -d "/Users/moy" ]; then
 elif [ -d "/home/sdas/codebase/bb_python/ad_examples" ]; then
     # cluster environment
     BASE_DIR=/data/doppa/users/sdas/${DATASET_FOLDER}
-    LOG_PATH=/data/doppa/users/sdas/temp/aad${STREAMING_SIG}
+    LOG_PATH=/data/doppa/users/sdas/temp/${OPERATION}${STREAMING_SIG}
     PYTHON_CMD="python -m"
-    RESULTS_PATH="${BASE_DIR}/results-aad${STREAMING_SIG}/$DATASET/${NAME_PREFIX}"
+    RESULTS_PATH="${BASE_DIR}/results-${OPERATION}${STREAMING_SIG}/$DATASET/${NAME_PREFIX}"
     source /home/sdas/py_venv/bin/activate
     export PYTHONPATH=$PYTHONPATH:/home/sdas/codebase/bb_python/ad_examples/python
     SCRIPT_PATH=${PYMODULE}

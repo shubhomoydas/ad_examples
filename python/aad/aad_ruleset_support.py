@@ -1,7 +1,7 @@
 from common.expressions import *
 from .aad_globals import *
 from aad.forest_description import get_regions_for_description, is_forest_detector, \
-    get_region_volumes, get_compact_regions
+    get_region_volumes, get_compact_regions, CompactDescriber, PositivesOnlyCompactDescriber
 from bayesian_ruleset.bayesian_ruleset import BayesianRuleset, get_max_len_in_rules
 
 
@@ -28,25 +28,6 @@ def get_top_regions(x, instance_indexes=None, model=None, opts=None):
                                            model=model, n_top=opts.describe_n_top)
     desc_regions = [model.all_regions[ridx].region for ridx in reg_idxs]
     return reg_idxs, desc_regions
-
-
-def get_compact_descriptions(x, instance_indexes, model, opts):
-    # get feature ranges which will be used to compute volumes
-    feature_ranges = get_sample_feature_ranges(x)
-
-    instance_indexes = np.array(instance_indexes)
-    top_region_idxs, top_regions = get_top_regions(x, instance_indexes=instance_indexes, model=model, opts=opts)
-
-    # get volume of each candidate region
-    volumes = get_region_volumes(model, top_region_idxs, feature_ranges)
-
-    # get the smallest set of smallest regions that together cover all instances
-    compact_region_idxs = get_compact_regions(x, model=model,
-                                              instance_indexes=instance_indexes,
-                                              region_indexes=top_region_idxs,
-                                              volumes=volumes, p=opts.describe_volume_p)
-    compact_regions = [model.all_regions[ridx].region for ridx in compact_region_idxs]
-    return compact_region_idxs, compact_regions
 
 
 def prepare_conjunctive_rulesets(x, y, meta, region_extents=None, str_rules=None, opts=None):
@@ -138,8 +119,12 @@ def get_rulesets(x, y, queried, model, meta, opts, bayesian=False):
     if len(discovered_anomalies) == 0:
         return None, None, None
 
+    compact_describer = CompactDescriber(x, y, model, opts, sample_negative=True)
+    # compact_describer = PositivesOnlyCompactDescriber(x, y, model, opts)
+
     regids_top, regions_top = get_top_regions(x, instance_indexes=discovered_anomalies, model=model, opts=opts)
-    regids_compact, regions_compact = get_compact_descriptions(x, instance_indexes=discovered_anomalies, model=model, opts=opts)
+
+    regids_compact, regions_compact, _ = compact_describer.describe(instance_indexes=queried)
 
     rules_top, str_rules_top = prepare_conjunctive_rulesets(x, y, meta=meta, region_extents=regions_top, opts=opts)
 
