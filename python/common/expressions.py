@@ -143,10 +143,13 @@ class Factor(DType):
 class NumericContinuous(DType):
     """Definitions for Gaussian distributed real values."""
 
-    def __init__(self, vals):
+    def __init__(self, vals=None):
         """Initializes the mean and variance of the Gaussian variable."""
 
         DType.__init__(self)
+
+        if vals is None:
+            vals = [0, 1]  # some dummy. This is more for information.
 
         # Ignore NaNs
         n = np.count_nonzero(~np.isnan(vals))
@@ -475,8 +478,14 @@ class Cmp(BinaryPredicate):
                 tlit.categorical = True  # class variables are always categorical
                 tlit.valindex = meta.lbldef.index_of(tlit.val)
             elif tvar.varindex >= 0:  # feature column
-                # assume that all features are continuous
-                tlit.categorical = False
+                if isinstance(meta.featuredefs[tvar.varindex], Factor):
+                    tlit.categorical = True
+                    valindex = meta.featuredefs[tvar.varindex].index_of(tlit.val)
+                    if valindex is None:
+                        valindex = UNKNOWN_CATEGORICAL_VALUE_INDEX
+                    tlit.valindex = valindex
+                else:
+                    tlit.categorical = False
         else:
             raise ValueError('Comparisons must be between a variable and a literal.')
 
@@ -1132,7 +1141,8 @@ def get_feature_meta_default(x, y, feature_names=None,
 def evaluate_instances_for_predicate(predicate, insts, labels, meta):
     satisfied = []
     for i in range(insts.shape[0]):
-        if predicate.evaluate(insts[i, :], labels[i], meta):
+        lbl = labels[i] if labels is not None else None
+        if predicate.evaluate(insts[i, :], lbl, meta):
             satisfied.append(i)
     return np.array(satisfied, dtype=np.int32)
 

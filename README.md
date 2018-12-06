@@ -269,7 +269,7 @@ A comparison of **interpretable** rules found by *Compact Descriptions (CD)* and
 
 We generate the rules by both techniques (*CD* and *BR*) at regular points in the feedback cycle and compute the F1 score on the entire dataset (top left plot below). These results were averaged over 10 independent runs. *CD* and *BR* are generally competitive. A decomposition of the F1 score shows that *CD* usually has a lower precision, but higher recall than *BR*. The bottom row shows that *CD* usually selects **simpler** rules (i.e., smaller length) than *BR* in order to describe the anomalies. The grey curve (bottom row middle, labeled 'Candidate Rules') is the total number of rules available in a feedback cycle. Both *CD* and *BR* use the same set of candidate rules. A slightly smaller subset of the candidate rules were selected by *BR* than *CD* to explain most anomalies.
 
-**Important:** The results have been presented here only for the *toy2* dataset because we have used this as the running example. The results differ by the dataset, but the general patterns pointed out above seem to hold on the real-world datasets [as shown here](documentation/rules).
+**Important:** The results have been presented here only for the *toy2* dataset because we have used this as the running example. The results differ by the dataset, but the general patterns pointed out above seem to hold on the real-world datasets as shown in the document [all-rule_analysis.pdf](documentation/rules/all-rule_analysis.pdf).
 
 In order to generate the plots below, first set `RULES_IND=1` and `RULE_OUTPUT_INTERVAL="--rule_output_interval=5"` in `aad.sh`, and then execute the following commands:
 
@@ -281,7 +281,7 @@ In order to generate the plots below, first set `RULES_IND=1` and `RULE_OUTPUT_I
 
 **Rule expressions**
 
-The codebase encapsulates predicate based rules into the `Predicate` class in `common/expressions.py`. The conjunctive rules are composed of a series of `Predicate`s, and operations on these are encapsulated in `ConjunctiveRule`. In order to understand and debug these data structures, please see `test_rule_apis()` in `common/expressions.py`.
+The codebase uses a very light-weight rule/predicate framework. The conjunctive rules (used by the description algorithms) are composed of a series of `Predicate` objects and operations on these are encapsulated in `ConjunctiveRule`. In order to understand and debug these data structures, please see `test_rule_apis()` in [expressions.py](python/common/expressions.py) and the [tutorial](python/common/expressions_tutorial.py). The rule framework has been introduced primarily to provide a higher-level abstraction for rulesets so that programming bugs may be avoided.
 
 **Reference(s)**:
   - Wang, T., Rudin, C., Velez-Doshi, F., Liu, Y., Klampfl, E., MacNeille, P. (2016). *Bayesian Rule Sets for Interpretable Classification* in the Proceedings of the IEEE International Conference on Data Mining.
