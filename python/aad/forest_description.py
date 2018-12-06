@@ -301,11 +301,11 @@ class CompactDescriber(InstancesDescriber):
     def get_complexity(self, regions):
         """ Gets the complexity of rules derived from feature ranges that define the regions
 
-        Computed the finite values in defining the regions. These finite values
-        become part of the rule. Fewer these values, smaller the rule in length.
+        Compute the finite values in defining the regions. These finite values
+        become part of the rule. Fewer such values, smaller the rule in length.
         E.g.: let a region be:
             {0: (-inf, 2), 1: (3, 5), 2: (-inf, inf)}
-        This region will become the rule of length (complexity) 3:
+        This region will become a rule of length 3 and complexity = 2^(3-1) = 4:
             feature0 <= 2 & feature1 > 3 & feature1 <= 5
 
         :param regions: list of dict
