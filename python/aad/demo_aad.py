@@ -2,7 +2,8 @@ from common.data_plotter import *
 from common.gen_samples import *
 
 from aad.aad_support import *
-from aad.forest_description import *
+from aad.forest_description import CompactDescriber, PositivesOnlyCompactDescriber, \
+    BayesianRulesetsDescriber, get_region_memberships
 
 """
 A simple no-frills demo of how to use AAD in an interactive loop.
@@ -40,12 +41,13 @@ def get_debug_args(budget=30, detector_type=AAD_IFOREST):
             # leaf-only is preferable, else computationally and memory expensive
             "--forest_add_leaf_nodes_only",
             "--ensemble_score=%d" % ENSEMBLE_SCORE_LINEAR,
+            # "--bayesian_rules",
             "--resultsdir=./temp",
             "--log_file=./temp/demo_aad.log",
             "--debug"]
 
 
-def describe_instances(x, instance_indexes, model, opts):
+def describe_instances(x, instance_indexes, model, opts, interpretable=False):
     """ Generates compact descriptions for the input instances
 
     :param x: np.ndarray
@@ -63,28 +65,33 @@ def describe_instances(x, instance_indexes, model, opts):
     if not is_forest_detector(opts.detector_type):
         raise ValueError("Descriptions only supported by forest-based detectors")
 
-    # get feature ranges which will be used to compute volumes
-    feature_ranges = get_sample_feature_ranges(x)
+    # setup dummy y
+    y = np.zeros(x.shape[0], dtype=np.int32)
+    y[instance_indexes] = 1
 
-    # get top region indexes which will be candidates for description
-    reg_idxs = get_regions_for_description(x, instance_indexes=instance_indexes,
-                                           model=model, n_top=opts.describe_n_top)
+    if interpretable:
+        if opts.bayesian_rules:
+            # use BayesianRulesetsDescriber to get compact and [human] interpretable rules
+            describer = BayesianRulesetsDescriber(x, y=y, model=model, opts=opts)
+        else:
+            # use CompactDescriber to get compact and [human] interpretable rules
+            describer = CompactDescriber(x, y=y, model=model, opts=opts)
+    else:
+        # use PositivesOnlyCompactDescriber to get simply compact (minimum volume) rules
+        describer = PositivesOnlyCompactDescriber(x, y=y, model=model, opts=opts)
 
-    # get volume of each candidate region
-    volumes = get_region_volumes(model, reg_idxs, feature_ranges)
+    selected_region_idxs, desc_regions, rules = describer.describe(instance_indexes)
 
-    # get the smallest set of smallest regions that together cover all instances
-    selected_region_idxs = get_compact_regions(x, model=model,
-                                               instance_indexes=instance_indexes,
-                                               region_indexes=reg_idxs,
-                                               volumes=volumes, p=opts.describe_volume_p)
-    desc_regions = [model.all_regions[ridx].region for ridx in selected_region_idxs]
     _, memberships = get_region_memberships(x, model, instance_indexes, selected_region_idxs)
     instances_in_each_region = np.sum(memberships, axis=0)
     if len(instance_indexes) < np.sum(instances_in_each_region):
         logger.debug("\nNote: len instance_indexes (%d) < sum of instances_in_each_region (%d)\n"
                      "because some regions overlap and cover the same instance(s)." %
-                     (len(instance_indexes), np.sum(instances_in_each_region)))
+                     (len(instance_indexes), int(np.sum(instances_in_each_region))))
+
+    if rules is not None:
+        logger.debug("Rules:\n  %s" % "\n  ".join([str(rule) for rule in rules]))
+
     return zip(selected_region_idxs, instances_in_each_region), desc_regions
 
 
@@ -139,7 +146,8 @@ def detect_anomalies_and_describe(x, y, opts):
     # generate compact descriptions for the detected anomalies
     ridxs_counts, region_extents = None, None
     if len(ha) > 0:
-        ridxs_counts, region_extents = describe_instances(x, np.array(ha), model=model, opts=opts)
+        ridxs_counts, region_extents = describe_instances(x, np.array(ha), model=model,
+                                                          opts=opts, interpretable=True)
         logger.debug("selected region indexes and corresponding instance counts (among %d):\n%s" %
                      (len(ha), str(list(ridxs_counts))))
         logger.debug("region_extents: these are of the form [{feature_index: (feature range), ...}, ...]\n%s" %
