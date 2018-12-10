@@ -936,7 +936,7 @@ class ConjunctiveRule(object):
             i += 1
         return result
 
-    def where_satisfied(self, insts, labels):
+    def where_satisfied(self, insts, labels=None):
         """ Returns all indexes of insts which satisfy the rule
 
         :param insts: np.ndarray
@@ -945,7 +945,7 @@ class ConjunctiveRule(object):
         """
         satisfied = []
         for i in range(insts.shape[0]):
-            if self.evaluate_inst(insts[i, :], labels[i]):
+            if self.evaluate_inst(insts[i, :], None if labels is None else labels[i]):
                 satisfied.append(i)
         return np.array(satisfied, dtype=np.int32)
 

@@ -90,7 +90,12 @@ def describe_instances(x, instance_indexes, model, opts, interpretable=False):
                      (len(instance_indexes), int(np.sum(instances_in_each_region))))
 
     if rules is not None:
-        logger.debug("Rules:\n  %s" % "\n  ".join([str(rule) for rule in rules]))
+        rule_details = []
+        for rule in rules:
+            rule_details.append("%s: %d/%d instances" % (str(rule),
+                                                         len(rule.where_satisfied(x[instance_indexes])),
+                                                         len(instance_indexes)))
+        logger.debug("Rules:\n  %s" % "\n  ".join(rule_details))
 
     return zip(selected_region_idxs, instances_in_each_region), desc_regions
 
