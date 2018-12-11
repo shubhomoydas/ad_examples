@@ -52,7 +52,7 @@ def plot_regions(model, region_indexes, pl):
         plot_rect_region(pl, region, "red", axis_lims)
 
 
-def train_anomaly_detector(x, y, opts, test_points, name, explain=False):
+def train_anomaly_detector(x, y, opts, test_points, name, explain=False, interpretable=False):
     rng = np.random.RandomState(opts.randseed)
 
     # fit the model
@@ -115,7 +115,8 @@ def train_anomaly_detector(x, y, opts, test_points, name, explain=False):
     dp.close()
 
     if explain:
-        ridxs_counts, region_extents = describe_instances(x, np.array(ha), model=model, opts=opts)
+        ridxs_counts, region_extents = describe_instances(x, np.array(ha), model=model, opts=opts,
+                                                          interpretable=interpretable)
         logger.debug("selected region indexes and corresponding instance counts (among %d):\n%s" %
                      (len(ha), str(list(ridxs_counts))))
         region_indexes = [region for region, count in ridxs_counts]
@@ -123,7 +124,7 @@ def train_anomaly_detector(x, y, opts, test_points, name, explain=False):
                      model=model, region_indexes=region_indexes, legend=False)
 
 
-def train_classifier(x, y, opts, test_points, name, explain=False):
+def train_classifier(x, y, opts, test_points, name, explain=False, interpretable=False):
     classifier = RFClassifier.fit(x, y, n_estimators=100, max_depth=None)
 
     xx, yy = np.meshgrid(np.linspace(-4, 8, 50), np.linspace(-4, 8, 50))
@@ -158,7 +159,8 @@ def train_classifier(x, y, opts, test_points, name, explain=False):
         # generate compact descriptions from the Random Forest classifier
         rfre = RandomForestAadWrapper(x, y, classifier.clf)
         ha = np.where(y == 1)[0]
-        ridxs_counts, region_extents = describe_instances(x, ha, model=rfre, opts=opts)
+        ridxs_counts, region_extents = describe_instances(x, ha, model=rfre, opts=opts,
+                                                          interpretable=interpretable)
         logger.debug("selected random forest region indexes and corresponding instance counts (among %d):\n%s" %
                      (len(ha), str(list(ridxs_counts))))
         region_indexes = [region for region, count in ridxs_counts]
@@ -166,12 +168,13 @@ def train_classifier(x, y, opts, test_points, name, explain=False):
                      model=rfre, region_indexes=region_indexes, legend=False)
 
 
-def plot_decision_tree_descriptions(x, y, name):
+def plot_decision_tree_descriptions(x, y, name, interpretable=False):
     ha = np.where(y == 1)[0]
     # generate compact descriptions from the Decision Tree classifier;
     # these just correspond to the rules extracted from the tree structure
     dt = DecisionTreeAadWrapper(x, y)
-    ridxs_counts, region_extents = describe_instances(x, ha, model=dt, opts=opts)
+    ridxs_counts, region_extents = describe_instances(x, ha, model=dt, opts=opts,
+                                                      interpretable=interpretable)
     logger.debug("selected decision tree region indexes and corresponding instance counts (among %d):\n%s" %
                  (len(ha), str(list(ridxs_counts))))
     region_indexes = [region for region, count in ridxs_counts]
@@ -222,11 +225,12 @@ if __name__ == "__main__":
     x, y = get_synthetic_samples(stype=synthetic_dataset_id)
     test_points = np.array([-3., 7.], dtype=np.float32).reshape((1,2))
 
+    interpretable = False
     name = "avc_dataset_%d" % synthetic_dataset_id
     plot_dataset(x, y, opts, test_points=test_points, name=name)
-    train_anomaly_detector(x, y, opts, test_points, name=name, explain=explain)
-    train_classifier(x, y, opts, test_points, name=name, explain=explain)
+    train_anomaly_detector(x, y, opts, test_points, name=name, explain=explain, interpretable=interpretable)
+    train_classifier(x, y, opts, test_points, name=name, explain=explain, interpretable=interpretable)
 
     # plot rules from a decision tree classifier
     if explain:
-        plot_decision_tree_descriptions(x, y, name=name)
+        plot_decision_tree_descriptions(x, y, name=name, interpretable=interpretable)
