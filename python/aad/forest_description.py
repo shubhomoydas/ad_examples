@@ -457,11 +457,17 @@ class CompactDescriber(InstancesDescriber):
             return None
 
 
-class PositivesOnlyCompactDescriber(CompactDescriber):
+class MinimumVolumeCoverDescriber(CompactDescriber):
     def __init__(self, x, y, model, opts):
         CompactDescriber.__init__(self, x, y, model, opts)
 
     def describe(self, instance_indexes):
+        """ Returns descriptions that cover all input instances
+
+        Finds all subspaces which together contain all input instances
+        and have the minimum volume. No effort is made to exclude
+        false positives.
+        """
 
         instance_indexes = np.array(instance_indexes)
         # get most anomalous regions that cover the positives

@@ -2,7 +2,7 @@ from common.data_plotter import *
 from common.gen_samples import *
 
 from aad.aad_support import *
-from aad.forest_description import CompactDescriber, PositivesOnlyCompactDescriber, \
+from aad.forest_description import CompactDescriber, MinimumVolumeCoverDescriber, \
     BayesianRulesetsDescriber, get_region_memberships
 
 """
@@ -77,8 +77,8 @@ def describe_instances(x, instance_indexes, model, opts, interpretable=False):
             # use CompactDescriber to get compact and [human] interpretable rules
             describer = CompactDescriber(x, y=y, model=model, opts=opts)
     else:
-        # use PositivesOnlyCompactDescriber to get simply compact (minimum volume) rules
-        describer = PositivesOnlyCompactDescriber(x, y=y, model=model, opts=opts)
+        # use MinimumVolumeCoverDescriber to get simply compact (minimum volume) rules
+        describer = MinimumVolumeCoverDescriber(x, y=y, model=model, opts=opts)
 
     selected_region_idxs, desc_regions, rules = describer.describe(instance_indexes)
 
