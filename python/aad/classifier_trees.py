@@ -1,3 +1,4 @@
+from sklearn.tree import DecisionTreeClassifier
 from aad.aad_support import *
 
 
@@ -58,7 +59,13 @@ class DecisionTreeAadWrapper(AadForest):
         self.d = None
 
         self.decision_tree = DTClassifier.fit(x, y, self.max_depth)
+
+        # anomalies are labeled '1'
+        self.anomaly_class_index = np.where(self.decision_tree.clf.classes_ == 1)[0][0]
+        # logger.debug("anomaly_class_index: %d" % self.anomaly_class_index)
+
         self.clf = ClassifierForest([self.decision_tree.clf])
+
         self._init_structures()
         self.init_weights(init_type=INIT_UNIF)
 
@@ -78,9 +85,32 @@ class DecisionTreeAadWrapper(AadForest):
                 region_id += 1  # this will monotonously increase across trees
             self.all_node_regions.append(node_regions)
             # print "%d, #nodes: %d" % (i, len(regions))
-        self.d, _, _ = self.get_region_scores(self.all_regions)
+        self.d, _, _ = self.get_region_scores_wrapper()
         # self.w = self.get_uniform_weights()
         self.w_unif_prior = self.get_uniform_weights()
+
+    def get_region_scores_wrapper(self):
+        """Larger values mean more anomalous"""
+        if self.clf.n_estimators == 1 and isinstance(self.clf.estimators_[0], DecisionTreeClassifier):
+            return self.get_region_scores_dt(self.all_regions)
+        return self.get_region_scores(self.all_regions)
+
+    def get_region_scores_dt(self, all_regions):
+        """ Assign the probability of being anomaly in a region as the score for that region
+
+        Note: Larger values mean more anomalous
+        """
+        d = np.zeros(len(all_regions), dtype=np.float64)
+        for i, region in enumerate(all_regions):
+            # the anomaly class '1' probability is the region score
+            dists = region.value[0]
+            tot = np.sum(dists)
+            if tot == 0:
+                tot = 1.
+            # logger.debug(region.value)
+            d[i] = dists[self.anomaly_class_index] * 1. / tot
+        logger.debug("d:\n%s" % str(list(d)))
+        return d, None, None
 
     def fit(self, x):
         raise NotImplementedError("fit() not implemented for DecisionTreeRegionExtractor")

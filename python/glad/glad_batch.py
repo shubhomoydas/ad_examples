@@ -54,6 +54,10 @@ def afss_active_learn_ensemble(x, y, ensemble, opts):
                                       name="_feedback_after", n_anoms=opts.n_anoms,
                                       dataset=opts.dataset, outpath=opts.results_dir)
 
+        plot_glad_relevance_regions(x, y, ensemble, afss, selected=None,
+                                    name="rel_regions",
+                                    dataset=opts.dataset, outpath=opts.results_dir)
+
     afss.close_session()
 
     # the number of anomalies discovered within the budget while incorporating feedback

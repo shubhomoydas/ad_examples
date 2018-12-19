@@ -94,14 +94,14 @@ class DataPlotter(object):
             self.pdf.close()
 
 
-def plot_rect_region(pl, region, color, axis_lims):
+def plot_rect_region(pl, region, color, axis_lims, facecolor='none', alpha=1):
     xlims = axis_lims[0]
     ylims = axis_lims[1]
     xy = (max(region[0][0], xlims[0]), max(region[1][0], ylims[0]))
     width = min(region[0][1], xlims[1]) - xy[0]
     height = min(region[1][1], ylims[1]) - xy[1]
-    pl.add_patch(plt.Rectangle(xy, width, height, facecolor='none',
-                               edgecolor=color, alpha=1))
+    pl.add_patch(plt.Rectangle(xy, width, height, facecolor=facecolor,
+                               edgecolor=color, alpha=alpha))
 
 
 def plot_sidebar(hts, dash_xy, dash_wh, pl):

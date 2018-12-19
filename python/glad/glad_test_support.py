@@ -3,7 +3,8 @@ from .afss import partition_instances, get_afss_batches
 from .glad_support import *
 from loda.loda import build_proj_hist, ProjectionVectorsHistograms, get_neg_ll_all_hist, \
     LodaModel, LodaResult
-
+from aad.classifier_trees import DecisionTreeAadWrapper
+from aad.demo_aad import describe_instances
 
 def plot_dataset(x, y, cls_cols, pl, selected=None, projections=None):
     plt.xlim([np.min(x[:, 0]), np.max(x[:, 0])])
@@ -95,7 +96,7 @@ def plot_afss_scores(x, y, ensemble, afss, selected=None, plot_ensemble=False,
     if ensemble.m > 1: p_rows = p_cols = 2
     dp = DataPlotter(pdfpath="%s/test_%s_%s_active_%dw%s.pdf" %
                              (outpath, score_type, dataset, ensemble.m, name),
-                     rows=p_rows, cols=p_cols)
+                     rows=p_rows, cols=p_cols, save_tight=True)
     for i in range(scores_all.shape[1]):
         pl = dp.get_next_plot()
 
@@ -127,7 +128,8 @@ def plot_weighted_scores(x, y, ensemble, afss, selected=None, xx=None, yy=None, 
     composite_scores = afss.get_weighted_scores(x_test, ensemble_scores)
     scores = composite_scores.reshape(xx.shape)
     dp = DataPlotter(pdfpath="%s/test_afss_%s_anomaly_scores_%dw%s.pdf" %
-                             (outpath, dataset, ensemble.get_projections().shape[1], name), rows=1, cols=1)
+                             (outpath, dataset, ensemble.get_projections().shape[1], name),
+                     rows=1, cols=1, save_tight=True)
     pl = dp.get_next_plot()
     cf = pl.contourf(xx, yy, scores, contour_levels, cmap=plt.cm.get_cmap('jet'))
     cbar = plt.colorbar(cf)
@@ -136,6 +138,47 @@ def plot_weighted_scores(x, y, ensemble, afss, selected=None, xx=None, yy=None, 
     plot_dataset(x, y, cls_cols, pl, selected=selected, projections=ensemble.get_projections())
     dp.close()
     return xx, yy
+
+
+def plot_glad_relevance_regions(x, y, ensemble, afss, selected=None,
+                                name="",
+                                dataset=None, outpath=None):
+    score_type = "afss"
+    scores_all = afss.decision_function(x)
+    projections = ensemble.get_projections()
+    p_rows = p_cols = 1
+    if ensemble.m > 1: p_rows = p_cols = 2
+    dp = DataPlotter(pdfpath="%s/test_%s_%s_active_%dw%s.pdf" %
+                             (outpath, score_type, dataset, ensemble.m, name),
+                     rows=p_rows, cols=p_cols, save_tight=True)
+    for i in range(scores_all.shape[1]):
+        pl = dp.get_next_plot()
+        scores = scores_all[:, i]
+
+        # Instances having AFSS probabilities > bias_prob are in 'relevant'
+        # regions for an ensemble member.
+        labels = np.zeros(len(scores), dtype=np.int32)
+        rel_indexes = np.where(scores > afss.bias_prob)[0]
+        if len(rel_indexes) > 0:
+            labels[rel_indexes] = 1
+            # train a decision tree classifier that will separate 0s from 1s
+            dt = DecisionTreeAadWrapper(x, labels)
+            # get all regions from the decision tree where probability of
+            # predicting anomaly class is > 0.5
+            region_idxs = np.where(dt.d > 0.5)[0]
+        else:
+            logger.debug("No relevant regions found for member %d..." % i)
+            dt = None
+            region_idxs = []
+
+        cls_cols = {0: "grey", 1: "red"}
+        plot_dataset(x, y, cls_cols, pl, selected=selected, projections=projections[:, [i]])
+        axis_lims = (plt.xlim(), plt.ylim())
+        for i in region_idxs:
+            region = dt.all_regions[i].region
+            # logger.debug(str(region))
+            plot_rect_region(pl, region, "red", axis_lims, facecolor='red', alpha=0.5)
+    dp.close()
 
 
 def prepare_loda_model_with_w(x, w):

@@ -17,12 +17,13 @@ from aad.multiview_forest import *
 
 
 class RegionData(object):
-    def __init__(self, region, path_length, node_id, score, node_samples, log_frac_vol=0.0):
+    def __init__(self, region, path_length, node_id, score, node_samples, value=None, log_frac_vol=0.0):
         self.region = region
         self.path_length = path_length
         self.node_id = node_id
         self.score = score
         self.node_samples = node_samples
+        self.value = value
         self.log_frac_vol = log_frac_vol
 
     def __str__(self):
@@ -215,7 +216,7 @@ class AadForest(Aad, StreamingSupport):
         if isinstance(tree.tree_, ArrTree):
             log_frac_vol = tree.tree_.acc_log_v
 
-        # value = tree.tree_.value
+        value = tree.tree_.value
 
         full_region = {}
         for fidx in range(tree.tree_.n_features):
@@ -231,6 +232,7 @@ class AadForest(Aad, StreamingSupport):
                 regions.append(RegionData(deepcopy(region), path_length, node,
                                           self._average_path_length(node_samples[node]),
                                           node_samples[node],
+                                          value=None if value is None else value[node],
                                           log_frac_vol=0. if log_frac_vol is None else log_frac_vol[node]))
                 return
             elif left[node] == -1 or right[node] == -1:
@@ -242,6 +244,7 @@ class AadForest(Aad, StreamingSupport):
                 regions.append(RegionData(deepcopy(region), path_length, node,
                                           self._average_path_length(node_samples[node]),
                                           node_samples[node],
+                                          value=None if value is None else value[node],
                                           log_frac_vol=0. if log_frac_vol is None else log_frac_vol[node]))
 
             if left[node] != -1:
