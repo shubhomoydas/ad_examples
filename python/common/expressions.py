@@ -1000,9 +1000,10 @@ def convert_feature_ranges_to_rules(ranges, meta):
                 predicates.append("%s > %f" % (meta.featurenames[feature], range[0]))
             if np.isfinite(range[1]):
                 predicates.append("%s <= %f" % (meta.featurenames[feature], range[1]))
-        str_rule = " & ".join(predicates)
-        rules.append(ConjunctiveRule.parse(str_rule, meta))
-        str_rules.append(str_rule)
+        if len(predicates) > 0:
+            str_rule = " & ".join(predicates)
+            rules.append(ConjunctiveRule.parse(str_rule, meta))
+            str_rules.append(str_rule)
     return rules, str_rules
 
 

@@ -4,6 +4,10 @@ from aad.aad_globals import *
 from loda.loda import Loda
 from .afss import AFSS
 import os
+from aad.classifier_trees import DecisionTreeAadWrapper
+from common.expressions import get_feature_meta_default
+from aad.forest_description import InstancesDescriber
+from loda.loda import ProjectionVectorsHistograms, LodaModel, LodaResult
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
@@ -65,6 +69,10 @@ class AnomalyEnsemble(object):
         # raise RuntimeError("get_projections() supported by LODA only")
         return None  # check with is_projection_based() before calling this API
 
+    def get_members(self):
+        """ Return a list of members which implement the decision_function(x) API """
+        raise NotImplementedError
+
 
 class AnomalyEnsembleLoda(AnomalyEnsemble):
     def __init__(self, loda_model):
@@ -79,6 +87,22 @@ class AnomalyEnsembleLoda(AnomalyEnsemble):
     def decision_function(self, x):
         # return higher for more anomalous
         return -self.model.decision_function(x)
+
+    def get_members(self):
+        members = []
+        loda_model = self.model.loda_model  # LodaResult object
+        pvh = loda_model.pvh.pvh  # ProjectionVectorsHistograms object
+        w = pvh.w
+        hists = pvh.hists
+        for i in range(self.m):
+            pvh_ = ProjectionVectorsHistograms(w=w[:, [i]], hists=[hists[i]])
+            loda_ = LodaModel(k=1, pvh=pvh_, sigs=None)
+            loda_model = LodaResult(anomranks=None, nll=None, pvh=loda_)
+            loda = Loda()
+            loda.m = 1
+            loda.loda_model = loda_model
+            members.append(AnomalyEnsembleLoda(loda))
+        return members
 
 
 def get_afss_model(opts, n_output=1):
@@ -97,6 +121,137 @@ def get_afss_model(opts, n_output=1):
                 max_labeled_reps=opts.afss_max_labeled_reps)
 
     return afss
+
+
+class GLADRelevanceDescriber(InstancesDescriber):
+    """ Generates descriptions for relevance of detectors
+
+    Employs a decision tree to generate rule-based descriptors.
+    """
+    def __init__(self, x, y, model, opts, max_rank=0):
+        InstancesDescriber.__init__(self, x, y, model, opts, sample_negative=False)
+        self.meta = get_feature_meta_default(x, y)
+        self.max_rank = max_rank
+
+    def get_member_relevance_scores_ranks(self, x):
+        scores_all = self.model.decision_function(x)
+
+        ranks_all = np.argsort(-scores_all, axis=1)
+        best_member = ranks_all[:, 0]
+
+        ranks_all = np.argsort(ranks_all, axis=1)
+
+        return scores_all, ranks_all, best_member
+
+    def describe(self, instance_indexes):
+        """ Generates descriptions for the input instances
+
+        :param instance_indexes: indexes of positive instances
+        :return: list of (list of int, list of dict, Rules)
+        """
+
+        if instance_indexes is None:
+            x = self.x
+        else:
+            x = self.x[instance_indexes]
+
+        scores_all, ranks_all, best_member = self.get_member_relevance_scores_ranks(x)
+        max_rank = self.max_rank
+        if max_rank <= 0:
+            max_rank = scores_all.shape[1]
+        # logger.debug("max_rank: %d" % max_rank)
+
+        descriptions = []
+        for i in range(scores_all.shape[1]):
+            scores = scores_all[:, i]
+            ranks = ranks_all[:, i]
+            # logger.debug("scores [%d]:\n%s" % (i, str(list(scores))))
+            # logger.debug("ranks [%d]:\n%s" % (i, str(list(ranks))))
+
+            # Instances having AFSS probabilities > bias_prob are in 'relevant'
+            # regions for an ensemble member.
+            labels = np.zeros(len(scores), dtype=np.int32)
+            rel_indexes = np.where(scores > self.model.bias_prob)[0]
+            rel_indexes = rel_indexes[ranks[rel_indexes] < max_rank]
+
+            if len(rel_indexes) > 0:
+                labels[rel_indexes] = 1
+                # train a decision tree classifier that will separate 0s from 1s
+                dt = DecisionTreeAadWrapper(x, labels, max_depth=None)
+                # get all regions from the decision tree where probability of
+                # predicting anomaly class is > 0.5
+                region_idxs = np.where(dt.d > 0.5)[0]
+                feature_ranges = [dt.all_regions[i].region for i in region_idxs]
+                logger.debug(region_idxs)
+                logger.debug(feature_ranges)
+                rules, str_rules = self.convert_regions_to_rules(feature_ranges, region_indexes=region_idxs)
+            else:
+                logger.debug("No relevant regions found for member %d..." % i)
+                region_idxs = []
+                feature_ranges = []
+                rules = []
+            descriptions.append((region_idxs, feature_ranges, rules))
+
+        return descriptions, best_member
+
+
+class GLADEnsembleLimeExplainer(object):
+    """ Generates explanations with LIME
+
+    Explainer and Describer are two different concepts:
+        - Explainer tells us why the detector considers an instance an anomaly.
+        - Describer generates a compact description for one (or more) instances.
+
+    Must install LIME. Use the following command:
+        pip install lime
+
+    References:
+        "Why Should I Trust You?" Explaining the Predictions of Any Classifier
+            by Marco Tulio Ribeiro, Sameer Singh and Carlos Guestrin, KDD, 2016.
+            https://marcotcr.github.io/lime
+    """
+    def __init__(self, x, y, ensemble, afss, feature_names=None):
+        self.members = ensemble.get_members()
+        self.afss = afss
+        self.describer = GLADRelevanceDescriber(x, y, model=afss, opts=None)
+        logger.debug("#ensemble members: %d" % len(self.members))
+        try:
+            import lime
+            from lime.lime_tabular import LimeTabularExplainer
+            logger.debug("loaded LIME")
+            self.explainer = LimeTabularExplainer(x, mode="regression", feature_names=feature_names,
+                                                  random_state=42)
+        except:
+            self.explainer = None
+            logger.warning("Failed to load LIME. Install LIME with command: 'pip install lime' or "
+                           "see: https://marcotcr.github.io/lime")
+            print("WARNING: Failed to load LIME. Install LIME with command: 'pip install lime' or "
+                  "see: https://marcotcr.github.io/lime")
+
+    def explain(self, inst, member_index=-1):
+        """ Generates explanation with a single ensemble member
+
+        First, finds the best member for the instance using AFSS relevance scores.
+        Then employs LIME to generate the explanation.
+
+        :param inst: 1d array of instance features
+        :param member_index: int
+            The index of the anomaly detector in the ensemble.
+            If -1, the most relevant member as per AFSS will be used
+        :return: LIME Explanation, best ensemble, member relevance
+        """
+        if self.explainer is None:
+            print("WARNING: Explainer is not initialized. No explanations generated.")
+            logger.warning("Explainer is not initialized. No explanations generated.")
+            return None, None, None
+        member_relevance = None
+        if member_index < 0:
+            member_relevance, ranks_all, best_member = self.describer.get_member_relevance_scores_ranks(np.reshape(inst, (1, -1)))
+            member_index = best_member[0]
+            # logger.debug("best member index: %d" % member_index)
+        explanation = self.explainer.explain_instance(inst,
+                                                      predict_fn=self.members[member_index].decision_function)
+        return explanation, member_index, member_relevance
 
 
 class SequentialResults(object):

@@ -3,25 +3,26 @@ from .afss import partition_instances, get_afss_batches
 from .glad_support import *
 from loda.loda import build_proj_hist, ProjectionVectorsHistograms, get_neg_ll_all_hist, \
     LodaModel, LodaResult
-from aad.classifier_trees import DecisionTreeAadWrapper
-from aad.demo_aad import describe_instances
 
-def plot_dataset(x, y, cls_cols, pl, selected=None, projections=None):
+
+def plot_dataset(x, y, cls_cols, pl, selected=None, projections=None, plot_labels=True):
     plt.xlim([np.min(x[:, 0]), np.max(x[:, 0])])
     plt.ylim([np.min(x[:, 1]), np.max(x[:, 1])])
     for cls in cls_cols.keys():
         X = x[np.where(y == cls)[0], :]
+        label = "class %d (%s)" % (cls, "nominal" if cls == 0 else "anomaly") if plot_labels else None
         pl.scatter(X[:, 0], X[:, 1], c=cls_cols.get(cls, "grey"), marker='x',
-                   linewidths=2.0, s=24, label="class %d (%s)" % (cls, "nominal" if cls == 0 else "anomaly"))
+                   linewidths=2.0, s=24, label=label)
     if selected is not None:
         pl.scatter(selected[:, 0], selected[:, 1], edgecolors="green", facecolors='none', marker='o',
-                   linewidths=2.0, s=40, label="selected")
+                   linewidths=2.0, s=40, label="selected" if plot_labels else None)
     if projections is not None:
         for p in range(projections.shape[1]):
             u = interpolate_2D_line_by_point_and_vec(np.array([np.min(x[:, 0]), np.max(x[:, 0])]),
                                                      [0.0, 0.0], projections[:, p])
             pl.plot(u[:, 0], u[:, 1], "-", color="green", linewidth=2)
-    pl.legend(loc='lower right', prop={'size': 4})
+    if plot_labels:
+        pl.legend(loc='lower right', prop={'size': 4})
 
 
 def get_grid(x=None, xx=None, yy=None, x_range=None, y_range=None, n=50):
@@ -141,43 +142,41 @@ def plot_weighted_scores(x, y, ensemble, afss, selected=None, xx=None, yy=None, 
 
 
 def plot_glad_relevance_regions(x, y, ensemble, afss, selected=None,
-                                name="",
-                                dataset=None, outpath=None):
-    score_type = "afss"
-    scores_all = afss.decision_function(x)
+                                max_rank=0,
+                                name="", dataset=None, outpath=None):
+    describer = GLADRelevanceDescriber(x, y, model=afss, opts=None, max_rank=max_rank)
+    descriptions, best_member = describer.describe(instance_indexes=None)  # descriptions with all instances
     projections = ensemble.get_projections()
+
+    sel_best = None
+    if selected is not None:
+        _, _, sel_best = describer.get_member_relevance_scores_ranks(selected)
+
     p_rows = p_cols = 1
     if ensemble.m > 1: p_rows = p_cols = 2
+    score_type = "afss"
     dp = DataPlotter(pdfpath="%s/test_%s_%s_active_%dw%s.pdf" %
                              (outpath, score_type, dataset, ensemble.m, name),
                      rows=p_rows, cols=p_cols, save_tight=True)
-    for i in range(scores_all.shape[1]):
+    for i, description in enumerate(descriptions):
+        feature_ranges = description[1]
+        sel_pts = None
+        if sel_best is not None:
+            sel_idxs = np.where(sel_best == i)[0]
+            if len(sel_idxs) > 0:
+                sel_pts = selected[sel_idxs]
         pl = dp.get_next_plot()
-        scores = scores_all[:, i]
-
-        # Instances having AFSS probabilities > bias_prob are in 'relevant'
-        # regions for an ensemble member.
-        labels = np.zeros(len(scores), dtype=np.int32)
-        rel_indexes = np.where(scores > afss.bias_prob)[0]
-        if len(rel_indexes) > 0:
-            labels[rel_indexes] = 1
-            # train a decision tree classifier that will separate 0s from 1s
-            dt = DecisionTreeAadWrapper(x, labels)
-            # get all regions from the decision tree where probability of
-            # predicting anomaly class is > 0.5
-            region_idxs = np.where(dt.d > 0.5)[0]
-        else:
-            logger.debug("No relevant regions found for member %d..." % i)
-            dt = None
-            region_idxs = []
-
         cls_cols = {0: "grey", 1: "red"}
-        plot_dataset(x, y, cls_cols, pl, selected=selected, projections=projections[:, [i]])
+        # plot in order to set the x/y limits consistently
+        plot_dataset(x, y, cls_cols, pl, selected=sel_pts,
+                     projections=projections[:, [i]], plot_labels=False)
         axis_lims = (plt.xlim(), plt.ylim())
-        for i in region_idxs:
-            region = dt.all_regions[i].region
+        for region in feature_ranges:
             # logger.debug(str(region))
             plot_rect_region(pl, region, "red", axis_lims, facecolor='red', alpha=0.5)
+        # plot again with labels so that points are plotted over the tinged rectangles
+        plot_dataset(x, y, cls_cols, pl, selected=sel_pts,
+                     projections=projections[:, [i]], plot_labels=True)
     dp.close()
 
 

@@ -634,6 +634,8 @@ def get_glad_option_list():
                         help="Whether to run AFSS on the generated ensemble")
     parser.add_argument("--compare_aad", action="store_true", default=False,
                         help="Whether to compare AFSS against AAD")
+    parser.add_argument("--explain", action="store_true", default=False,
+                        help="Whether to explain why an instance was assigned a high anomaly score")
     return parser
 
 
@@ -665,6 +667,7 @@ class GladOpts(object):
         self.log_file = args.log_file
         self.ensemble_only = args.ensemble_only
         self.compare_aad = args.compare_aad
+        self.explain = args.explain
 
         self.fid = 1  # this attributed has been retained for historical reasons only
         self.runidx = 0  # number of reruns

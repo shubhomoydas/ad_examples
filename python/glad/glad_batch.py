@@ -43,6 +43,7 @@ def afss_active_learn_ensemble(x, y, ensemble, opts):
         queried.extend(items)
         hf = np.array(queried, dtype=int)
         y_labeled[items] = y[items]
+
         afss.update_afss(x, y_labeled, hf, scores, tau=opts.afss_tau)
         if plot and ensemble.m < 5:
             xx, yy = plot_afss_scores(x, y, ensemble, afss, selected=x[hf], cmap='jet', xx=xx, yy=yy,
@@ -54,9 +55,24 @@ def afss_active_learn_ensemble(x, y, ensemble, opts):
                                       name="_feedback_after", n_anoms=opts.n_anoms,
                                       dataset=opts.dataset, outpath=opts.results_dir)
 
-        plot_glad_relevance_regions(x, y, ensemble, afss, selected=None,
-                                    name="rel_regions",
-                                    dataset=opts.dataset, outpath=opts.results_dir)
+    if opts.explain:
+        # get the next unlabeled instance and try to explain its anomaly score
+        explainer = GLADEnsembleLimeExplainer(x, y, ensemble, afss, feature_names=["x", "y"])
+        a_scores = afss.get_weighted_scores(x, scores)
+        ordered_indexes = np.argsort(-a_scores)
+        items = get_first_vals_not_marked(ordered_indexes, queried, start=0, n=1)
+        # why did GLAD assign a high anomaly score to the instance in its current state?
+        explanation, best_member, member_relevance = explainer.explain(x[items[0]])
+        if explanation is not None:
+            logger.debug("\nExplain inst: %d %s (%s); best: %d %s\n%s" %
+                         (items[0], "" if x.shape[1] != 2 else str(x[items[0]]),
+                          "anomaly" if y[items[0]] == 1 else "nominal",
+                          best_member, str(member_relevance), str(explanation.as_list())))
+        if plot:
+            max_rank = 1
+            plot_glad_relevance_regions(x, y, ensemble, afss, selected=x[items],
+                                        max_rank=max_rank, name="rel_regions_r%d" % max_rank,
+                                        dataset=opts.dataset, outpath=opts.results_dir)
 
     afss.close_session()
 

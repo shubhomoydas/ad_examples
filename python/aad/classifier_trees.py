@@ -109,7 +109,7 @@ class DecisionTreeAadWrapper(AadForest):
                 tot = 1.
             # logger.debug(region.value)
             d[i] = dists[self.anomaly_class_index] * 1. / tot
-        logger.debug("d:\n%s" % str(list(d)))
+        # logger.debug("d:\n%s" % str(list(d)))
         return d, None, None
 
     def fit(self, x):
