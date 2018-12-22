@@ -385,7 +385,7 @@ There are four members (LODA projections) and for each member, the relevant regi
 
 In order to dig deeper into the explanation for a test instance, we may take the following approach:
   1. Use AFSS to identify the most relevant ensemble member for the test instance.
-  2. Employ a generic explanation technique such as LIME (Ribeiro et al. 2016) to generate the explanation using the most relevant ensemble member.
+  2. Employ a model agnostic explanation technique such as LIME (Ribeiro et al. 2016) to generate the explanation using the most relevant ensemble member.
 
 We illustrate this approach with a test point *(6.17921313 3.04212317)* circled in green in the figure below. The generated explanation (output in the log file) is also shown below. Here, the ensemble member with index 2 has the highest relevance (0.86733496) for this test point. The explanation `2.16 < y <= 3.31` has the highest absolute weight (0.4253860500153764).
 
