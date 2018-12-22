@@ -267,7 +267,7 @@ A comparison of **interpretable** rules found by *Compact Descriptions (CD)* and
   2. We set a minimum precision threshold (defaults to 0.4) for the rules selected. This removes noisy rules.
   3. Whenever a negative (nominal) example gets included within a region, we penalize it by the volume of the corresponding region. This encourages selection of regions with fewer false positives.
 
-We generate the rules by both techniques (*CD* and *BR*) at regular points in the feedback cycle and compute the F1 score on the entire dataset (top left plot below). These results were averaged over 10 independent runs. *CD* and *BR* are generally competitive. A decomposition of the F1 score shows that *CD* usually has a lower precision, but higher recall than *BR*. The bottom row shows that *CD* usually selects **simpler** rules (i.e., smaller length) than *BR* in order to describe the anomalies. The grey curve (bottom row middle, labeled 'Candidate Rules') is the total number of rules available in a feedback cycle. Both *CD* and *BR* use the same set of candidate rules. A slightly smaller subset of the candidate rules were selected by *BR* than *CD* to explain most anomalies.
+We generate the rules by both techniques (*CD* and *BR*) at regular points in the feedback cycle and compute the F1 score on the entire dataset (top left plot below). These results were averaged over 10 independent runs. *CD* and *BR* are generally competitive. A decomposition of the F1 score shows that *CD* usually has a lower precision, but higher recall than *BR*. The bottom row shows that *CD* usually selects **simpler** rules (i.e., smaller length) than *BR* in order to describe the anomalies. The grey curve (bottom row middle, labeled 'Candidate Rules') is the total number of rules available in a feedback cycle. Both *CD* and *BR* use the same set of candidate rules. A slightly smaller subset of the candidate rules were selected by *BR* than *CD* to describe most anomalies.
 
 **Important:** The results have been presented here only for the *toy2* dataset because we have used this as the running example. The results differ by the dataset, but the general patterns pointed out above seem to hold on the real-world datasets as shown in the document [all-rule_analysis.pdf](documentation/rules/all-rule_analysis.pdf).
 
@@ -291,7 +291,7 @@ Applications of compact descriptions
 ------------------------------------
 Compact descriptions (or Bayesian rulesets) have multiple uses including:
   - Discovery of diverse classes of anomalies very quickly by querying instances from different subspaces of the description
-  - Improved interpretability and explainability of anomalous instances
+  - Improved interpretability of anomalous instances
 
 We assume that in a practical setting, the analyst(s) will be presented with instances along with their corresponding description(s). Additional information can be derived from the descriptions and shown to the analyst such as the number of instances in each description, which can help prioritize the analysis. Unfortunately, most uses of descriptions are subjective or application dependent, and therefore, hard to evaluate. However, we can evaluate the improvement in query [diversity](#query-diversity-with-compact-descriptions) objectively as we do [below](#does-query-diversity-with-compact-descriptions-help).
 
@@ -387,7 +387,7 @@ The above strategy is intended to provide a set of interpretable rules for the r
 
     python -m glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --budget=30 --loda_debug --plot --explain
 
-There are four members (LODA projections) and for each member, the relevant regions are shown in red. The last projection (lower right, having index 3) did not rank as the top-most relevant for any instance; hence, it does not have any region marked in red.
+There are four members (LODA projections) and for each member, the relevant regions are shown in red. The last member (member 3) did not rank as the top-most relevant for any instance; hence, it does not have any region marked in red. It is important to note that the **relevance of a detector is different from the anomaly score(s) it assigns**. A detector which is *relevant* in a particular subspace predicts the labels of instances in that subspace correctly irrespective of whether those instances are anomalies or nominals. For example, ensemble members 0 and 1 are relevant (in the figure below) in subspaces which have mostly nominal instances, i.e., they correctly predicted that instances in those subspaces are *nominal*. Members, which incorrectly predicted that instances in these subspaces were anomalies, lost relevance there.
 
 In order to dig deeper into the explanation for a test instance, we may take the following approach:
   1. Use AFSS to identify the most relevant ensemble member for the test instance.

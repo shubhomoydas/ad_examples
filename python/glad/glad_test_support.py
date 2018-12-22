@@ -166,6 +166,7 @@ def plot_glad_relevance_regions(x, y, ensemble, afss, selected=None,
             if len(sel_idxs) > 0:
                 sel_pts = selected[sel_idxs]
         pl = dp.get_next_plot()
+        plt.title("Ensemble member %d" % i, fontsize=8)
         cls_cols = {0: "grey", 1: "red"}
         # plot in order to set the x/y limits consistently
         plot_dataset(x, y, cls_cols, pl, selected=sel_pts,
