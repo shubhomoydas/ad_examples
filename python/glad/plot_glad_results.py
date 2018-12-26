@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     budget = 150
     datasets = ['abalone', 'yeast', 'ann_thyroid_1v3', 'cardiotocography_1',
-                'mammography', 'shuttle_1v23567', 'kddcup',
+                'mammography', 'shuttle_1v23567', 'kddcup', 'covtype',
                 ]
     datasets = ['toy2']
 

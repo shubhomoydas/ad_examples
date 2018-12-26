@@ -160,14 +160,15 @@ def found_precomputed_summaries(opts):
     return True
 
 
-def plot_scores(agg_top, agg_compact, agg_bayesian, score_type, dp, opts):
+def plot_scores(agg_top, agg_compact, agg_bayesian, score_type, dp, opts, is_title=True):
     score_name = {"f1s": "F1 Score", "precisions": "Precision", "recalls": "Recall"}
     legend_handles = []
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
     plt.ylabel(score_name[score_type], fontsize=8)
     plt.ylim([0, 1])
-    plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
+    if is_title:
+        plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
 
     ln, = pl.plot(agg_compact[score_type][:, 0], agg_compact[score_type][:, 1],
                   "-", color="red", linewidth=1, label="Compact Descriptions")
@@ -186,14 +187,15 @@ def plot_scores(agg_top, agg_compact, agg_bayesian, score_type, dp, opts):
         pl.legend(handles=legend_handles, loc='lower right', prop={'size': 6})
 
 
-def plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts):
+def plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts, is_title=True):
     legend_handles = []
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
     plt.ylabel('Rule length', fontsize=8)
     max_rule_length = max(np.max(agg_compact["lengths"][:, 1]), np.max(agg_bayesian["lengths"][:, 1]))
     plt.ylim([0, max_rule_length+1])
-    plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
+    if is_title:
+        plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
 
     ln, = pl.plot(agg_compact["lengths"][:, 0], agg_compact["lengths"][:, 1],
                   "-", color="red", linewidth=1, label="Compact Descriptions")
@@ -207,12 +209,13 @@ def plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts):
         pl.legend(handles=legend_handles, loc='upper right', prop={'size': 6})
 
 
-def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts):
+def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts, is_title=True):
     legend_handles = []
     pl = dp.get_next_plot()
     plt.xlabel('Feedback iterations', fontsize=8)
     plt.ylabel('# Rules', fontsize=8)
-    plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
+    if is_title:
+        plt.title("%s" % dataset_configs[opts.dataset][4], fontsize=8)
 
     ln, = pl.plot(agg_top["num_rules"][:, 0], agg_top["num_rules"][:, 1],
                   "-", color="grey", linewidth=1, label="Candidate Rules")
@@ -249,7 +252,7 @@ def swap_metadata(rules_data, meta):
         logger.debug("runidx: %d, iter: %d\n  %s" % (rl[0], rl[1], "\n  ".join([str(v) for v in rl[2]])))
 
 
-def analyze_rules_dataset(opts, dp):
+def analyze_rules_dataset(opts, dp, is_num_rules=True, is_blank=True, is_title=True):
 
     if not found_precomputed_summaries(opts):
         logger.debug("Precomputed summaries not found. Regenerating...")
@@ -282,19 +285,26 @@ def analyze_rules_dataset(opts, dp):
         agg_bayesian = load_summary("bayesian", opts)
 
     if opts.plot2D:
-        plot_scores(agg_top, agg_compact, agg_bayesian, "f1s", dp, opts)
-        plot_scores(agg_top, agg_compact, agg_bayesian, "precisions", dp, opts)
-        plot_scores(agg_top, agg_compact, agg_bayesian, "recalls", dp, opts)
-        plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts)
-        plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts)
-        plot_blank_image(dp, message="Intentionally\nBlank")  # placeholder for alignment
+        plot_scores(agg_top, agg_compact, agg_bayesian, "f1s", dp, opts, is_title=is_title)
+        plot_scores(agg_top, agg_compact, agg_bayesian, "precisions", dp, opts, is_title=is_title)
+        plot_scores(agg_top, agg_compact, agg_bayesian, "recalls", dp, opts, is_title=is_title)
+        plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts, is_title=is_title)
+        if is_num_rules:
+            plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts, is_title=is_title)
+        if is_blank:
+            plot_blank_image(dp, message="Intentionally\nBlank")  # placeholder for alignment
 
 
 def analyze_rules(opts):
+    plot_short_summary = False
     if opts.dataset != "Xall":
         pdfpath = "%s/%s-f1_scores.pdf" % (opts.resultsdir, opts.dataset)
-        dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=3, save_tight=True)
-        analyze_rules_dataset(opts, dp=dp)
+        if plot_short_summary:
+            dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2, save_tight=True)
+            analyze_rules_dataset(opts, dp=dp, is_num_rules=False, is_blank=False, is_title=False)
+        else:
+            dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=3, save_tight=True)
+            analyze_rules_dataset(opts, dp=dp, is_num_rules=True, is_blank=True, is_title=True)
         dp.close()
         return
 

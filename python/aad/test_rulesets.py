@@ -72,10 +72,12 @@ def plot_rule_annotations(str_compact_rules, str_bayesian_rules, dp):
     plt.yticks([])
     plt.xlim([0, 1])
     plt.ylim([-2, 2])
-    pl.text(0.01, 1, r"${\bf Compact\ Descriptions:}$ Predict 'anomaly' if:" + "\n " + "\n or ".join(str_compact_rules),
-            fontsize=4, color="black")
-    pl.text(0.01, -1, r"${\bf Bayesian\ Rulesets:}$ Predict 'anomaly' if:" + "\n " + "\n or ".join(str_bayesian_rules),
-            fontsize=4, color="black")
+    if str_compact_rules is not None:
+        pl.text(0.01, 1, r"${\bf Compact\ Descriptions:}$ Predict 'anomaly' if:" + "\n " + "\n or ".join(str_compact_rules),
+                fontsize=4, color="black")
+    if str_bayesian_rules is not None:
+        pl.text(0.01, -1, r"${\bf Bayesian\ Rulesets:}$ Predict 'anomaly' if:" + "\n " + "\n or ".join(str_bayesian_rules),
+                fontsize=4, color="black")
 
 
 def test_aad_rules(opts):
@@ -137,6 +139,9 @@ def test_aad_rules(opts):
     logger.debug("Compact regions:\n%s" % str(regions_compact))
     logger.debug("Compact ruleset:\n  %s" % "\n  ".join(str_rules_compact))
 
+    plot_annotations = True
+    plot_bayesian_rulesets = True
+
     bayesian_describer = BayesianRulesetsDescriber(x, y, model=None, opts=opts, meta=meta, candidate_rules=rules_top)
     regids_bayesian, regions_bayesian, rules_bayesian = bayesian_describer.describe(instance_indexes=queried)
     str_rules_bayesian = convert_conjunctive_rules_to_strings(rules_bayesian)
@@ -154,14 +159,18 @@ def test_aad_rules(opts):
         path = os.path.join(opts.resultsdir, "%s_rulesets.pdf" % opts.dataset)
         dp = DataPlotter(pdfpath=path, rows=2, cols=2, save_tight=True)
         plot_selected_regions(x, y, regions=regions_top, query_instances=queried,
-                              title="Candidate Regions (Most Anomalous)\nAfter AAD (budget: %d, #regions: %d)" %
+                              title="Candidate Regions (Most Anomalous)\nAfter BAL (budget: %d, #regions: %d)" %
                                     (opts.budget, len(regions_top)), dp=dp)
         plot_selected_regions(x, y, regions=regions_compact, query_instances=queried,
-                              title="Compact Descriptions\nMinimum volume subspaces", dp=dp)
-        plot_selected_regions(x, y, regions=regions_bayesian, query_instances=queried,
-                              title="Bayesian Rulesets\nWang, Rudin, et al. (2016)", dp=dp)
-        # plot the inferred rules
-        plot_rule_annotations(str_rules_compact, str_rules_bayesian, dp)
+                              title="Compact Descriptions\nWith Interpretability", dp=dp)
+        if plot_bayesian_rulesets:
+            plot_selected_regions(x, y, regions=regions_bayesian, query_instances=queried,
+                                  title="Bayesian Rulesets\nWang, Rudin, et al. (2016)", dp=dp)
+        if plot_annotations:
+            # plot the inferred rules
+            plot_rule_annotations(str_rules_compact,
+                                  str_bayesian_rules=str_rules_bayesian if plot_bayesian_rulesets else None,
+                                  dp=dp)
         dp.close()
 
 
