@@ -22,7 +22,7 @@ def plot_dataset(x, y, cls_cols, pl, selected=None, projections=None, plot_label
                                                      [0.0, 0.0], projections[:, p])
             pl.plot(u[:, 0], u[:, 1], "-", color="green", linewidth=2)
     if plot_labels:
-        pl.legend(loc='lower right', prop={'size': 4})
+        pl.legend(loc='lower right', prop={'size': 7})
 
 
 def get_grid(x=None, xx=None, yy=None, x_range=None, y_range=None, n=50):
