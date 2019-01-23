@@ -99,6 +99,10 @@ dataset_feature_names = {'abalone': ["Sex_1", "Sex_2",  # '1,0': M, '0,1': I, '0
                                      "Length", "Diameter", "Height",
                                      "Whole_weight", "Shucked_weight", "Viscera_weight",
                                      "Shell_weight"],
+                         'cardiotocography_1': ["LB", "AC", "FM", "UC", "DL", "DS", "DP", "ASTV",
+                                                "MSTV", "ALTV", "MLTV", "Width", "Min", "Max", "Nmax",
+                                                "Nzeros", "Mode", "Mean", "Median", "Variance", "Tendency"],
+                         'yeast': ["mcg", "gvh", "alm", "mit", "erl", "pox", "vac", "nuc"],
                          'toy2': ["x", "y"]}
 
 

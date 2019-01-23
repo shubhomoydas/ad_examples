@@ -1,0 +1,52 @@
+# Change the following variable in aad.sh before executing any of the below:
+# RULES_IND=1
+
+# analyze rules -- generate
+nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 0 512 0 1 1 &
+nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 0 512 0 1 1 &
+nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 1 0 0 512 0 1 1 &
+nohup bash ./aad.sh yeast 300 10 0.03 7 1 0 0 512 0 1 1 &
+nohup bash ./aad.sh mammography 500 10 0.03 7 1 0 0 4096 0 1 1 &
+nohup bash ./aad.sh shuttle_1v23567 500 10 0.03 7 1 0 0 4096 0 1 1 &
+nohup bash ./aad.sh covtype 500 10 0.03 7 1 0 0 4096 0 1 1 &
+nohup bash ./aad.sh kddcup 500 10 0.03 7 1 0 0 4096 0 1 1 &
+nohup bash ./aad.sh weather 500 10 0.03 7 1 0 0 1024 0 1 1 &
+nohup bash ./aad.sh electricity 500 10 0.03 7 1 0 0 1024 0 1 1 &
+
+# analyze rules
+nohup bash ./aad.sh abalone 300 10 0.03 7 1 0 3 512 0 1 1 &
+nohup bash ./aad.sh ann_thyroid_1v3 300 10 0.03 7 1 0 3 512 0 1 1 &
+nohup bash ./aad.sh cardiotocography_1 300 10 0.03 7 1 0 3 512 0 1 1 &
+nohup bash ./aad.sh yeast 300 10 0.03 7 1 0 3 512 0 1 1 &
+nohup bash ./aad.sh mammography 500 10 0.03 7 1 0 3 4096 0 1 1 &
+nohup bash ./aad.sh shuttle_1v23567 500 10 0.03 7 1 0 3 4096 0 1 1 &
+nohup bash ./aad.sh covtype 500 10 0.03 7 1 0 3 4096 0 1 1 &
+nohup bash ./aad.sh kddcup 500 10 0.03 7 1 0 3 4096 0 1 1 &
+nohup bash ./aad.sh weather 500 10 0.03 7 1 0 3 1024 0 1 1 &
+nohup bash ./aad.sh electricity 500 10 0.03 7 1 0 3 1024 0 1 1 &
+
+
+# analyze rules -- generate on server
+bash ./aad-job.sh abalone 300 10 0.03 7 1 0 0 512 0 1 1
+bash ./aad-job.sh ann_thyroid_1v3 300 10 0.03 7 1 0 0 512 0 1 1
+bash ./aad-job.sh cardiotocography_1 300 10 0.03 7 1 0 0 512 0 1 1
+bash ./aad-job.sh yeast 300 10 0.03 7 1 0 0 512 0 1 1
+bash ./aad-job.sh mammography 500 10 0.03 7 1 0 0 4096 0 1 1
+bash ./aad-job.sh shuttle_1v23567 500 10 0.03 7 1 0 0 4096 0 1 1
+bash ./aad-job.sh kddcup 500 10 0.03 7 1 0 0 4096 0 1 1
+bash ./aad-job.sh covtype 500 10 0.03 7 1 0 0 4096 0 1 1
+bash ./aad-job.sh weather 500 10 0.03 7 1 0 0 1024 0 1 1
+bash ./aad-job.sh electricity 500 10 0.03 7 1 0 0 1024 0 1 1
+
+
+# analyze rules -- on server
+bash ./aad-job.sh abalone 300 10 0.03 7 1 0 3 512 0 1 1
+bash ./aad-job.sh ann_thyroid_1v3 300 10 0.03 7 1 0 3 512 0 1 1
+bash ./aad-job.sh cardiotocography_1 300 10 0.03 7 1 0 3 512 0 1 1
+bash ./aad-job.sh yeast 300 10 0.03 7 1 0 3 512 0 1 1
+bash ./aad-job.sh mammography 500 10 0.03 7 1 0 3 4096 0 1 1
+bash ./aad-job.sh shuttle_1v23567 500 10 0.03 7 1 0 3 4096 0 1 1
+bash ./aad-job.sh kddcup 500 10 0.03 7 1 0 3 4096 0 1 1
+bash ./aad-job.sh covtype 500 10 0.03 7 1 0 3 4096 0 1 1
+bash ./aad-job.sh weather 500 10 0.03 7 1 0 3 1024 0 1 1
+bash ./aad-job.sh electricity 500 10 0.03 7 1 0 3 1024 0 1 1

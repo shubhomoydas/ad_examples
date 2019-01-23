@@ -12,6 +12,9 @@ nohup bash ./glad.sh yeast 150 10 0.03 loda &
 nohup bash ./glad.sh mammography 150 10 0.03 loda &
 nohup bash ./glad.sh shuttle_1v23567 150 10 0.03 loda &
 
+nohup bash ./glad.sh mammography 150 10 0.03 loda &
+nohup bash ./glad.sh shuttle_1v23567 150 10 0.03 loda &
+
 nohup bash ./glad.sh kddcup 150 10 0.03 loda &
 nohup bash ./glad.sh covtype 150 10 0.03 loda &
 

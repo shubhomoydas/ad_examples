@@ -45,6 +45,8 @@ fi
 # ------------------------------
 AFSS_C_TAU=1.0
 AFSS_LAMBDA_PRIOR=1.0
+# The below is NOT RECOMMENDED, just use for ablation tests
+# AFSS_LAMBDA_PRIOR=0
 AFSS_BIAS_PROB=0.50
 AFSS_NODES=0
 AFSS_MAX_LABELED_REPS=5
@@ -56,8 +58,10 @@ N_EPOCHS=200
 # 1: Do not prime the network - pity the analyst
 # ------------------------------
 AFSS_NO_PRIME_IND=0
+AFSS_NO_PRIME_SIG=""
 if [[ "$AFSS_NO_PRIME_IND" == "1" ]]; then
     AFSS_NO_PRIME="--afss_no_prime"
+    AFSS_NO_PRIME_SIG="-no_prime"
 fi
 
 # ==============================
@@ -116,7 +120,7 @@ MAX_K=15
 PYSCRIPT=glad_vs_aad.py
 PYMODULE=glad.glad_vs_aad
 
-NAME_PREFIX="${OPERATION}-${ENSEMBLE_TYPE}_${MIN_K}_${MAX_K}-nodes${AFSS_NODES}-bd${BUDGET}-tau${TAU}-bias${AFSS_BIAS_PROB}-c${AFSS_C_TAU}-amr${AFSS_MAX_LABELED_REPS}-r${RERUNS}"
+NAME_PREFIX="${OPERATION}-${ENSEMBLE_TYPE}_${MIN_K}_${MAX_K}-nodes${AFSS_NODES}-bd${BUDGET}-tau${TAU}-bias${AFSS_BIAS_PROB}-c${AFSS_C_TAU}-amr${AFSS_MAX_LABELED_REPS}${AFSS_NO_PRIME_SIG}-r${RERUNS}"
 NAME_PREFIX="${NAME_PREFIX//./_}"  # replace '.' with '_'
 
 echo "NAME: ${NAME_PREFIX}"

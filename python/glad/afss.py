@@ -684,8 +684,9 @@ class GladOpts(object):
         nodes_str = "-nodes%d" % self.afss_nodes
         reps_sig = "-amr%d" % self.afss_max_labeled_reps
         prior_sig = "-no_prior" if self.afss_lambda_prior == 0 else ""
-        name = "%s%s%s%s%s%s%s%s%s-r%d" % (self.dataset, ensemble_str, nodes_str, budget_str,
-                                         tau_str, bias_str, c_tau_str, reps_sig, prior_sig, self.reruns)
+        prime_sig = "-no_prime" if self.afss_no_prime else ""
+        name = "%s%s%s%s%s%s%s%s%s%s-r%d" % (self.dataset, ensemble_str, nodes_str, budget_str,
+                                             tau_str, bias_str, c_tau_str, reps_sig, prime_sig, prior_sig, self.reruns)
         return name
 
     def str_opts(self):

@@ -11,6 +11,7 @@ python -m glad.plot_glad_results
 def get_glad_result_names(result_type):
     if result_type == "batch":
         return ['loda_glad', 'loda', 'loda_aad']
+        # return ['loda_glad', 'loda', 'loda_aad', 'loda_glad_no_prior']
     else:
         raise ValueError("Invalid result type: %s" % result_type)
 
@@ -23,6 +24,9 @@ def get_glad_result_defs(args, budget=-1, mink=2, maxk=15, reruns=10):
     loda_afss_f = "{dataset}-loda_{mink}_{maxk}-nodes0-bd{budget}-tau0_03-bias0_50-c1_00-amr5-r{reruns}-{type}.csv"
     loda_aad_f  = "{dataset}-aad-nodes0-bd{budget}-tau0_03-bias0_50-c1_00-amr5-r{reruns}-{type}.csv"
     loda_afss_d = "glad-loda_{mink}_{maxk}-nodes0-bd{budget}-tau0_03-bias0_50-c1_0-amr5-r{reruns}"
+
+    loda_afss_no_prior_f = "{dataset}-loda_{mink}_{maxk}-nodes0-bd{budget}-tau0_03-bias0_50-c1_00-amr5-no_prime-no_prior-r{reruns}-{type}.csv"
+    loda_afss_no_prior_d = "glad-loda_{mink}_{maxk}-nodes0-bd{budget}-tau0_03-bias0_50-c1_0-amr5-no_prime-r{reruns}"
 
     result_lists = [
         ResultDefs(name="loda_glad", display_name="GLAD", dataset=args.dataset, num_anoms=num_anoms,
@@ -37,6 +41,10 @@ def get_glad_result_defs(args, budget=-1, mink=2, maxk=15, reruns=10):
                    filename=loda_aad_f.format(dataset=args.dataset, budget=budget,
                                               mink=mink, maxk=maxk, reruns=reruns, type="num_seen"),
                    subdir=loda_afss_d.format(budget=budget, mink=mink, maxk=maxk, reruns=reruns)),
+        ResultDefs(name="loda_glad_no_prior", display_name="GLAD-NoPrior", dataset=args.dataset, num_anoms=num_anoms,
+                   filename=loda_afss_no_prior_f.format(dataset=args.dataset, budget=budget,
+                                               mink=mink, maxk=maxk, reruns=reruns, type="num_seen"),
+                   subdir=loda_afss_no_prior_d.format(budget=budget, mink=mink, maxk=maxk, reruns=reruns)),
         ]
 
     result_map = {}
@@ -62,7 +70,7 @@ def get_results(result_map, r_name, relative=None, parent_folder=None):
 
 
 def process_glad_results(args, result_type="batch", budget=-1, plot=True, plot_sd=False,
-                         relative=None,
+                         relative=None, outdir=None,
                          legend_loc='lower right', legend_datasets=None, legend_size=14):
     parent_folder = "./temp/glad/%s" % args.dataset
     result_names = get_glad_result_names(result_type)
@@ -87,7 +95,7 @@ def process_glad_results(args, result_type="batch", budget=-1, plot=True, plot_s
         num_seen = max(num_seen, len(r_avg))
         num_anoms = max(num_anoms, rs.num_anoms)
     if plot:
-        outpath = "./temp/glad_plots/%s" % result_type
+        outpath = "%s/%s" % (outdir, result_type)
         dir_create(outpath)
         plot_results(all_results, cols, "%s/num_seen-%s.pdf" % (outpath, args.dataset),
                      num_seen=num_seen, num_anoms=-1,  # num_anoms,
@@ -107,7 +115,9 @@ if __name__ == "__main__":
     # print "log file: %s" % args.log_file
     configure_logger(args)
 
-    dir_create("./temp/glad_plots")  # for logging and plots
+    # outdir = "./temp/glad_plots"
+    outdir = "./temp/glad_plots_no_prior"
+    dir_create(outdir)  # for logging and plots
 
     result_type = "batch"
 
@@ -135,5 +145,6 @@ if __name__ == "__main__":
         plot = True
         all_results.append(process_glad_results(args, result_type=result_type, budget=budget,
                                                 plot=plot, plot_sd=plot_sd, relative=relative,
+                                                outdir=outdir,
                                                 legend_loc=legend_loc, legend_datasets=legend_datasets,
                                                 legend_size=legend_size))

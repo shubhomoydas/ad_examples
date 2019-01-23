@@ -91,7 +91,7 @@ def string_agg_scores(agg_scores):
     return str_f1s, str_lengths
 
 
-def load_all_rule_data(x, y, meta, opts):
+def load_all_rule_data(x, y, meta, opts, evaluate_f1=True):
 
     acc_top = []
     acc_compact = []
@@ -112,11 +112,13 @@ def load_all_rule_data(x, y, meta, opts):
         acc_top.append(top_data)
 
         logger.debug("\nLoading compact rules")
-        compact_data = load_rules(x, y, meta, fileprefix_compact, out_dir=opts.resultsdir, opts=opts)
+        compact_data = load_rules(x, y, meta, fileprefix_compact, out_dir=opts.resultsdir,
+                                  opts=opts, evaluate_f1=evaluate_f1)
         acc_compact.append(compact_data)
 
         logger.debug("\nLoading bayesian rules")
-        bayesian_data = load_rules(x, y, meta, fileprefix_bayesian, out_dir=opts.resultsdir, opts=opts)
+        bayesian_data = load_rules(x, y, meta, fileprefix_bayesian, out_dir=opts.resultsdir,
+                                   opts=opts, evaluate_f1=evaluate_f1)
         acc_bayesian.append(bayesian_data)
 
     logger.debug("Aggregated Top:")
@@ -183,7 +185,7 @@ def plot_scores(agg_top, agg_compact, agg_bayesian, score_type, dp, opts, is_tit
         ln, = pl.plot([0, 0], [0, 0], "-", color="grey", linewidth=1, label="Candidate Rules")
         legend_handles.append(ln)
 
-    if opts.dataset == "abalone" or (opts.dataset == "toy2" and score_type == "precisions"):
+    if opts.dataset in ["abalone", "ann_thyroid_1v3"] or (opts.dataset == "toy2" and score_type == "precisions"):
         pl.legend(handles=legend_handles, loc='lower right', prop={'size': 6})
 
 
@@ -205,7 +207,7 @@ def plot_rule_lengths(agg_top, agg_compact, agg_bayesian, dp, opts, is_title=Tru
                   "-", color="blue", linewidth=1, label="Bayesian Rulesets")
     legend_handles.append(ln)
 
-    if opts.dataset == "abalone":
+    if opts.dataset in ["abalone", "ann_thyroid_1v3"]:
         pl.legend(handles=legend_handles, loc='upper right', prop={'size': 6})
 
 
@@ -229,7 +231,7 @@ def plot_num_rules(agg_top, agg_compact, agg_bayesian, dp, opts, is_title=True):
                   "-", color="blue", linewidth=1, label="Bayesian Rulesets")
     legend_handles.append(ln)
 
-    if opts.dataset == "abalone":
+    if opts.dataset in ["abalone", "ann_thyroid_1v3"]:
         pl.legend(handles=legend_handles, loc='upper right', prop={'size': 6})
 
 
@@ -249,7 +251,34 @@ def swap_metadata(rules_data, meta):
             continue
         for rule in rl[2]:
             rule.meta = meta
-        logger.debug("runidx: %d, iter: %d\n  %s" % (rl[0], rl[1], "\n  ".join([str(v) for v in rl[2]])))
+        # logger.debug("runidx: %d, iter: %d\n  %s" % (rl[0], rl[1], "\n  ".join([str(v) for v in rl[2]])))
+
+
+def print_readable_rules(opts):
+    feature_names = dataset_feature_names.get(opts.dataset, None)
+    if feature_names is None:
+        logger.debug("Readable names not found...")
+        return
+    X_train, labels = read_data_as_matrix(opts)
+    new_meta = get_feature_meta_default(X_train, labels, feature_names=feature_names)
+    default_meta = get_feature_meta_default(X_train, labels, feature_names=None)
+    agg_top, agg_compact, agg_bayesian = load_all_rule_data(X_train, labels, default_meta,
+                                                            opts, evaluate_f1=False)
+    swap_metadata(agg_top["data"], new_meta)
+    swap_metadata(agg_compact["data"], new_meta)
+    swap_metadata(agg_bayesian["data"], new_meta)
+
+    logger.debug("Printing Compact Descriptions:")
+    for rules_data in agg_compact["data"]:
+        if rules_data[1] == opts.budget:
+            str_rules = "\n  or ".join(["(" + str(r) + ")" for r in rules_data[2]])
+            logger.debug("Iter %d:\n  %s" % (rules_data[1], str_rules))
+
+    logger.debug("Printing Bayesian Rulesets:")
+    for rules_data in agg_bayesian["data"]:
+        if rules_data[1] == opts.budget:
+            str_rules = "\n  or ".join(["(" + str(r) + ")" for r in rules_data[2]])
+            logger.debug("Iter %d:\n  %s" % (rules_data[1], str_rules))
 
 
 def analyze_rules_dataset(opts, dp, is_num_rules=True, is_blank=True, is_title=True):
@@ -301,6 +330,7 @@ def analyze_rules(opts):
         pdfpath = "%s/%s-f1_scores.pdf" % (opts.resultsdir, opts.dataset)
         if plot_short_summary:
             dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=2, save_tight=True)
+            print_readable_rules(opts)
             analyze_rules_dataset(opts, dp=dp, is_num_rules=False, is_blank=False, is_title=False)
         else:
             dp = DataPlotter(pdfpath=pdfpath, rows=2, cols=3, save_tight=True)
