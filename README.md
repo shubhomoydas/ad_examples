@@ -17,9 +17,9 @@ Python libraries required:
 Note: The code has been tested with **python 2.7** and **python 3.6.1**.
 
 This repository includes, among other examples, my own original research in active learning and data drift detection:
-  - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work)) (Das, Wong, et al. 2016), (Das, Wong, et al. 2017), (Das, Islam, et al. 2018)
+  - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work)) (Das, Wong, et al. 2016), (Das, Wong, et al. 2017), (Das, Islam, et al. 2019)
   - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite](#cite-this-work)) (Das and Doppa 2018)
-  - [Data drift detection](DriftDetection.md#data-drift-detection) ([cite](#cite-this-work)) (Das, Islam, et al. 2018)
+  - [Data drift detection](DriftDetection.md#data-drift-detection) ([cite](#cite-this-work)) (Das, Islam, et al. 2019)
 
 
 Anomaly Detection Examples
@@ -115,6 +115,8 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 
 
 **Reference(s)**:
+  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2019). *Active Anomaly Detection via Ensembles: Insights, Algorithms, and Interpretability*. [(pdf)](https://arxiv.org/pdf/1901.08930.pdf) (**This is the most comprehensive version.**)
+
   - Das, S. and Doppa, J.R. (2018). *GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression*. [(pdf)](https://arxiv.org/pdf/1810.01403.pdf)
 
   - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
@@ -129,6 +131,27 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 Cite this work
 --------------
 In case you find this **repository** useful or use in your own work, please cite it with the following BibTeX references:
+```
+@article{das:2019,
+    author = {Shubhomoy Das and Md Rakibul Islam and Nitthilan Kannappan Jayakodi and Janardhan Rao Doppa},
+    title = {Active Anomaly Detection via Ensembles: Insights, Algorithms, and Interpretability},
+    year = {2019},
+    journal = {arXiv:1901.08930},
+    howpublished = {\url{https://arxiv.org/abs/1901.08930}},
+    note = {[Online; accessed 27-Jan-2019]}
+}
+
+@misc{github:shubhomoydas:ad_examples,
+    author = {Shubhomoy Das},
+    title = {Active Anomaly Discovery},
+    year = {2018},
+    journal = {arXiv:1708.09441},
+    howpublished = {\url{https://github.com/shubhomoydas/ad_examples}},
+    note = {[Online; accessed 19-Sep-2018]}
+}
+```
+
+Other publications may be cited as:
 ```
 @article{das:2018b,
     author = {Shubhomoy Das and Janardhan Rao Doppa},
@@ -148,18 +171,6 @@ In case you find this **repository** useful or use in your own work, please cite
     note = {[Online; accessed 19-Sep-2018]}
 }
 
-@misc{github:shubhomoydas:ad_examples,
-    author = {Shubhomoy Das},
-    title = {Active Anomaly Discovery},
-    year = {2018},
-    journal = {arXiv:1708.09441},
-    howpublished = {\url{https://github.com/shubhomoydas/ad_examples}},
-    note = {[Online; accessed 19-Sep-2018]}
-}
-```
-
-Other **publications** may be cited as:
-```
 @inproceedings{das:2016,
     author={Shubhomoy Das and Weng-Keen Wong and Thomas G. Dietterich and Alan Fern and Andrew Emmott},
     title={Incorporating Expert Feedback into Active Anomaly Discovery},
@@ -240,7 +251,7 @@ Suppose that `m` pre-labeled instances are already available *before* starting t
 
 Generating compact descriptions with AAD
 -------------------------------------------
-AAD, when used with a forest-based detector such as Isolation Forest, can output a compact set of subspaces that contain all labeled anomalies. The idea is explained in [(Das, Islam, et al. 2018)](#cite-this-work). Following illustrations show the results of this approach.
+AAD, when used with a forest-based detector such as Isolation Forest, can output a compact set of subspaces that contain all labeled anomalies. The idea is explained in [(Das, Islam, et al. 2019)](#cite-this-work). Following illustrations show the results of this approach.
 
 **Note:** The algorithm to compute compact descriptions (as illustrated here) might also be considered to be a non-parametric clustering algorithm where each 'description' is a cluster.
   
@@ -298,7 +309,7 @@ We assume that in a practical setting, the analyst(s) will be presented with ins
 
 Query diversity with compact descriptions
 -----------------------------------------
-The idea for querying a diverse set of instances without significantly affecting the anomaly detection efficiency is explained in [(Das, Islam, et al. 2018)](#cite-this-work).
+The idea for querying a diverse set of instances without significantly affecting the anomaly detection efficiency is explained in [(Das, Islam, et al. 2019)](#cite-this-work).
 
 To generate the below, use the command:
     
@@ -316,7 +327,7 @@ We compare the following query strategies (variables `QUERY_TYPE, N_BATCH, N_EXP
   - **Select a subset of most anomalous instances whose descriptions are diverse within a feedback iteration:** (`QUERY_TYPE=8, N_BATCH=3, N_EXPLORE=10`) [Select](python/aad/query_model_other.py) three instances among top 10 anomalous instances which have most diverse descriptions (explained in [previous section](#query-diversity-with-compact-descriptions)). (**BAL-D** in the plots below.)
   - **Select a subset of most anomalous instances which are farthest from each other within a feedback iteration:** (`QUERY_TYPE=9, N_BATCH=3, N_EXPLORE=10`) [Select](python/aad/query_model_euclidean.py) three instances among the top 10 anomalous instances which have the highest average euclidean distance between them. First short-list the top 10 anomalous instances as candidates. Now, to select a batch of (three) instances, first add the most anomalous instance from these candidates to the selected list. Then iterate (two more times); in each iteration, add that instance (from the candidates) to the selected list which has the maximum average distance from the instances currently in the selected list. This is a diversity strategy common in existing literature. (**BAL-E** in the plots below.)
 
-The plots below show that the description-based diversity strategy `BAL-D` indeed helps. While selecting the top-most anomalous instances is highly label-efficient for discovering anomalies [(Das, Islam, et al. 2018)](#cite-this-work), we can also improve the diversity in each query-batch through descriptions without loss in efficiency. Employing descriptions for diversity (`BAL-D`) also has similar query diversity on the *toy2* dataset as that which maximizes the euclidean distance (`BAL-E`); however, the description based strategy `BAL-D` has the advantage of being more user-friendly because it can characterize multiple anomalies through the descriptions.
+The plots below show that the description-based diversity strategy `BAL-D` indeed helps. While selecting the top-most anomalous instances is highly label-efficient for discovering anomalies [(Das, Islam, et al. 2019)](#cite-this-work), we can also improve the diversity in each query-batch through descriptions without loss in efficiency. Employing descriptions for diversity (`BAL-D`) also has similar query diversity on the *toy2* dataset as that which maximizes the euclidean distance (`BAL-E`); however, the description based strategy `BAL-D` has the advantage of being more user-friendly because it can characterize multiple anomalies through the descriptions.
 
 To generate the below plots, perform the following steps (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
 

@@ -1,6 +1,6 @@
 Data Drift Detection
 --------------------
-This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)) (Das, Islam, et al. 2018). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
+This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)) (Das, Islam, et al. 2019). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
   - First, randomly partition the current window of data into two equal parts (*A* and *B*).
   - For each tree in the forest, compute average KL-divergence as follows:
     - Treat the tree as set of histogram bins
@@ -35,7 +35,8 @@ Following shows the results of integrating drift detection along with label feed
 The application of KL-divergence in the **specific manner employed here is novel**, and is motivated by the dataset partitioning idea (presented in a different context) in (Dasu et al. 2006).
 
 **Reference(s)**:
-  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
+  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2019). *Active Anomaly Detection via Ensembles: Insights, Algorithms, and Interpretability*. [(pdf)](https://arxiv.org/pdf/1901.08930.pdf)
+
   - Tamraparni Dasu, Shankar Krishnan, Suresh Venkatasubramanian and Ke Yi, *An information-theoretic approach to detecting changes in multi-dimensional data streams*, Symp. on the Interface of Statistics, Computing Science, and Applications, 2006 ([pdf](https://www.cse.ust.hk/~yike/datadiff/datadiff.pdf)).
 
 
