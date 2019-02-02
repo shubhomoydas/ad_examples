@@ -143,7 +143,7 @@ Our motivation for exploring active anomaly detection with ensembles is presente
 
 **Approach**
 
-The approach is explained in more detail in [(Das, S., Islam, R., et al. 2019)](https://arxiv.org/pdf/1809.06477.pdf).
+The approach is explained in more detail in [(Das, S., Islam, R., et al. 2019)](https://arxiv.org/pdf/1901.08930.pdf).
 
 
 **Demonstration of the basic idea**
