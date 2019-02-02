@@ -3,7 +3,7 @@ from .utils import *
 from .data_plotter import *
 
 """
-pythonw -m common.test_sgd_optimization
+pythonw -m ad_examples.common.test_sgd_optimization
 """
 
 

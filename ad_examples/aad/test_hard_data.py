@@ -4,7 +4,7 @@ from ..common.gen_samples import *
 
 
 """
-pythonw -m aad.test_hard_data
+pythonw -m ad_examples.aad.test_hard_data
 """
 
 

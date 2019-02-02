@@ -6,7 +6,7 @@ from ..aad.simple_aad import *
 
 
 """
-pythonw -m percept.percept
+pythonw -m ad_examples.percept.percept
 """
 
 

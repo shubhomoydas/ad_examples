@@ -2,7 +2,7 @@ from .svm import *
 
 
 """
-pythonw -m classifier.test_svm
+pythonw -m ad_examples.classifier.test_svm
 """
 
 

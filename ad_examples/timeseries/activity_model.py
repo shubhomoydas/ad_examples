@@ -22,7 +22,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 Simple time-series modeling with Tensorflow RNN and LSTM cells
 
 To execute:
-pythonw -m timeseries.activity_model --log_file=temp/timeseries/activity_model.log --debug --n_epochs=100 --n_lags=20 --algo=lstm
+pythonw -m ad_examples.timeseries.activity_model --log_file=temp/timeseries/activity_model.log --debug --n_epochs=100 --n_lags=20 --algo=lstm
 
 Supported algo(s): lstm, basic
 """

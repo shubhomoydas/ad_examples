@@ -11,7 +11,7 @@ General Rule-parsing functions. We might use only a subset of the features avail
 For some rule illustrations/examples, see test_rule_apis()
 
 To test:
-    pythonw -m common.expressions
+    pythonw -m ad_examples.common.expressions
 """
 
 # Supported datatypes

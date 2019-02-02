@@ -8,7 +8,7 @@ from .aad_support import *
 
 """
 To run:
-pythonw -m aad.test_tree_detectors
+pythonw -m ad_examples.aad.test_tree_detectors
 """
 
 

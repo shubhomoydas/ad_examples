@@ -5,13 +5,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 """
 Simple GAN demo:
-python -m dnn.test_gan --log_file=temp/gan/simple_gan.log --debug --plot --n_epochs=200 --dataset=2
+python -m ad_examples.dnn.test_gan --log_file=temp/gan/simple_gan.log --debug --plot --n_epochs=200 --dataset=2
 
 Conditional GAN demo:
-python -m dnn.test_gan --log_file=temp/gan/test_gan.log --results_dir=./temp/gan --debug --plot --n_epochs=1000 --dataset=2 --conditional
-python -m dnn.test_gan --log_file=temp/gan/test_gan.log --results_dir=./temp/gan --debug --plot --n_epochs=1000 --dataset=3 --conditional
+python -m ad_examples.dnn.test_gan --log_file=temp/gan/test_gan.log --results_dir=./temp/gan --debug --plot --n_epochs=1000 --dataset=2 --conditional
+python -m ad_examples.dnn.test_gan --log_file=temp/gan/test_gan.log --results_dir=./temp/gan --debug --plot --n_epochs=1000 --dataset=3 --conditional
 
-python -m dnn.test_gan --log_file=temp/gan/test_gan.log --results_dir=./temp/gan --debug --plot --n_epochs=1000 --dataset=toy2 --conditional
+python -m ad_examples.dnn.test_gan --log_file=temp/gan/test_gan.log --results_dir=./temp/gan --debug --plot --n_epochs=1000 --dataset=toy2 --conditional
 """
 
 

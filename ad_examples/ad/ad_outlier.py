@@ -6,7 +6,7 @@ from ..common.gen_samples import *
 from ..loda.loda import Loda
 
 """
-pythonw -m ad.ad_outlier --plot --debug --log_file=temp/ad_outlier.log --dataset=face --algo=ifor
+pythonw -m ad_examples.ad.ad_outlier --plot --debug --log_file=temp/ad_outlier.log --dataset=face --algo=ifor
 
 Supported algorithms: ifor, loda, lof, ocsvm
 

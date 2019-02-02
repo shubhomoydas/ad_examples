@@ -5,7 +5,7 @@ from sklearn.ensemble import IsolationForest
 from ..common.gen_samples import *
 
 """
-pythonw -m ad.spectral_outlier
+pythonw -m ad_examples.ad.spectral_outlier
 """
 
 

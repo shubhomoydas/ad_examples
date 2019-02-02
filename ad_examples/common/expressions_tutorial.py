@@ -13,7 +13,7 @@ employ our rule-processor when needed for rule-based abstractions.
 The most crucial data structure is the FeatureMetadata.
 
 To run:
-python -m common.expressions_tutorial
+python -m ad_examples.common.expressions_tutorial
 """
 
 

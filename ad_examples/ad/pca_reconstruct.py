@@ -4,7 +4,7 @@ from sklearn.decomposition import PCA
 from ..common.gen_samples import *
 
 """
-pythonw -m ad.pca_reconstruct
+pythonw -m ad_examples.ad.pca_reconstruct
 """
 
 

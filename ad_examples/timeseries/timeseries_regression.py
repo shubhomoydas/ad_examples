@@ -16,14 +16,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 """
 To execute:
-pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=12 --dataset=airline
-pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=5 --dataset=shampoo
-pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=lynx
-pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=aus_beer
-pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=us_accident
-pythonw -m timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=50 --dataset=wolf_sunspot
+pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=12 --dataset=airline
+pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=5 --dataset=shampoo
+pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=lynx
+pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=aus_beer
+pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=us_accident
+pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=50 --dataset=wolf_sunspot
 
-pythonw -m timeseries.timeseries_regression --dataset=fisher_temp --algo=nntf --n_lags=20 --n_epochs=100 --debug --log_file=temp/timeseries/timeseries_regression.log
+pythonw -m ad_examples.timeseries.timeseries_regression --dataset=fisher_temp --algo=nntf --n_lags=20 --n_epochs=100 --debug --log_file=temp/timeseries/timeseries_regression.log
 
 """
 

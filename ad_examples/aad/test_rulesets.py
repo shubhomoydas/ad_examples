@@ -6,7 +6,7 @@ from .forest_description import CompactDescriber
 from .anomaly_dataset_support import dataset_feature_names
 
 """
-pythonw -m aad.test_rulesets
+pythonw -m ad_examples.aad.test_rulesets
 """
 
 

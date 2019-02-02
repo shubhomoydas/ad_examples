@@ -5,7 +5,7 @@ from sklearn.mixture.gaussian_mixture import GaussianMixture as GMM
 from ..common.gen_samples import *
 
 """
-pythonw -m ad.gmm_outlier
+pythonw -m ad_examples.ad.gmm_outlier
 
 This example is based on:
     http://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_covariances.html

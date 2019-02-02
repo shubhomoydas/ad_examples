@@ -15,7 +15,7 @@ from .anomaly_dataset_support import *
 
 
 """
-pythonw -m aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
+pythonw -m ad_examples.aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
 """
 
 

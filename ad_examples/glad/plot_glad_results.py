@@ -4,7 +4,7 @@ from .glad_batch import *
 
 
 """
-python -m glad.plot_glad_results
+python -m ad_examples.glad.plot_glad_results
 """
 
 

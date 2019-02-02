@@ -9,7 +9,7 @@ from ..common.timeseries_datasets import *
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 """
-pythonw -m dnn.ad_autoencoder
+pythonw -m ad_examples.dnn.ad_autoencoder
 """
 
 

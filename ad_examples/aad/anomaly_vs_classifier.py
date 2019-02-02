@@ -6,7 +6,7 @@ from .demo_aad import describe_instances
 from .classifier_trees import *
 
 """
-pythonw -m aad.anomaly_vs_classifier --dataset=5 --algo=explain
+pythonw -m ad_examples.aad.anomaly_vs_classifier --dataset=5 --algo=explain
 """
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ from ..common.sgd_optimization import sgdRMSProp
 from ..common.gen_samples import *
 
 """
-pythonw -m ad.outlier_effect
+pythonw -m ad_examples.ad.outlier_effect
 """
 
 

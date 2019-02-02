@@ -4,7 +4,7 @@ from .data_plotter import *
 from .utils import *
 
 """
-pythonw -m common.gen_samples
+pythonw -m ad_examples.common.gen_samples
 """
 
 

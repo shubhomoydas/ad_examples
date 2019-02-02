@@ -9,7 +9,7 @@ from .forest_description import CompactDescriber, MinimumVolumeCoverDescriber, \
 A simple no-frills demo of how to use AAD in an interactive loop.
 
 To execute:
-pythonw -m aad.demo_aad
+pythonw -m ad_examples.aad.demo_aad
 """
 
 logger = logging.getLogger(__name__)

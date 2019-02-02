@@ -8,7 +8,7 @@ from ..common.data_plotter import *
 from ..common.timeseries_datasets import TSeries
 
 """
-pythonw -m timeseries.simulate_timeseries
+pythonw -m ad_examples.timeseries.simulate_timeseries
 """
 
 

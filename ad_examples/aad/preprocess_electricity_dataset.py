@@ -9,7 +9,7 @@ This type of preprocessing is used in (for example):
 Incremental Learning of Concept Drift from Streaming Imbalanced Data by
 Gregory Ditzler, Robi Polikar
 
-pythonw -m aad.preprocess_electricity_dataset
+pythonw -m ad_examples.aad.preprocess_electricity_dataset
 """
 
 

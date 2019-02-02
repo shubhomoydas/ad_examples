@@ -17,7 +17,7 @@ detects time points with largest forecasting errors on the last 1/3 data. Are th
 Some examples motivated by:
     https://machinelearningmastery.com/arima-for-time-train_series-forecasting-with-python/
 
-pythonw -m timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --log_transform --dataset=airline
+pythonw -m ad_examples.timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --log_transform --dataset=airline
 '''
 
 

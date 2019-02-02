@@ -3,7 +3,7 @@ import numpy.random as rnd
 from ..common.gen_samples import *
 
 """
-pythonw -m ad.pseudo_anom_outlier
+pythonw -m ad_examples.ad.pseudo_anom_outlier
 """
 
 

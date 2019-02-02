@@ -7,7 +7,7 @@ from .loda import *
 
 
 """
-pythonw -m loda.test_loda --log_file=temp/loda/test_loda.log --debug --dataset=mammography
+pythonw -m ad_examples.loda.test_loda --log_file=temp/loda/test_loda.log --debug --dataset=mammography
 """
 
 

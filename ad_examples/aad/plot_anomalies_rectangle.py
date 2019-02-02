@@ -17,7 +17,7 @@ from .anomaly_dataset_support import *
 
 
 """
-pythonw -m aad.plot_anomalies_rectangle
+pythonw -m ad_examples.aad.plot_anomalies_rectangle
 """
 
 

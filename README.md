@@ -30,6 +30,8 @@ To check the installed library version:
 pip list | grep ad-examples
 ```
 
+**IMPORTANT:** In order for the logs and plots to be generated, make sure that the current working directory has a `temp` folder.
+
 To run demo_aad:
 
 ```

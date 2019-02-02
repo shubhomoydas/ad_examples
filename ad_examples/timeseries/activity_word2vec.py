@@ -50,7 +50,7 @@ More details on the setup can be found in:
     and on the CASAS website: http://ailab.wsu.edu/casas/hh
 
 To execute:
-pythonw -m timeseries.activity_word2vec --log_file=temp/timeseries/activity_word2vec.log --n_epochs=1 --debug
+pythonw -m ad_examples.timeseries.activity_word2vec --log_file=temp/timeseries/activity_word2vec.log --n_epochs=1 --debug
 """
 
 

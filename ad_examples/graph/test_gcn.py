@@ -12,8 +12,8 @@ from .gcn_test_support import read_datasets_for_illustration, get_target_and_att
     test_neighbor_gradients, test_robust_training_helper, plot_model_diagnostics
 
 """
-pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top
-pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --ensemble --n_estimators=10 --edge_sample_prob=0.6
+pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top
+pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --ensemble --n_estimators=10 --edge_sample_prob=0.6
 """
 
 

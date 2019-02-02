@@ -5,7 +5,7 @@ from .glad_test_support import *
 An implementation of:
     GLAD: *GL*ocalized *A*nomaly *D*etection via Active Feature Space Suppression
 
-python -m glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --afss_bias_prob=0.50 --train_batch_size=25 --budget=60 --afss_nodes=0 --afss_max_labeled_reps=5 --loda_debug --plot
+python -m ad_examples.glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --afss_bias_prob=0.50 --train_batch_size=25 --budget=60 --afss_nodes=0 --afss_max_labeled_reps=5 --loda_debug --plot
 """
 
 

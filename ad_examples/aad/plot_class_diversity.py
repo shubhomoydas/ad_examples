@@ -15,7 +15,7 @@ from .anomaly_dataset_support import *
 
 
 """
-pythonw -m aad.plot_class_diversity
+pythonw -m ad_examples.aad.plot_class_diversity
 """
 
 

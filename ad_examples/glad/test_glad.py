@@ -2,9 +2,9 @@ from .glad_batch import *
 from .glad_test_support import *
 
 """
-python -m glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --n_anoms=60 --loda_debug --plot --op=unit
+python -m ad_examples.glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --n_anoms=60 --loda_debug --plot --op=unit
 
-python -m glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --budget=30 --loda_debug --plot --op=active
+python -m ad_examples.glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --budget=30 --loda_debug --plot --op=active
 """
 
 

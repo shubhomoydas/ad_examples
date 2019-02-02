@@ -19,7 +19,7 @@ Visualization should provide a hint on how easy/difficult is anomaly detection f
 Consider applying other dimensionality reduction techniques such as MDS, t-SNE, etc.
 
 To execute:
-pythonw -m dnn.autoencoder --n_epochs=100 --log_file=temp/dnn/autoencoder.log --debug --dataset=kddcup_sub
+pythonw -m ad_examples.dnn.autoencoder --n_epochs=100 --log_file=temp/dnn/autoencoder.log --debug --dataset=kddcup_sub
 """
 
 

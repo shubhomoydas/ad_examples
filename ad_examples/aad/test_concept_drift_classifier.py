@@ -13,7 +13,7 @@ NOTE: The classifier is trained only once in this example with the
     windows *without* updating the model.
 
 To run:
-pythonw -m aad.test_concept_drift_classifier --debug --plot --log_file=temp/test_concept_drift_classifier.log --dataset=weather
+pythonw -m ad_examples.aad.test_concept_drift_classifier --debug --plot --log_file=temp/test_concept_drift_classifier.log --dataset=weather
 """
 
 

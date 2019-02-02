@@ -3,7 +3,7 @@ import numpy.random as rnd
 from ..common.gen_samples import *
 
 """
-pythonw -m aad.test_data_gen
+pythonw -m ad_examples.aad.test_data_gen
 """
 
 

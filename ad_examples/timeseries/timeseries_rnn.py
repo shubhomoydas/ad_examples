@@ -20,17 +20,17 @@ After modeling the timeseries, we predict values for new time points
 and flag the time points with the most deviating values as anomalies.
 
 To execute:
-pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=airline
-pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
+pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=airline
+pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
 
-pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=5 --dataset=shampoo
-pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=4 --dataset=lynx
-pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=4 --dataset=aus_beer
-pythonw -m timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=us_accident
-pythonw -m timeseries.timeseries_rnn --n_epochs=20 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=50 --dataset=wolf_sunspot
+pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=5 --dataset=shampoo
+pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=4 --dataset=lynx
+pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=4 --dataset=aus_beer
+pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=us_accident
+pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=20 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=50 --dataset=wolf_sunspot
 
 The below does not work well...need longer dependencies
-pythonw -m timeseries.timeseries_rnn --dataset=fisher_temp --algo=lstm --n_lags=200 --n_epochs=10 --debug --log_file=temp/timeseries/timeseries_rnn.log
+pythonw -m ad_examples.timeseries.timeseries_rnn --dataset=fisher_temp --algo=lstm --n_lags=200 --n_epochs=10 --debug --log_file=temp/timeseries/timeseries_rnn.log
 """
 
 

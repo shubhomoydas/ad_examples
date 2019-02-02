@@ -4,7 +4,7 @@ from ..common.gen_samples import *
 from ..common.gen_samples import *
 
 """
-pythonw -m ad.kde_outlier
+pythonw -m ad_examples.ad.kde_outlier
 """
 
 
