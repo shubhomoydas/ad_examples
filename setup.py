@@ -37,6 +37,7 @@ setup(
     author='Shubhomoy Das',
     author_email='da.shubhomoy@gmail.com',
     url='https://github.com/shubhomoydas/ad_examples',
+    license='MIT',
     package_dir = {'ad_examples': 'ad_examples'},
     packages=['ad_examples',
               'ad_examples.aad',
@@ -65,6 +66,10 @@ setup(
         # 'tensorflow>=1.6.0',  # *NOT* required for AAD. Required for GLAD and a few other stuff such as timeseries
     ],
     classifiers=[
-        'Programming Language :: Python',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
     ],
 )
