@@ -10,3 +10,5 @@
 /weather/weather_data
 /NSWElectricityPricing/elecNormNew.arff
 /AirlineDelay/airlines.arff
+/UCIActivity/UCI\ HAR\ Dataset.names
+/UCIActivity/UCI\ HAR\ Dataset.zip
