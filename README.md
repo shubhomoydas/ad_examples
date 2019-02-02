@@ -18,14 +18,37 @@ Python libraries required:
 Installation with `pip`:
 --------------------------
 
+Execute the following to install the library from git.
+
 ```
-# Execute the following to install the library from git.
 pip install git+https://github.com/shubhomoydas/ad_examples.git
+```
 
-# To check the installed library version:
+To check the installed library version:
+
+```
 pip list | grep ad-examples
+```
 
-# To uninstall:
+To run demo_aad:
+
+```
+python -m ad_examples.aad.demo_aad
+
+```
+
+Check output:
+
+```
+baseline found:
+[0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 7, 7, 8, 8, 8, 9, 9, 9]
+AAD found:
+[0, 0, 0, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 7, 7, 8, 8, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14, 15, 16]
+```
+
+To uninstall:
+
+```
 pip uninstall ad-examples
 ```
 
