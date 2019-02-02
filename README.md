@@ -17,9 +17,16 @@ Python libraries required:
 
 Installation with `pip`:
 --------------------------
-Execute the following to install the library from git.
+
 ```
+# Execute the following to install the library from git.
 pip install git+https://github.com/shubhomoydas/ad_examples.git
+
+# To check the installed library version:
+pip list | grep ad-examples
+
+# To uninstall:
+pip uninstall ad-examples
 ```
 
 **Note(s):**
