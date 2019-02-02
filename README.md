@@ -10,11 +10,24 @@ Python libraries required:
     matplotlib (2.1.0)
     tensorflow (1.6.0)
 
-`python/requirements.txt` lists all these libraries. To install:
+`requirements.txt` lists all these libraries. To install:
 
     pip install -r requirements.txt
 
-Note: The code has been tested with **python 2.7** and **python 3.6.1**.
+
+Installation with `pip`:
+--------------------------
+Execute the following to install the library from git.
+```
+pip install git+https://github.com/shubhomoydas/ad_examples.git
+```
+
+**Note(s):**
+
+  1. The code has been tested with **python 2.7** and **python 3.6.1**.
+  
+  2. Although the package has a dependency on tensorflow, it is not required for AAD and hence tensorflow will not be installed automatically.
+
 
 This repository includes, among other examples, my own original research in active learning and data drift detection:
   - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work)) (Das, Wong, et al. 2016), (Das, Wong, et al. 2017), (Das, Islam, et al. 2019)
@@ -28,15 +41,15 @@ This is a collection of anomaly detection examples for detection methods popular
 
 Some techniques covered are listed below. These are a mere drop in the ocean of all anomaly detectors and are only meant to highlight some broad categories. Apologies if your favorite one is currently not included -- hopefully in time...
   - i.i.d setting:
-    - [Standard unsupervised anomaly detectors](python/ad/ad_outlier.py) (Isolation Forest, LODA, One-class SVM, LOF)
-    - [Clustering and density-based](python/ad/gmm_outlier.py)
-    - [Density estimation based](python/ad/kde_outlier.py)
-    - [PCA Reconstruction-based](python/ad/pca_reconstruct.py)
-    - [Autoencoder Reconstruction-based](python/dnn/autoencoder.py)
-    - [Classifier and pseudo-anomaly based](python/ad/pseudo_anom_outlier.py)
-    - [Ensemble/Projection-based](python/loda/loda.py)
-    - [A demonstration of outlier influence](python/ad/outlier_effect.py)
-    - [Spectral-based](SpectralMethods.md) [code](python/ad/spectral_outlier.py)
+    - [Standard unsupervised anomaly detectors](ad_examples/ad/ad_outlier.py) (Isolation Forest, LODA, One-class SVM, LOF)
+    - [Clustering and density-based](ad_examples/ad/gmm_outlier.py)
+    - [Density estimation based](ad_examples/ad/kde_outlier.py)
+    - [PCA Reconstruction-based](ad_examples/ad/pca_reconstruct.py)
+    - [Autoencoder Reconstruction-based](ad_examples/dnn/autoencoder.py)
+    - [Classifier and pseudo-anomaly based](ad_examples/ad/pseudo_anom_outlier.py)
+    - [Ensemble/Projection-based](ad_examples/loda/loda.py)
+    - [A demonstration of outlier influence](ad_examples/ad/outlier_effect.py)
+    - [Spectral-based](SpectralMethods.md) [code](ad_examples/ad/spectral_outlier.py)
   - timeseries (**Jump to** [illustrations](TimeSeries.md#timeseries-anomaly-detection))
     - Forecasting-based
       - [Exploratory Analysis](TimeSeries.md#exploratory-analysis)
@@ -46,14 +59,14 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - i.i.d
       - [Windows/Shingle based](TimeSeries.md#timeseries-outliers-with-shingles) (Isolation Forest, One-class SVM, LOF, Autoencoder)
   - [human-in-the-loop (active learning)](#active-anomaly-discovery-aad)
-    - Active Anomaly Discovery ([batch setup](python/aad/aad_batch.py), [streaming setup](python/aad/aad_stream.py)) -- **Includes plots and illustrations (see sections below)**
+    - Active Anomaly Discovery ([batch setup](ad_examples/aad/aad_batch.py), [streaming setup](ad_examples/aad/aad_stream.py)) -- **Includes plots and illustrations (see sections below)**
       - [High-level summary of the approach](#active-anomaly-discovery-aad)
       - [Cite this work](#cite-this-work)
       - **Jump right in:** [General instructions on running AAD](#running-aad)
       - **Descriptions and Interpretability:** [Generating anomaly descriptions with tree-based ensembles](#generating-compact-descriptions-with-aad)
       - [Bayesian Rulesets with AAD](#bayesian-rulesets-with-aad)
       - **Query strategies:** [Diversifying query instances using the descriptions](#query-diversity-with-compact-descriptions) and its [evaluation](#does-query-diversity-with-compact-descriptions-help)
-      - **GLAD: GLocalized Anomaly Detection** ([glad_batch.py](python/glad/glad_batch.py))
+      - **GLAD: GLocalized Anomaly Detection** ([glad_batch.py](ad_examples/glad/glad_batch.py))
         - [Approach and architecture](#glocalized-anomaly-detection)
       - **Aside:** [When we have a lot of labeled data (both anomalies and nominals), should we employ a classifier instead of an anomaly detector?](#anomaly-detector-vs-classifier)
       - [Some properties of different tree-based detectors](TreeProperties.md)
@@ -71,19 +84,19 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
   - [Reducing activity sequences to i.i.d](ActivitySequences.md#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
 
-There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'python/temp' folder when executed.
+There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'temp' folder when executed.
 
-**AUC** is the most common metric used to report anomaly detection performance. See [here](python/dnn/autoencoder.py) for a complete example with standard datasets.
+**AUC** is the most common metric used to report anomaly detection performance. See [here](ad_examples/dnn/autoencoder.py) for a complete example with standard datasets.
 
 To execute the code:
 
-1. **Run code from 'python' folder**. The outputs will be generated under 'temp' folder. The `pythonw` command is used on OSX with python 2.7, but `python` should be used with Python 3.6 on OSX, or on Linux.
+1. **Run code from the checkout folder**. The outputs will be generated under 'temp' folder. The `pythonw` command is used on OSX with python 2.7, but `python` should be used with Python 3.6 on OSX, or on Linux.
 
-2. To avoid import errors, make sure that `PYTHONPATH` is configured correctly to include the current dir: `.:/usr/local/lib/python`
+2. To avoid import errors, make sure that `PYTHONPATH` is configured correctly to include the ad_examples source dir: `.:/usr/local/lib/python`
 
 3. *The run commands are at the top of the python source code files.*
 
-4. Check the log file in `python/temp` folder. Usually it will be named <demo_code>.log. Timeseries demos will output logs under the `python/temp/timeseries` folder.
+4. Check the log file in `temp` folder. Usually it will be named <demo_code>.log. Timeseries demos will output logs under the `timeseries` folder.
 
 
 Active Anomaly Discovery (AAD)
@@ -98,16 +111,16 @@ Our motivation for exploring active anomaly detection with ensembles is presente
 
 **Approach**
 
-The approach is explained in more detail in [(Das, S., Islam, R., et al. 2018)](https://arxiv.org/pdf/1809.06477.pdf).
+The approach is explained in more detail in [(Das, S., Islam, R., et al. 2019)](https://arxiv.org/pdf/1809.06477.pdf).
 
 
 **Demonstration of the basic idea**
 
-*Assuming that the ensemble scores have already been computed*, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py) implements AAD in a much more simplified manner.
+*Assuming that the ensemble scores have already been computed*, the demo code [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/ad_examples/percept/percept.py) implements AAD in a much more simplified manner.
 
-To run [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/python/percept/percept.py):
+To run [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/ad_examples/percept/percept.py):
 
-    pythonw -m percept.percept
+    pythonw -m ad_examples.percept.percept
 
 The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/percept_taurel_fixedtau_prior.pdf) with plots illustrating how the data was actively labeled.
 
@@ -190,24 +203,24 @@ Other publications may be cited as:
 
 Running AAD
 -----------
-This codebase is my **research** platform. The main `bash` script `aad.sh` makes it easier to run all AAD experiments multiple times (in the spirit of scientific inquiry) so that final results can be averaged. I try to output results for different parameter settings into different folders (under `python/temp/aad`) so that results can be easily compared without conflicts. I also output to files the instance indexes (as 1-indexed and **not** 0-indexed) in the order they were queried for fine-grained analysis and visualization. If you want to introduce a new dataset with the least effort, then put its files under `datasets/anomaly` folder in the same format and structure as those of the `toy2` dataset and follow the same naming conventions. Else, a little effort would be needed to invoke the necessary data load APIs. You might also want to have a look at the [simplified API usage example](#how-to-employ-aad-in-your-own-application) (`python/aad/demo_aad.py`) below.
+This codebase is my **research** platform. The main `bash` script `aad.sh` makes it easier to run all AAD experiments multiple times (in the spirit of scientific inquiry) so that final results can be averaged. I try to output results for different parameter settings into different folders (under `temp/aad`) so that results can be easily compared without conflicts. I also output to files the instance indexes (as 1-indexed and **not** 0-indexed) in the order they were queried for fine-grained analysis and visualization. If you want to introduce a new dataset with the least effort, then put its files under `ad_examples/datasets/anomaly` folder in the same format and structure as those of the `toy2` dataset and follow the same naming conventions. Else, a little effort would be needed to invoke the necessary data load APIs. You might also want to have a look at the [simplified API usage example](#how-to-employ-aad-in-your-own-application) (`ad_examples/aad/demo_aad.py`) below.
 
 **Note:** It might seem that the script `aad.sh` requires an intimidating number of parameters, but bear in mind that the simplest settings (or automatic configuration from cross-validation etc.) are preferred for any formal publication. **The reason we allow so many parameters to be configurable is to support ablation studies and general curiosity.**
 
 This codebase supports the following five different anomaly detection algorithms. If pre-computed anomaly scores are available from another ensemble-based algorithm, then jump to the [below section on pre-computed scores](#running-aad-with-precomputed-anomaly-scores).
-  - The [LODA based AAD](python/aad/loda_aad.py) (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
-  - The [Isolation Forest based AAD](python/aad/random_split_trees.py) (**streaming support with model update**)
+  - The [LODA based AAD](ad_examples/aad/loda_aad.py) (**works with streaming data, but does not support incremental update to model after building the model with the first window of data**)
+  - The [Isolation Forest based AAD](ad_examples/aad/random_split_trees.py) (**streaming support with model update**)
     - For streaming update, we support two modes:
       - **Mode 0**: Replace the oldest 20% trees (configurable) with new trees trained on the latest window of data. The previously learned weights of the nodes of the retained (80%) trees are retained, and the weights of nodes of new trees are set to a default value (see code) before normalizing the entire weight vector to unit length. For this mode, set `CHECK_KL_IND=0` in `aad.sh`.
       - **Mode 1** (Default): Replace trees based on KL-divergence. Further details are [below](#data-drift-detection). For this mode, set `CHECK_KL_IND=1` in `aad.sh`.
-  - [HS Trees based AAD](python/aad/random_split_trees.py) (**streaming support with model update**)
+  - [HS Trees based AAD](ad_examples/aad/random_split_trees.py) (**streaming support with model update**)
     - For streaming update, the option `--tree_update_type=0` replaces the previous node-level sample counts with counts from the new window of data. This is as per the original published algorithm. The option `--tree_update_type=1` updates the node-level counts as a linear combination of previous and current counts -- this is an experimental feature.
-  - [RS Forest based AAD](python/aad/random_split_trees.py) (**streaming support with model update**)
+  - [RS Forest based AAD](ad_examples/aad/random_split_trees.py) (**streaming support with model update**)
     - See the previous HS Trees streaming update options above.
-  - The [Isolation Forest based AAD with Multiview](python/aad/multiview_forest.py) (**streaming support with model update**)
+  - The [Isolation Forest based AAD with Multiview](ad_examples/aad/multiview_forest.py) (**streaming support with model update**)
     - This is useful if (say) there are groups of features that represent coherent groups and we want to create trees only with the features in a particular group. For instance, in a malware detection application, we might have 100 features computed with static program features and 120 computed with dynamic program features. Then we want 50 isolation trees with only the 100 static features and 50 trees with the 120 dynamic features for a total of 100 trees. In a streaming situation, we would want the tree replacement to take into account the grouping as well, for example, if there has been no drift in the static features while there is a significant drift in dynamic features, we should not replace the trees of static features and only replace the trees of dynamic features.
 
-To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
+To run the Isolation Forest / HS-Trees / RS-Forest / LODA based algorithms, the command has the following format (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'temp' folder**):
 
     bash ./aad.sh <dataset> <budget> <reruns> <tau> <detector_type> <query_type[1|2|8|9]> <query_confident[0|1]> <streaming[0|1]> <streaming_window> <retention_type[0|1]> <with_prior[0|1]> <init_type[0|1|2]>
 
@@ -268,11 +281,11 @@ Bayesian Rulesets with AAD
 -------------------------------------------
 As we saw above, AAD helped infer the true relevance of subspaces and the most relevant subspaces were then employed as candidates for compact descriptions. This approach can be applied with other rule-mining algorithms such as (Wang, Rudin, et al. 2016) as well. (Wang, Rudin, et al. 2016) is a supervised algorithm that is first initialized with a [modestly] large set of classification rules. It then infers a much smaller subset of interpretable rules from the initial set of rules using a Bayesian framework. We will refer to these rules as **Bayesian Rulesets** (in contrast with our *Compact Descriptions*). The following command generates the plots below and illustrates both *Compact Descriptions* and *Bayesian Rulesets*. Here, we first run AAD with a budget of 30 and retrieve the top subspaces which cover all *discovered* anomalies. These subspaces (top left plot) are used as candidates for both *Compact Descriptions* (top right plot) as well as *Bayesian Rulesets* (bottom left plot). The discovered rules which imply **Anomaly** are shown in the bottom right plot. Since *Bayesian Rulesets* is supervised, we take the set of queried instances, and another set of randomly sampled unlabeled instances (having same size as queried) as the training set. The sampled unlabeled instances selected for training are assumed to be **nominal**.
 
-    pythonw -m aad.test_rulesets
+    pythonw -m ad_examples.aad.test_rulesets
 
 ![Bayesian Rulesets](figures/aad/rulesets.png)
 
-A comparison of **interpretable** rules found by *Compact Descriptions (CD)* and *Bayesian Rulesets (BR)* is shown below for the *toy2* dataset. Interpretability implies that the rules will be simple-enough for an analyst to understand. Such rules generally have shorter lengths (fewer predicates). The application of compact descriptions in the case of diversity only involved a set-covering problem without any regard to interpretability. Now, we modify the ILP (integer linear programming) objective in the following manner (see [CompactDescriber.describe()](python/aad/forest_description.py)):
+A comparison of **interpretable** rules found by *Compact Descriptions (CD)* and *Bayesian Rulesets (BR)* is shown below for the *toy2* dataset. Interpretability implies that the rules will be simple-enough for an analyst to understand. Such rules generally have shorter lengths (fewer predicates). The application of compact descriptions in the case of diversity only involved a set-covering problem without any regard to interpretability. Now, we modify the ILP (integer linear programming) objective in the following manner (see [CompactDescriber.describe()](ad_examples/aad/forest_description.py)):
 
   1. We add a **complexity** penalty to each region. A region is defined by its feature ranges, i.e., the max and min values of each feature within the region. A feature range that does not have either a minimum or a maximum value (i.e., they are `-inf` or `inf`) makes the corresponding region definition simpler because it implies that fewer predicates will be required to define the region. Our complexity definition encourages selection of regions which have fewer feature range values in their definition.
   2. We set a minimum precision threshold (defaults to 0.4) for the rules selected. This removes noisy rules.
@@ -292,7 +305,7 @@ In order to generate the plots below, first set `RULES_IND=1` and `RULE_OUTPUT_I
 
 **Rule expressions**
 
-The codebase uses a very light-weight rule/predicate framework. The conjunctive rules (used by the description algorithms) are composed of a series of `Predicate` objects and operations on these are encapsulated in `ConjunctiveRule`. In order to understand and debug these data structures, please see `test_rule_apis()` in [expressions.py](python/common/expressions.py) and the [tutorial](python/common/expressions_tutorial.py). The rule framework has been introduced primarily to provide a higher-level abstraction for rulesets so that programming bugs may be avoided.
+The codebase uses a very light-weight rule/predicate framework. The conjunctive rules (used by the description algorithms) are composed of a series of `Predicate` objects and operations on these are encapsulated in `ConjunctiveRule`. In order to understand and debug these data structures, please see `test_rule_apis()` in [expressions.py](ad_examples/common/expressions.py) and the [tutorial](ad_examples/common/expressions_tutorial.py). The rule framework has been introduced primarily to provide a higher-level abstraction for rulesets so that programming bugs may be avoided.
 
 **Reference(s)**:
   - Wang, T., Rudin, C., Velez-Doshi, F., Liu, Y., Klampfl, E., MacNeille, P. (2016). *Bayesian Rule Sets for Interpretable Classification* in the Proceedings of the IEEE International Conference on Data Mining.
@@ -321,15 +334,15 @@ To generate the below, use the command:
 Does Query diversity with compact descriptions help?
 ----------------------------------------------------
 We compare the following query strategies (variables `QUERY_TYPE, N_BATCH, N_EXPLORE` are set in `aad.sh`):
-  - **Select the single-most anomalous instance per feedback iteration:** (`QUERY_TYPE=1, N_BATCH=1`) [Select](python/aad/query_model.py) the top-most instance ordered by anomaly score. (**BAL (Adaptive Prior)** in the plots below.)
-  - **Select a set of the top-most anomalous instances per feedback iteration:** (`QUERY_TYPE=1, N_BATCH=3`) [Select](python/aad/query_model.py) a batch of three top-most instances ordered by anomaly score. (**ifor\_q1b3** in the plots below.)
-  - **Select a random subset of the most anomalous instances per feedback iteration:** (`QUERY_TYPE=2, N_BATCH=3, N_EXPLORE=10`) [Select](python/aad/query_model.py) a random batch of three instances among top 10 anomalous instances. (**ifor\_top\_random** in the plots below.)
-  - **Select a subset of most anomalous instances whose descriptions are diverse within a feedback iteration:** (`QUERY_TYPE=8, N_BATCH=3, N_EXPLORE=10`) [Select](python/aad/query_model_other.py) three instances among top 10 anomalous instances which have most diverse descriptions (explained in [previous section](#query-diversity-with-compact-descriptions)). (**BAL-D** in the plots below.)
-  - **Select a subset of most anomalous instances which are farthest from each other within a feedback iteration:** (`QUERY_TYPE=9, N_BATCH=3, N_EXPLORE=10`) [Select](python/aad/query_model_euclidean.py) three instances among the top 10 anomalous instances which have the highest average euclidean distance between them. First short-list the top 10 anomalous instances as candidates. Now, to select a batch of (three) instances, first add the most anomalous instance from these candidates to the selected list. Then iterate (two more times); in each iteration, add that instance (from the candidates) to the selected list which has the maximum average distance from the instances currently in the selected list. This is a diversity strategy common in existing literature. (**BAL-E** in the plots below.)
+  - **Select the single-most anomalous instance per feedback iteration:** (`QUERY_TYPE=1, N_BATCH=1`) [Select](ad_examples/aad/query_model.py) the top-most instance ordered by anomaly score. (**BAL (Adaptive Prior)** in the plots below.)
+  - **Select a set of the top-most anomalous instances per feedback iteration:** (`QUERY_TYPE=1, N_BATCH=3`) [Select](ad_examples/aad/query_model.py) a batch of three top-most instances ordered by anomaly score. (**ifor\_q1b3** in the plots below.)
+  - **Select a random subset of the most anomalous instances per feedback iteration:** (`QUERY_TYPE=2, N_BATCH=3, N_EXPLORE=10`) [Select](ad_examples/aad/query_model.py) a random batch of three instances among top 10 anomalous instances. (**ifor\_top\_random** in the plots below.)
+  - **Select a subset of most anomalous instances whose descriptions are diverse within a feedback iteration:** (`QUERY_TYPE=8, N_BATCH=3, N_EXPLORE=10`) [Select](ad_examples/aad/query_model_other.py) three instances among top 10 anomalous instances which have most diverse descriptions (explained in [previous section](#query-diversity-with-compact-descriptions)). (**BAL-D** in the plots below.)
+  - **Select a subset of most anomalous instances which are farthest from each other within a feedback iteration:** (`QUERY_TYPE=9, N_BATCH=3, N_EXPLORE=10`) [Select](ad_examples/aad/query_model_euclidean.py) three instances among the top 10 anomalous instances which have the highest average euclidean distance between them. First short-list the top 10 anomalous instances as candidates. Now, to select a batch of (three) instances, first add the most anomalous instance from these candidates to the selected list. Then iterate (two more times); in each iteration, add that instance (from the candidates) to the selected list which has the maximum average distance from the instances currently in the selected list. This is a diversity strategy common in existing literature. (**BAL-E** in the plots below.)
 
 The plots below show that the description-based diversity strategy `BAL-D` indeed helps. While selecting the top-most anomalous instances is highly label-efficient for discovering anomalies [(Das, Islam, et al. 2019)](#cite-this-work), we can also improve the diversity in each query-batch through descriptions without loss in efficiency. Employing descriptions for diversity (`BAL-D`) also has similar query diversity on the *toy2* dataset as that which maximizes the euclidean distance (`BAL-E`); however, the description based strategy `BAL-D` has the advantage of being more user-friendly because it can characterize multiple anomalies through the descriptions.
 
-To generate the below plots, perform the following steps (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'python/temp' folder**):
+To generate the below plots, perform the following steps (**remember to run the commands from the 'python' folder, and monitor progress in logs under 'temp' folder**):
 
     - set N_BATCH=1 in aad.sh and then run the command:
     
@@ -344,11 +357,11 @@ To generate the below plots, perform the following steps (**remember to run the 
 
     - Next, generate anomaly discovery curves:
         
-        pythonw -m aad.plot_aad_results
+        pythonw -m ad_examples.aad.plot_aad_results
         
     - Finally, generate class diversity plot:
     
-        pythonw -m aad.plot_class_diversity
+        pythonw -m ad_examples.aad.plot_class_diversity
 
 ![Diversity Effect](figures/aad/diversity_effect.png)
 
@@ -373,9 +386,9 @@ The architecture of GLAD is shown below.
 
 The results on the *Toy2* dataset are shown below. In order to generate these figures, run the following commands (replace `python` with `pythonw` if facing problems with python 2.7):
     
-    python -m glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --n_anoms=60 --loda_debug --plot --op=unit
+    python -m ad_examples.glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --n_anoms=60 --loda_debug --plot --op=unit
     
-    python -m glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --budget=60 --loda_debug --plot
+    python -m ad_examples.glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --budget=60 --loda_debug --plot
 
 
 ![GLAD Toy2](figures/glad/glad_toy2.png)
@@ -396,7 +409,7 @@ GLAD assumes that the anomaly detectors in the ensemble can be arbitrary. The be
 
 The above strategy is intended to provide a set of interpretable rules for the relevance of a specific ensemble member (detector) in the feature space. This is illustrated in the figure below. These plots were generated by running the following with python 3.6.
 
-    python -m glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --budget=30 --loda_debug --plot --explain
+    python -m ad_examples.glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --budget=30 --loda_debug --plot --explain
 
 There are four members (i.e., LODA projections) in our current example. The region where a member is ranked as the top-most relevant detector is shown in red. The last member (member 3) did not rank as the top-most relevant for any instance; hence, it does not have any region marked in red. It is important to note that the **relevance of a detector is different from the anomaly score(s) it assigns**. A detector which is *relevant* in a particular subspace predicts the labels of instances in that subspace correctly irrespective of whether those instances are anomalies or nominals. For example, ensemble members 0 and 1 are relevant (in the figure below) in subspaces which have mostly nominal instances, i.e., they correctly predicted that instances in those subspaces are *nominal*. Members, which incorrectly predicted that instances in these subspaces were anomalies, lost relevance there.
 
@@ -422,7 +435,7 @@ Anomaly Detector vs Classifier
 ------------------------------
 A question that comes up often is: *if we have a lot of labeled anomaly and nominal instances, then could we employ a classifier instead of an anomaly detector?* The answer is: **it depends on the dataset and the application**. We illustrate the difference between the behavior of an anomaly detector (AAD) and a classifier (Random Forest) in the figure below. The compact description strategy of AAD is also applicable to tree-based classifiers (such as decision trees and random forests) as demonstrated in the plots. These figures were generated by the following command.
 
-    pythonw -m aad.anomaly_vs_classifier --dataset=5 --algo=explain
+    pythonw -m ad_examples.aad.anomaly_vs_classifier --dataset=5 --algo=explain
 
 ![Anomaly Detector vs Classifier](figures/aad/anomaly_vs_classifier.png)
 
@@ -431,16 +444,16 @@ Running AAD with precomputed anomaly scores
 -------------------------------------------
 In case scores from anomaly detector ensembles are available in a CSV file, then AAD can be run with the following command.
 
-    pythonw -m aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=../datasets/toy.csv --scoresfile=../datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
+    pythonw -m ad_examples.aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=./ad_examples/datasets/toy.csv --scoresfile=./ad_examples/datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
 
 **Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (`--init=1`) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
 
 
 How to employ AAD in your own application
 -----------------------------------------
-The [demo_aad.py](python/aad/demo_aad.py) shows the simpest AAD implementation that can be used as a template by other developers. To load a different dataset, replace `get_synthetic_samples(stype=2)` (in the code) with the appropriate function(s). The following command executes the code; check the generated log file `python/temp/demo_aad.log` for details such as anomaly descriptions.
+The [demo_aad.py](ad_examples/aad/demo_aad.py) shows the simpest AAD implementation that can be used as a template by other developers. To load a different dataset, replace `get_synthetic_samples(stype=2)` (in the code) with the appropriate function(s). The following command executes the code; check the generated log file `temp/demo_aad.log` for details such as anomaly descriptions.
 
-    pythonw -m aad.demo_aad
+    pythonw -m ad_examples.aad.demo_aad
 
 
 GAN-based Anomaly Detection
@@ -506,7 +519,7 @@ The context here is graph data. See the figures below. Figure **(a)** shows a sy
 
 The figures presented below were generated by the following command:
 
-    pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top
+    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top
 
 GCNs (Kipf and Welling, 2017) are a neural network based technique for learning on graph-structured data. Here, we will employ GCNs to predict the node labels in a partially-labeled graph (i.e., semi-supervised learning). As shown in Figure **(b)**, the nodes are either unlabeled (grey), or they are labeled (blue or red). Within this context, we have two tasks:
   1. Train a GCN transductively to predict the missing labels.
@@ -532,7 +545,7 @@ Increasing the number of layers
 
 The following command builds a model with **6** GCN layers. Each *GCN layer* involves one graph convolution operation. Therefore, the 6 GCN layer model implies a 6-hop neighborhood. As a result, the target node (in the figure below) is now within the neighborhood of the right-most attack node; this makes the attack nodes's gradients non-zero. *Note that having more than two layers has not been found to be very useful (Kipf and Welling, 2017).* The implications of having more layers on properties such as robustness are probably worth exploring. Having more layers probably increases the **attack surface** for a target node for the specific type of attack described above since more neighbors can now be used for attack. While increasing complexity of deep networks (e.g., by adding layers) sometimes adds more robustness, the situation for GCNs is a bit different because adding GCN layers implies a different model assumption (neighborhood distance) rather than just a different feature representation.
 
-    pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=6
+    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=6
 
 ![GCN](figures/gcn/face_top_gcn_l6_n10_leaky_relu_r0100_p00010_nn5.png)
 
@@ -541,14 +554,14 @@ The following command builds a model with **6** GCN layers. Each *GCN layer* inv
 
 Within a GCN layer we first add one graph convolution. Next, we might stack zero or more neural network layers on top if it. Thus, each *GCN layer* is composed of one or more neural network layers -- of which the first layer is always a graph convolution. This increases the complexity of each GCN layer without increasing the hop-distance, and might help in identifying better hidden states. Its effect on robustness, as in the previous case, is worth exploring. Robustness of the target node in the illustrated toy dataset actually degraded in our preliminary experiments when we added extra layers to each GCN layer -- but again, more exhaustive experiments will be required before we make any conclusions. We do not show the plots here; however, they can be generated by running the following command. Here, the option `--n_sub_layers=2` adds an additional *leaky_relu* layer on top of the graph convolution in each GCN layer. The default strategy of adding additional layers is rather simplistic (see `simple_gcn.create_gcn_default()`) and should be customized for each dataset.
 
-    pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=2 --n_sub_layers=2 --activation_type=leaky_relu
+    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=2 --n_sub_layers=2 --activation_type=leaky_relu
 
 
 Robustness with ensembles
 -------------------------
 One commonly suggested technique to improve robustness of deep networks is to use *ensembles*. For GCNs, we can train multiple GCN models with subsampled edges. This means that although the nodes of the graph remain the same across all models, the adjacency matrices differ. The below command creates such a model with 10 members. The corresponding results are shown below. Here, we see that in Figure **(c)** the gradients are now smaller in magnitude. This implies that the attacker node's influence is somewhat diminished. As a result, the attribute(s) of the attacker need to change more (Figure **(d)**) to flip the target's label. Of course, this is just one data point and hence not scientific. **A more rigorous analysis would look at the results averaged across multiple nodes.**
 
-    pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --ensemble --n_estimators=10 --edge_sample_prob=0.6
+    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --ensemble --n_estimators=10 --edge_sample_prob=0.6
 
 ![GCN](figures/gcn/gcn_face_top_ensemble_m10_e060.png)
 
@@ -566,7 +579,7 @@ For this, one approach might be to train the GCN in the following manner in each
 
 The below command executes this approach and the corresponding results are plotted below.
 
-    pythonw -m graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --adversarial_train --n_vulnerable=25 --n_sample_neighbors=3 --perturb_prob=0.1 --perturb_epsilon=0.2
+    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --adversarial_train --n_vulnerable=25 --n_sample_neighbors=3 --perturb_prob=0.1 --perturb_epsilon=0.2
 
 **Important:** The approach mentioned here is **EXPERIMENTAL**. There are possibly many other principled ways to implement robustness. The objective here is to make APIs available in order to try out various techniques. Other techniques include:
   1. Random perturbations to the uncertain nodes/edges
