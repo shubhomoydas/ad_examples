@@ -661,7 +661,7 @@ class GladOpts(object):
         self.loda_maxk = args.loda_maxk
         self.loda_debug = args.loda_debug
         self.afss_tau = args.afss_tau
-        self.afss_nodes = [int(n) for n in args.afss_nodes.split(",")]
+        self.afss_nodes = [int(n) if n.isnumeric() else 0 for n in args.afss_nodes.split(",")]
         self.afss_max_labeled_reps = args.afss_max_labeled_reps
         self.afss_c_tau = args.afss_c_tau
         self.afss_l2_lambda = args.afss_l2_lambda

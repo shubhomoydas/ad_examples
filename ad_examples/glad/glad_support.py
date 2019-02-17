@@ -108,7 +108,7 @@ class AnomalyEnsembleLoda(AnomalyEnsemble):
 def get_afss_model(opts, n_output=1):
 
     layer_sizes = opts.afss_nodes
-    if len(layer_sizes) == 0 or layer_sizes[0] == 0:
+    if len(layer_sizes) == 0 or any(n < 1 for n in layer_sizes):
         layer_sizes = [max(50, n_output * 3)]
         logger.debug("Setting layer_sizes to [%d]" % layer_sizes[0])
 
