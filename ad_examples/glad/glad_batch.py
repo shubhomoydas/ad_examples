@@ -5,7 +5,7 @@ from .glad_test_support import *
 An implementation of:
     GLAD: *GL*ocalized *A*nomaly *D*etection via Active Feature Space Suppression
 
-python -m ad_examples.glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --afss_bias_prob=0.50 --train_batch_size=25 --budget=60 --afss_nodes=0 --afss_max_labeled_reps=5 --loda_debug --plot
+python -m ad_examples.glad.glad_batch --log_file=temp/glad/glad_batch.log --debug --dataset=toy2 --n_epochs=200 --afss_bias_prob=0.50 --train_batch_size=25 --budget=60 --afss_nodes=25,50 --afss_max_labeled_reps=5 --loda_debug --plot
 """
 
 
@@ -98,7 +98,7 @@ def glad_active_learn(opts):
 
     opts.plot = opts.plot and opts.reruns == 1  # just in case...
 
-    logger.debug("feedback budget: %d, batch_size: %d, afss_nodes: %d" %
+    logger.debug("feedback budget: %d, batch_size: %d, afss_nodes: %s" %
                  (opts.budget, opts.train_batch_size, opts.afss_nodes))
 
     if opts.ensemble_type not in supported_ensemble_types:

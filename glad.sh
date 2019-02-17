@@ -40,8 +40,8 @@ fi
 #      Recommended: AFSS_LAMBDA_PRIOR=1.0
 #   2. AFSS_MAX_LABELED_REPS is the number of times the labeled instances
 #      will be over-sampled during training. Value > 1 helps overcome class-imbalance.
-#   3. If AFSS_NODES=0, GLAD will use max(50, <num_ensemble_members> * 3) nodes 
-#      in the hidden layer. Else, the number of nodes specified will be used.
+#   3. If AFSS_NODES=0, GLAD will use a single layer of
+       max(50, <num_ensemble_members> * 3) nodes.
 # ------------------------------
 AFSS_C_TAU=1.0
 AFSS_LAMBDA_PRIOR=1.0

@@ -107,23 +107,15 @@ class AnomalyEnsembleLoda(AnomalyEnsemble):
 
 def get_afss_model(opts, n_output=1):
 
-    # n_hidden is merely the penultimate [bottle-neck] layer.
-    # In case the network is required to be 'deep', might
-    # need other ways to externalize their configuration.
-    n_hidden = opts.afss_nodes
-    if n_hidden < 1:
-        n_hidden = max(50, n_output * 3)
-        logger.debug("Setting n_hidden nodes to %d" % n_hidden)
+    layer_sizes = opts.afss_nodes
+    if len(layer_sizes) == 0 or layer_sizes[0] == 0:
+        layer_sizes = [max(50, n_output * 3)]
+        logger.debug("Setting layer_sizes to [%d]" % layer_sizes[0])
 
     logger.debug("l2_lambda: %f" % opts.afss_l2_lambda)
     logger.debug("max_afss_epochs: %d" % opts.max_afss_epochs)
 
-    if True:
-        # one-layer neural network when the number of input features is reasonable
-        n_neurons = [n_hidden, n_output]
-    else:
-        # deep network - might prefer a deep network if the number of input features is very large
-        n_neurons = [200, 100, 50, 50, n_hidden, n_output]
+    n_neurons = layer_sizes + [n_output]
 
     names = ["hidden%d" % (i+1) for i in range(len(n_neurons)-1)]
     names.append("output")
