@@ -1,7 +1,7 @@
 Data Drift Detection
 --------------------
 This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)) (Das, Islam, et al. 2019). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
-  - First, randomly partition the current window of data into two equal parts (*A* and *B*).
+  - First, partition the current window of data into two equal parts (*A* and *B*).
   - For each tree in the forest, compute average KL-divergence as follows:
     - Treat the tree as set of histogram bins
     - Compute the instance distributions with each of the data partitions *A* and *B*.
