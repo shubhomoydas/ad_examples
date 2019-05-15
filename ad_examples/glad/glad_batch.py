@@ -98,7 +98,7 @@ def glad_active_learn(opts):
 
     opts.plot = opts.plot and opts.reruns == 1  # just in case...
 
-    logger.debug("feedback budget: %d, batch_size: %d, afss_nodes: %d" %
+    logger.debug("feedback budget: %d, batch_size: %d, afss_nodes: %s" %
                  (opts.budget, opts.train_batch_size, opts.afss_nodes))
 
     if opts.ensemble_type not in supported_ensemble_types:

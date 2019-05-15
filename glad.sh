@@ -40,8 +40,8 @@ fi
 #      Recommended: AFSS_LAMBDA_PRIOR=1.0
 #   2. AFSS_MAX_LABELED_REPS is the number of times the labeled instances
 #      will be over-sampled during training. Value > 1 helps overcome class-imbalance.
-#   3. If AFSS_NODES=0, GLAD will use max(50, <num_ensemble_members> * 3) nodes 
-#      in the hidden layer. Else, the number of nodes specified will be used.
+#   3. If AFSS_NODES=0, GLAD will use a single layer of
+#      max(50, <num_ensemble_members> * 3) nodes.
 # ------------------------------
 AFSS_C_TAU=1.0
 AFSS_LAMBDA_PRIOR=1.0
@@ -120,15 +120,15 @@ MAX_K=15
 # PYSCRIPT=glad_batch.py
 # PYMODULE=glad.glad_batch
 
-PYSCRIPT=glad_vs_aad.py
-PYMODULE=glad.glad_vs_aad
+PYSCRIPT=ad_examples/glad_vs_aad.py
+PYMODULE=ad_examples.glad.glad_vs_aad
 
-NAME_PREFIX="${OPERATION}-${ENSEMBLE_TYPE}_${MIN_K}_${MAX_K}-nodes${AFSS_NODES}-bd${BUDGET}-tau${TAU}-bias${AFSS_BIAS_PROB}-c${AFSS_C_TAU}-amr${AFSS_MAX_LABELED_REPS}${AFSS_NO_PRIME_SIG}-r${RERUNS}"
+NAME_PREFIX="${OPERATION}-${ENSEMBLE_TYPE}_${MIN_K}_${MAX_K}-nodes_${AFSS_NODES}-bd${BUDGET}-tau${TAU}-bias${AFSS_BIAS_PROB}-c${AFSS_C_TAU}-amr${AFSS_MAX_LABELED_REPS}${AFSS_NO_PRIME_SIG}-r${RERUNS}"
 NAME_PREFIX="${NAME_PREFIX//./_}"  # replace '.' with '_'
 
 echo "NAME: ${NAME_PREFIX}"
 
-DATASET_FOLDER=datasets
+DATASET_FOLDER=ad_examples/datasets
 SCRIPT_PATH=./glad/${PYSCRIPT}
 BASE_DIR=
 if [ -d "/Users/moy" ]; then

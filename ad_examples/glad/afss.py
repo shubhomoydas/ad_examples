@@ -613,8 +613,8 @@ def get_glad_option_list():
                              "This is relevant only if the dataset is 2D.")
     parser.add_argument("--afss_tau", type=float, default=0.03, required=False,
                         help="Tau (a guess for the fraction of anomalies, just needs to be small)")
-    parser.add_argument("--afss_nodes", type=int, default=0, required=False,
-                        help="Number of nodes in first layer of AFSS")
+    parser.add_argument("--afss_nodes", type=str, default='0', required=False,
+                        help="Number of nodes in each layer of AFSS, comma-separated")
     parser.add_argument("--afss_max_labeled_reps", type=int, default=5, required=False,
                         help="Number of times the labeled instances may be repeated when performing SGD for AFSS")
     parser.add_argument("--max_afss_epochs", type=int, default=1, required=False,
@@ -661,7 +661,7 @@ class GladOpts(object):
         self.loda_maxk = args.loda_maxk
         self.loda_debug = args.loda_debug
         self.afss_tau = args.afss_tau
-        self.afss_nodes = args.afss_nodes
+        self.afss_nodes = [int(n) if n.isdigit() else 0 for n in args.afss_nodes.split(",")]
         self.afss_max_labeled_reps = args.afss_max_labeled_reps
         self.afss_c_tau = args.afss_c_tau
         self.afss_l2_lambda = args.afss_l2_lambda
@@ -688,7 +688,7 @@ class GladOpts(object):
             ensemble_str = "-%s" % self.ensemble_type
         bias_str = ("-bias%0.2f" % self.afss_bias_prob).replace('.', '_')
         c_tau_str = ("-c%0.2f" % self.afss_c_tau).replace('.', '_')
-        nodes_str = "-nodes%d" % self.afss_nodes
+        nodes_str = "-nodes_%s" % "_".join([str(n) for n in self.afss_nodes])
         reps_sig = "-amr%d" % self.afss_max_labeled_reps
         prior_sig = "-no_prior" if self.afss_lambda_prior == 0 else ""
         prime_sig = "-no_prime" if self.afss_no_prime else ""
