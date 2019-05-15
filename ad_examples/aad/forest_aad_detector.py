@@ -773,23 +773,46 @@ class AadForest(Aad, StreamingSupport):
             start_region += n_regions
         return kl_trees, np.sum(kl_trees) / self.n_estimators
 
-    def get_KL_divergence_distribution(self, x, p=None, alpha=0.05, n_tries=10):
+    def get_KL_divergence_distribution(self, x, p=None, alpha=0.05, n_tries=10, simple=True):
+        """ Gets KL divergence between a distribution 'p' and the tree distribution of data 'x'
+
+        :param x: np.ndarray
+        :param p: np.array
+        :param alpha: float
+        :param n_tries: int
+        :param simple: bool
+            True: Uses only one partition of the data: first half / last half
+                  This also implies n_tries=1.
+        :return: np.array, float
+        """
+        if simple:
+            n_tries = 1
         kls = list()
         for i in range(n_tries):
             all_i = np.arange(x.shape[0], dtype=int)
             np.random.shuffle(all_i)
             h = int(len(all_i) // 2)
             if p is None:
-                x1 = x[0:h, :]
+                if simple:
+                    x1 = x[:h, :]
+                else:
+                    x1 = x[all_i[:h], :]
                 p1 = self.get_node_sample_distributions(x1)
             else:
                 p1 = p
-            x2 = x[h:len(all_i), :]
+            if simple:
+                x2 = x[h:, :]
+            else:
+                x2 = x[all_i[h:], :]
             p2 = self.get_node_sample_distributions(x2)
             kl_trees, _= self.get_KL_divergence(p1, p2)
             kls.append(kl_trees)
         kls = np.vstack(kls)
+        # logger.debug("# kls after vstack: {}, {}".format(len(kls), kls.shape))
+        # kls_std = np.std(kls, axis=0).flatten()
+        # logger.debug("kls std flattened:\n{}".format(kls_std))
         kls = np.mean(kls, axis=0).flatten()
+        # logger.debug("kls flattened:\n{}".format(kls))
 
         partitions = self._get_tree_partitions()
 
