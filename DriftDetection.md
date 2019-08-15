@@ -1,6 +1,6 @@
 Data Drift Detection
 --------------------
-This section applies to isolation tree-based detectors (such as [IForest](python/aad/random_split_trees.py) and [IForestMultiview](python/aad/multiview_forest.py)) (Das, Islam, et al. 2019). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
+This section applies to isolation tree-based detectors (such as [IForest](ad_examples/aad/random_split_trees.py) and [IForestMultiview](ad_examples/aad/multiview_forest.py)) (Das, Islam, et al. 2019). Such trees provide a way to compute the KL-divergence between the data distribution of one [old] batch of data with another [new] batch. Once we determine which trees have the most significant KL-divergences w.r.t expected data distributions, we can replace them with new trees constructed from new data as follows:
   - First, partition the current window of data into two equal parts (*A* and *B*).
   - For each tree in the forest, compute average KL-divergence as follows:
     - Treat the tree as set of histogram bins
@@ -17,7 +17,7 @@ This section applies to isolation tree-based detectors (such as [IForest](python
       - Recompute *KL-q* and the baseline distributions *P* with the new data and the updated model.
       - Retrain the weights certain number of times (determined by `N_WEIGHT_UPDATES_AFTER_STREAM` in `aad.sh`, 10 works well) with just the labeled data available so far (no additional feedback). This step helps tune the ensemble weights better after significant change to the model.
 
-For more details on KL-divergence based data drift detection, check the [demo code](python/aad/test_concept_drift.py). Execute this code with the following sample command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated (on the *Weather* dataset):
+For more details on KL-divergence based data drift detection, check the [demo code](ad_examples/aad/test_concept_drift.py). Execute this code with the following sample command and see the [plots](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/concept_drift/concept_drift.pdf) generated (on the *Weather* dataset):
     
     pythonw -m ad_examples.aad.test_concept_drift --debug --plot --log_file=temp/test_concept_drift.log --dataset=weather
 
@@ -42,5 +42,5 @@ The application of KL-divergence in the **specific manner employed here is novel
 
 Applying drift detection to tree-based classifiers
 --------------------------------------------------
-The above KL-divergence based method can be applied to detect drift with tree-based classifiers such as Random Forest as well. The example [python/aad/test_concept_drift_classifier.py](python/aad/test_concept_drift_classifier.py) uses the wrapper class [RandomForestAadWrapper](python/aad/classifier_trees.py) to detect the drift with trees created by `sklearn.ensemble.RandomForestClassifier`.
+The above KL-divergence based method can be applied to detect drift with tree-based classifiers such as Random Forest as well. The example [python/aad/test_concept_drift_classifier.py](ad_examples/aad/test_concept_drift_classifier.py) uses the wrapper class [RandomForestAadWrapper](ad_examples/aad/classifier_trees.py) to detect the drift with trees created by `sklearn.ensemble.RandomForestClassifier`.
 
