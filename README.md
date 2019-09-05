@@ -56,7 +56,7 @@ pip uninstall ad-examples
 
 Jupyter notebook usage:
 --------------------------
-See [test_aad.ipynb](notebooks/test_aad.ipynb) for sample notebook usage.
+See [test_aad.ipynb](test_aad.ipynb) for sample notebook usage.
 
 
 **Note(s):**
