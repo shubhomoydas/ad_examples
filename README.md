@@ -56,10 +56,11 @@ pip uninstall ad-examples
 
 Jupyter notebook usage:
 --------------------------
-See [test_aad.ipynb](test_aad.ipynb) for sample notebook usage.
+See [test_aad.ipynb](test_aad.ipynb) for sample notebook usage. This notebook code should run without the `pip install` step since the package `ad_examples` is directly under the notebook's work folder.
 
 
-**Note(s):**
+Note(s):
+--------------------------
 
   1. The code has been tested with **python 2.7** and **python 3.6.1**.
   
