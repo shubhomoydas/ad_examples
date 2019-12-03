@@ -121,6 +121,7 @@ Some techniques covered are listed below. These are a mere drop in the ocean of 
     - [Adversarial training](#robustness-with-adversarial-training)
   - [Reducing activity sequences to i.i.d](ActivitySequences.md#activity-modeling) -- This illustrates an approach that is becoming increasingly popular as a starting-point for anomaly detection on activity sequences and transfer learning.
 
+There are other important data types/scenarios such as *static and dynamic graphs* ([(Akoglu, Tong, Koutra 2015)](https://arxiv.org/pdf/1404.4679.pdf), [(Bhatia, S. et al. 2020)](https://github.com/bhatiasiddharth/MIDAS)) where anomaly detection is highly relevant for real-world applications, but which are not covered in this repository. Interested readers may instead refer to the references provided.
 
 There are multiple datasets (synthetic/real) supported. Change the code to work with whichever dataset or algorithm is desired. Most of the demos will output pdf plots under the 'temp' folder when executed.
 
@@ -173,11 +174,15 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
   - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
 
   - Das, S., Wong, W-K., Fern, A., Dietterich, T. and Siddiqui, A. (2017). *Incorporating Feedback into Tree-based Anomaly Detection*, KDD Interactive Data Exploration and Analytics (IDEA) Workshop. [(pdf)](https://arxiv.org/pdf/1708.09441)[(presentation)](https://github.com/shubhomoydas/pyaad/blob/master/presentations/IDEA17_slides.pptx)
-  
+
   - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2016). *Incorporating Expert Feedback into Active Anomaly Discovery* in the Proceedings of the IEEE International Conference on Data Mining. [(pdf)](http://web.engr.oregonstate.edu/~wongwe/papers/pdf/ICDM2016.AAD.pdf)[(presentation)](https://github.com/shubhomoydas/aad/blob/master/overview/ICDM2016-AAD.pptx)
 
   - Das, S. (2017). *Incorporating User Feedback into Machine Learning Systems*, [PhD Thesis](http://ir.library.oregonstate.edu/concern/graduate_thesis_or_dissertations/9019s7533) [(pdf)](https://ir.library.oregonstate.edu/downloads/m900p057t) -- The work on AAD in this repository was developed during my PhD and Post-doctoral research.
 
+  - Akoglu, L., Tong, H. and Koutra, D. (2015). *Graph based anomaly detection and description: a survey*, Data Mining and Knowledge Discovery. [(pdf)](https://arxiv.org/pdf/1404.4679.pdf)
+
+  - Bhatia, S., Hooi, B., Yoon, M., Shin, K., Faloutsos, C. (2020). *MIDAS: Microcluster-Based Detector of Anomalies in Edge Streams*. [(pdf)](https://arxiv.org/pdf/1911.04464.pdf) [(code)](https://github.com/bhatiasiddharth/MIDAS)
+  
 
 Cite this work
 --------------
