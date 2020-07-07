@@ -1,22 +1,11 @@
-import random
-import numpy as np
 import numpy.random as rnd
-from pandas import concat
-from sklearn.preprocessing import MinMaxScaler
 from sklearn import manifold
-import collections
-import math
-import tensorflow as tf
-import matplotlib.image as mpimg
-from ..common.utils import *
-from ..common.timeseries_datasets import *
-from ..common.data_plotter import *
-from ..common.nn_utils import *
-from .casas import *
-from .word2vec import *
-from .word2vec_custom import *
 
-from .simulate_timeseries import *
+from ..common.utils import *
+from ..common.data_plotter import *
+from .casas import Casas, maybe_download_casas
+from .word2vec import Word2vec
+from .word2vec_custom import CustomWord2vec
 
 # Just disables the warning, doesn't enable AVX/FMA
 import os

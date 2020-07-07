@@ -599,7 +599,7 @@ if [ -d "/Users/moy" ]; then
     # personal laptop
     BASE_DIR=${DATASET_FOLDER}
     LOG_PATH=./temp/${OPERATION}
-    PYTHON_CMD="pythonw -m"
+    PYTHON_CMD="python -m"
     RESULTS_PATH="temp/${OPERATION}/$DATASET/${NAME_PREFIX}"
     SCRIPT_PATH=${PYMODULE}
 elif [ -d "/home/sdas/codebase/bb_python/ad_examples" ]; then

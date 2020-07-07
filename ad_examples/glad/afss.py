@@ -8,11 +8,13 @@ Reference(s):
     Das, S. and Doppa, J.R. (2018). GLAD: GLocalized Anomaly Detection via
             Active Feature Space Suppression. (https://arxiv.org/abs/1810.01403)
 """
+import sys
+from argparse import ArgumentParser
 import numpy as np
 import tensorflow as tf
 import numpy.random as rnd
 
-from ..common.gen_samples import *
+from ..common.utils import Timer, logger
 
 
 def suppression_layer(x, n_neurons, name, activation=tf.nn.sigmoid):

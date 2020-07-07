@@ -1,11 +1,14 @@
 import random
+import logging
 import numpy as np
 import numpy.random as rnd
-from pandas import concat
+import matplotlib.pyplot as plt
 import tensorflow as tf
-from ..common.utils import *
-from ..common.timeseries_datasets import *
-from ..common.data_plotter import *
+from ..common.utils import dir_create, get_command_args, configure_logger
+from ..common.timeseries_datasets import (
+    univariate_timeseries_datasets, get_univariate_timeseries_data, DiffScale, prepare_tseries
+)
+from ..common.data_plotter import DataPlotter
 from .timeseries_customRNN import TsRNNCustom
 
 # Just disables the warning, doesn't enable AVX/FMA
@@ -20,17 +23,17 @@ After modeling the timeseries, we predict values for new time points
 and flag the time points with the most deviating values as anomalies.
 
 To execute:
-pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=airline
-pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
+python -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=airline
+python -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=12 --dataset=airline
 
-pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=5 --dataset=shampoo
-pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=4 --dataset=lynx
-pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=4 --dataset=aus_beer
-pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=us_accident
-pythonw -m ad_examples.timeseries.timeseries_rnn --n_epochs=20 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=50 --dataset=wolf_sunspot
+python -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=5 --dataset=shampoo
+python -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=basic --n_lags=4 --dataset=lynx
+python -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=4 --dataset=aus_beer
+python -m ad_examples.timeseries.timeseries_rnn --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=12 --dataset=us_accident
+python -m ad_examples.timeseries.timeseries_rnn --n_epochs=20 --debug --log_file=temp/timeseries/timeseries_rnn.log --normalize_trend --algo=lstm --n_lags=50 --dataset=wolf_sunspot
 
 The below does not work well...need longer dependencies
-pythonw -m ad_examples.timeseries.timeseries_rnn --dataset=fisher_temp --algo=lstm --n_lags=200 --n_epochs=10 --debug --log_file=temp/timeseries/timeseries_rnn.log
+python -m ad_examples.timeseries.timeseries_rnn --dataset=fisher_temp --algo=lstm --n_lags=200 --n_epochs=10 --debug --log_file=temp/timeseries/timeseries_rnn.log
 """
 
 
@@ -154,7 +157,7 @@ if __name__ == "__main__":
                      'lstm': 'RNN using LSTM Cell'}
     if args.algo not in allowed_algos.keys():
         print ("Invalid algo: %s. Allowed algos:" % args.algo)
-        for key, val in allowed_algos.iteritems():
+        for key, val in allowed_algos.items():
             print ("  %s: %s" % (key, val))
         exit(0)
 

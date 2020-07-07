@@ -1,5 +1,8 @@
+import numpy as np
 import pandas as pd
-from .expressions import *
+from .expressions import (
+    NumericContinuous, Factor, FeatureMetadata, string_to_predicate, evaluate_instances_for_predicate
+)
 
 """
 Some very simple rule/predicate expression examples have been presented 

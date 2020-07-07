@@ -10,3 +10,5 @@
 *.blg
 temp
 temp-old
+.idea
+get-pip.py

@@ -6,8 +6,8 @@ Some code motivated by:
 import numpy as np
 import numpy.random as rnd
 import tensorflow as tf
-from .utils import *
-from .timeseries_datasets import *
+from .timeseries_datasets import DiffScale
+from .utils import logger
 
 
 def leaky_relu(z, name=None):

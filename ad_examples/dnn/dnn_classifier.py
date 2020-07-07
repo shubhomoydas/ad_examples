@@ -5,14 +5,12 @@ Some code motivated by:
 To execute:
 python -m dnn.dnn_classifier
 """
-
-import numpy as np
+import logging
 import numpy.random as rnd
 import tensorflow as tf
 
-from ..common.utils import *
-from ..common.nn_utils import *
-
+from ..common.utils import get_command_args, configure_logger
+from ..common.nn_utils import dnn_construct, leaky_relu
 
 if __name__ == "__main__":
     from tensorflow.examples.tutorials.mnist import input_data

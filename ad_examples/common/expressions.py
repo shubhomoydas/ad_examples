@@ -2,7 +2,6 @@ import tokenize
 import re
 import os
 import numpy as np
-# from sklearn.metrics import f1_score
 from sklearn.metrics import precision_recall_fscore_support
 
 """

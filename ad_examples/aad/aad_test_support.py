@@ -1,16 +1,24 @@
 import os
 import numpy as np
+
+import matplotlib
 import matplotlib.pyplot as plt
 
-import logging
-from pandas import DataFrame
+from ..common.data_plotter import (
+    DataPlotter, plot_sidebar, plot_rect_region
+)
 
-from ..common.data_plotter import *
-
-from .aad_globals import *
-from .aad_support import *
-from .forest_description import *
-from .query_model_other import *
+from ..common.utils import logger, Timer, read_csv, quantile, matrix
+from .aad_globals import QUERY_EUCLIDEAN, QUERY_SUBSPACE_EUCLIDEAN
+from .aad_support import write_sparsemat_to_file
+from .forest_aad_detector import is_forest_detector
+from .forest_description import (
+    get_instances_for_description, get_regions_for_description,
+    get_region_volumes, get_compact_regions, get_region_memberships
+)
+from .aad_base import get_budget_topK, estimate_qtau
+from .query_model_other import get_sample_feature_ranges, QueryTopDiverseSubspace
+from .query_model_euclidean import filter_by_euclidean_distance
 
 
 def plot_queries(x, labels, queried, pdfpath):

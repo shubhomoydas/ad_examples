@@ -3,33 +3,25 @@
 
 from __future__ import division
 
-import logging
 import copy
 
 import numpy as np
-import scipy as sp
-from warnings import warn
 
-from scipy import sparse
-from scipy.sparse import lil_matrix, csr_matrix, vstack
-
-from numpy import random
+from scipy.sparse import lil_matrix, csr_matrix
 
 from scipy.sparse import issparse
 
 import numbers
-from sklearn.externals import six
-from sklearn.tree import ExtraTreeRegressor
 from sklearn.utils import check_random_state, check_array
 
-from sklearn.ensemble.bagging import BaseBagging
-from sklearn.tree._tree import Tree
 from sklearn.ensemble import IsolationForest
 
 from multiprocessing import Pool
 
-from ..common.utils import *
-from .data_stream import *
+from ..common.utils import (
+    cbind, ecdf, logger, Timer
+)
+from .data_stream import StreamingSupport
 
 __all__ = ["get_tree_partitions", "RandomSplitTree", "RandomSplitForest",
            "ArrTree", "HSSplitter", "HSTree", "HSTrees",

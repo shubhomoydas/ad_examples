@@ -1,11 +1,16 @@
+import logging
+import numpy as np
 import numpy.random as rnd
+import matplotlib.pyplot as plt
 from sklearn import manifold
 from sklearn.ensemble import IsolationForest
 
-from ..common.gen_samples import *
+from ..common.utils import nrow, get_command_args, configure_logger
+from ..common.gen_samples import get_demo_samples, plot_sample, normalize_and_center_by_feature_range
+from ..common.data_plotter import DataPlotter
 
 """
-pythonw -m ad_examples.ad.spectral_outlier
+python -m ad_examples.ad.spectral_outlier
 """
 
 

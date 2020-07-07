@@ -1,7 +1,12 @@
+import random
+from argparse import ArgumentParser
+import numpy as np
 import numpy.random as rnd
 from sklearn.metrics import f1_score
 import tensorflow as tf
-from ..common.gen_samples import *
+
+from ..common.utils import logger, nrow, Timer
+from ..common.gen_samples import normalize_and_center_by_feature_range
 
 
 ACTIVATION_NONE = "none"

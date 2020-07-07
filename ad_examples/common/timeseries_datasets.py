@@ -1,8 +1,7 @@
 import numpy as np
-import pandas as pd
-# from pandas import datetime
 from sklearn.preprocessing import MinMaxScaler
-from .utils import *
+
+from .utils import logger, read_resource_csv
 
 
 class TsFileDef(object):

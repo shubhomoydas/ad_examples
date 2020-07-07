@@ -1,12 +1,18 @@
+import logging
+import numpy as np
 import numpy.random as rnd
+import matplotlib.pyplot as plt
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
+from sklearn.svm import OneClassSVM
 
-from ..common.gen_samples import *
+from ..common.utils import get_command_args, configure_logger
+from ..common.gen_samples import get_demo_samples, plot_sample
+from ..common.data_plotter import DataPlotter
 from ..loda.loda import Loda
 
 """
-pythonw -m ad_examples.ad.ad_outlier --plot --debug --log_file=temp/ad_outlier.log --dataset=face --algo=ifor
+python -m ad_examples.ad.ad_outlier --plot --debug --log_file=temp/ad_outlier.log --dataset=face --algo=ifor
 
 Supported algorithms: ifor, loda, lof, ocsvm
 
@@ -61,7 +67,7 @@ if __name__ == "__main__":
         x_grid = np.c_[xx.ravel(), yy.ravel()]
 
     if ad_type == "ocsvm":
-        ad = svm.OneClassSVM(nu=outliers_fraction, kernel="rbf", gamma=0.1)
+        ad = OneClassSVM(nu=outliers_fraction, kernel="rbf", gamma=0.1)
         ad.fit(x)
         scores = -ad.decision_function(x).reshape((n,))
         Z = -ad.decision_function(x_grid)

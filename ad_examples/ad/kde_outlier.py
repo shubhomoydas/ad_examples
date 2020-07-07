@@ -1,10 +1,15 @@
+import logging
+import numpy as np
 import numpy.random as rnd
+from scipy import stats
+import matplotlib.pyplot as plt
 
-from ..common.gen_samples import *
-from ..common.gen_samples import *
+from ..common.utils import get_command_args, configure_logger
+from ..common.gen_samples import get_demo_samples, plot_sample, plot_samples_and_lines
+from ..common.data_plotter import DataPlotter
 
 """
-pythonw -m ad_examples.ad.kde_outlier
+python -m ad_examples.ad.kde_outlier
 """
 
 

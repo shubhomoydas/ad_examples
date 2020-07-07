@@ -1,10 +1,15 @@
+import logging
+import numpy as np
 import numpy.random as rnd
 
+from ..common.utils import get_command_args, configure_logger, cbind
+from ..common.gen_samples import (
+    plot_sample, get_synthetic_samples, interpolate_2D_line_by_slope_and_intercept, plot_samples_and_lines
+)
 from ..common.sgd_optimization import sgdRMSProp
-from ..common.gen_samples import *
 
 """
-pythonw -m ad_examples.ad.outlier_effect
+python -m ad_examples.ad.outlier_effect
 """
 
 

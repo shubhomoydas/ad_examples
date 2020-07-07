@@ -1,10 +1,16 @@
 import warnings
+import logging
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
 from statsmodels.tsa import stattools
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from ..common.timeseries_datasets import *
-from ..common.data_plotter import *
-from ..common.utils import *
+from ..common.timeseries_datasets import (
+    get_univariate_timeseries_data, univariate_timeseries_datasets, log_transform_series
+)
+from ..common.data_plotter import DataPlotter
+from ..common.utils import dir_create, get_command_args, configure_logger
 
 
 '''
@@ -17,7 +23,7 @@ detects time points with largest forecasting errors on the last 1/3 data. Are th
 Some examples motivated by:
     https://machinelearningmastery.com/arima-for-time-train_series-forecasting-with-python/
 
-pythonw -m ad_examples.timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --log_transform --dataset=airline
+python -m ad_examples.timeseries.timeseries_arima --debug --plot --log_file=temp/timeseries/timeseries_arima.log --log_transform --dataset=airline
 '''
 
 

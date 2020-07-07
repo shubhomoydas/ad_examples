@@ -1,4 +1,3 @@
-import numpy as np
 import pickle
 import logging
 import random
@@ -6,7 +5,7 @@ import os
 import os.path
 import errno
 import pandas as pd
-from pandas import DataFrame
+import numpy as np
 import sys
 from timeit import default_timer as timer
 from datetime import timedelta

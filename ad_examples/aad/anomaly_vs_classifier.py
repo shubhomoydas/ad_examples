@@ -1,9 +1,22 @@
-from ..common.data_plotter import *
-from ..common.gen_samples import *
+import logging
+import numpy as np
+import matplotlib.pyplot as plt
 
-from .aad_support import *
+from ..common.utils import (
+    cbind, get_command_args, configure_logger, RFClassifier
+)
+from ..common.metrics import fn_auc
+from ..common.gen_samples import get_synthetic_samples
+from .aad_globals import (
+    AAD_IFOREST, IFOR_SCORE_TYPE_NEG_PATH_LEN, HST_LOG_SCORE_TYPE,
+    AAD_HSTREES, RSF_SCORE_TYPE, AAD_RSFOREST, INIT_UNIF, AAD_CONSTRAINT_TAU_INSTANCE,
+    ENSEMBLE_SCORE_LINEAR, get_aad_command_args, AadOpts
+)
+
 from .demo_aad import describe_instances
-from .classifier_trees import *
+from .aad_support import get_aad_model
+from .classifier_trees import RandomForestAadWrapper, DecisionTreeAadWrapper
+from ..common.data_plotter import plot_rect_region, plot_sidebar, DataPlotter
 
 """
 pythonw -m ad_examples.aad.anomaly_vs_classifier --dataset=5 --algo=explain

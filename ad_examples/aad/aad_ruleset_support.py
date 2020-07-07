@@ -1,5 +1,8 @@
-from ..common.expressions import *
-from .aad_globals import *
+import numpy as np
+from ..common.expressions import (
+    convert_feature_ranges_to_rules, convert_strings_to_conjunctive_rules,
+    convert_conjunctive_rules_to_strings, get_feature_meta_default
+)
 from .forest_description import CompactDescriber, BayesianRulesetsDescriber
 
 

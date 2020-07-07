@@ -1,6 +1,8 @@
+import os
+import sys
 from argparse import ArgumentParser
-from copy import copy
-from ..common.utils import *
+import numpy as np
+from ..common.utils import order, read_csv
 
 # ==============================
 # Initialization Types
@@ -372,7 +374,7 @@ def get_aad_option_list():
                         help="Exponent for region volume while computing descriptions. " +
                              "Higher power encourages selection of smaller volumes")
 
-    parser.add_argument("--query_module_name", action="store", type=str, default="aad.query_model_other",
+    parser.add_argument("--query_module_name", action="store", type=str, default="ad_examples.aad.query_model_other",
                         help="Module/package name of the custom query model to use. " +
                              "Only applies when querytype=" + str(QUERY_CUSTOM_MODULE))
     parser.add_argument("--query_class_name", action="store", type=str, default="QueryTopDiverseSubspace",

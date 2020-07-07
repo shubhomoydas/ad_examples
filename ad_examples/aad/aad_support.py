@@ -1,14 +1,14 @@
+import os
 import gzip
+import numpy as np
+from scipy.sparse import csr_matrix
 
-from ..common.utils import *
-from ..common.metrics import *
-from .aad_base import *
-from .query_model import *
-from .aad_loss import *
+from ..common.utils import rbind, save, load, quantile, matrix, SetList, Timer, logger
+from .aad_globals import LODA, PRECOMPUTED_SCORES
 
-from .forest_aad_detector import *
-from .loda_aad import *
-from .precomputed_aad import *
+from .forest_aad_detector import is_forest_detector, AadForest
+from .loda_aad import AadLoda
+from .precomputed_aad import AadPrecomputed
 
 
 def get_aad_model(x, opts, random_state=None, event_listener=None):
@@ -318,16 +318,16 @@ def write_sparsemat_to_file(fname, X, fmt='%.18e', delimiter=','):
 
 
 def save_aad_model(filepath, model):
-    import cPickle
+    import pickle
     f = gzip.open(filepath, 'wb')
-    cPickle.dump(model, f, protocol=cPickle.HIGHEST_PROTOCOL)
+    pickle.dump(model, f, protocol=pickle.HIGHEST_PROTOCOL)
     f.close()
 
 
 def load_aad_model(filepath):
-    import cPickle
+    import pickle
     f = gzip.open(filepath, 'rb')
-    model = cPickle.load(f)
+    model = pickle.load(f)
     f.close()
     return model
 

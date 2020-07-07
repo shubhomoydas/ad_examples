@@ -1,14 +1,21 @@
+import os
+import logging
 import random
 import numpy as np
 import numpy.random as rnd
-from sklearn.preprocessing import MinMaxScaler
+import tensorflow as tf
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 
-from ..common.utils import *
-from ..common.data_plotter import *
-from ..common.nn_utils import *
-from ..common.timeseries_datasets import *
+from ..common.utils import (
+    dir_create, get_command_args, configure_logger, read_resource_csv,
+    get_sample_feature_ranges
+)
+from ..common.nn_utils import AutoencoderAnomalyDetector
+from ..common.timeseries_datasets import (
+    difference_series, log_transform_series, TSeries, univariate_timeseries_datasets, get_univariate_timeseries_data
+)
+from ..common.data_plotter import DataPlotter
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
@@ -16,8 +23,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 Anomaly detection in time series by breaking the series into windows ('shingles')
 and then treating each window as i.i.d feature vector.
 
-pythonw -m ad_examples.timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc --dataset=synthetic
-pythonw -m ad_examples.timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=6 --algo=ifor --normalize_trend --log_transform --dataset=airline
+python -m ad_examples.timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=20 --algo=autoenc --dataset=synthetic
+python -m ad_examples.timeseries.timeseries_shingles --debug --plot --log_file=temp/timeseries/timeseries_shingles.log --n_lags=6 --algo=ifor --normalize_trend --log_transform --dataset=airline
 """
 
 
@@ -143,7 +150,7 @@ if __name__ == "__main__":
                      'lof': 'Local Outlier Factor'}
     if args.algo not in allowed_algos.keys():
         print ("Invalid algo: %s. Allowed algos:" % args.algo)
-        for key, val in allowed_algos.iteritems():
+        for key, val in allowed_algos.items():
             print ("  %s: %s" % (key, val))
         exit(0)
 

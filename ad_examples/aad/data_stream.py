@@ -1,10 +1,6 @@
 import numpy as np
-import scipy as sp
 
-from scipy import sparse
-from scipy.sparse import lil_matrix, csr_matrix, vstack
-
-from ..common.utils import *
+from ..common.utils import InstanceList
 
 
 class IdServer(object):

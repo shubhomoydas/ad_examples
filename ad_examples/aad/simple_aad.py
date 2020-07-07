@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.random as rnd
 
-from ..common.utils import *
+from ..common.utils import normalize
 from ..common.sgd_optimization import sgdRMSProp
 
 

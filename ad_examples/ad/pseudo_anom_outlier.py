@@ -1,6 +1,14 @@
+import logging
+import numpy as np
 import numpy.random as rnd
+import matplotlib.pyplot as plt
 
-from ..common.gen_samples import *
+from ..common.utils import (
+    get_command_args, configure_logger, LogisticRegressionClassifier,
+    SVMClassifier, DTClassifier, RFClassifier
+)
+from ..common.gen_samples import get_demo_samples, plot_sample
+from ..common.data_plotter import DataPlotter
 
 """
 pythonw -m ad_examples.ad.pseudo_anom_outlier

@@ -1,10 +1,13 @@
 import os
+import sys
+import random
+from argparse import ArgumentParser
 import numpy as np
 import tensorflow as tf
 import numpy.random as rnd
 from sklearn import mixture
 
-from ..common.gen_samples import *
+from ..common.utils import Timer, logger
 from ..common.nn_utils import get_train_batches
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 

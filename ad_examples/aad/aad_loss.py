@@ -1,5 +1,5 @@
 import numpy as np
-from ..common.utils import *
+from ..common.utils import ncol, rep
 
 
 def aad_loss_linear(w, xi, yi, qval, in_constr_set=None, x_tau=None,

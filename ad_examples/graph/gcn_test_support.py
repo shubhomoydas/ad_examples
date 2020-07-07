@@ -1,9 +1,12 @@
-import numpy.random as rnd
+import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.utils import check_random_state
 import tensorflow as tf
 
-from ..common.gen_samples import *
-from .simple_gcn import *
+from ..common.utils import Timer, logger
+from ..common.gen_samples import get_demo_samples
+from ..common.data_plotter import DataPlotter
+from .simple_gcn import GraphAdjacency, create_gcn_default, SimpleGCNAttack, AdversarialUpdater
 
 
 def find_insts(x, x_range, y_range):

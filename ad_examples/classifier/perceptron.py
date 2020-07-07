@@ -1,6 +1,5 @@
 import logging
 import numpy as np
-import numpy.random as rnd
 
 from ..common.utils import normalize
 

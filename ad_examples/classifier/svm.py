@@ -1,7 +1,6 @@
+import numpy as np
 import numpy.random as rnd
 
-from ..common.utils import *
-from ..common.gen_samples import *
 from ..common.sgd_optimization import sgdRMSProp
 
 """

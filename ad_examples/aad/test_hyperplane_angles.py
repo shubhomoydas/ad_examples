@@ -1,9 +1,16 @@
+import logging
 import matplotlib as mpl
 
-from ..common.data_plotter import *
+import numpy as np
+import numpy.random as rnd
+import matplotlib.pyplot as plt
+
+from ..common.utils import configure_logger, dir_create, read_data_as_matrix
+from ..common.data_plotter import DataPlotter
+
 from ..classifier.perceptron import Perceptron
 
-from .aad_support import *
+from .aad_globals import get_aad_command_args, AadOpts, detector_types
 
 """
 bash ./aad.sh toy2 35 1 0.03 7 1 0 2 512 0 1 1

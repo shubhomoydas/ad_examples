@@ -1,9 +1,10 @@
-import numpy as np
+import os
 import pandas as pd
 import collections
 import zipfile
 from six.moves import urllib
-from ..common.utils import *
+
+from ..common.utils import logger
 
 
 def maybe_download_casas(zipfilename, url, filepathinzip, localpath):

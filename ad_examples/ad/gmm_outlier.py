@@ -1,11 +1,16 @@
+import logging
+import numpy as np
 import numpy.random as rnd
+import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
-from sklearn.mixture.gaussian_mixture import GaussianMixture as GMM
+from sklearn.mixture import GaussianMixture as GMM
 
-from ..common.gen_samples import *
+from ..common.utils import get_command_args, configure_logger
+from ..common.gen_samples import get_demo_samples, plot_sample
+from ..common.data_plotter import DataPlotter
 
 """
-pythonw -m ad_examples.ad.gmm_outlier
+python -m ad_examples.ad.gmm_outlier
 
 This example is based on:
     http://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_covariances.html

@@ -1,9 +1,12 @@
-from .sgd_optimization import *
-from .utils import *
-from .data_plotter import *
+import logging
+import numpy as np
+
+from .sgd_optimization import sgdRMSProp
+from .utils import get_command_args, configure_logger
+from .data_plotter import DataPlotter
 
 """
-pythonw -m ad_examples.common.test_sgd_optimization
+python -m ad_examples.common.test_sgd_optimization
 """
 
 

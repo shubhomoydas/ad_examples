@@ -1,10 +1,15 @@
+import logging
+import numpy as np
 import numpy.random as rnd
+import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
-from ..common.gen_samples import *
+from ..common.utils import get_command_args, configure_logger
+from ..common.gen_samples import get_demo_samples, interpolate_2D_line_by_point_and_vec, plot_samples_and_lines
+from ..common.data_plotter import DataPlotter
 
 """
-pythonw -m ad_examples.ad.pca_reconstruct
+python -m ad_examples.ad.pca_reconstruct
 """
 
 

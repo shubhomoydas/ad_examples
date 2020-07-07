@@ -1,16 +1,6 @@
 import os
 import numpy as np
-import numpy.random as rnd
-import matplotlib.pyplot as plt
-
-import logging
-from pandas import DataFrame
-
-from ..common.data_plotter import *
-
-from .aad_globals import *
-from .aad_support import *
-from .forest_description import *
+import pandas as pd
 
 
 class ResultDefs(object):
@@ -72,7 +62,7 @@ class ResultDefs(object):
         window_indexes = window_indexes[:, 2:] - 1
         return window_indexes
 
-    def get_original_labels(self, datasetdir="../datasets/anomaly"):
+    def get_original_labels(self, datasetdir="./ad_examples/datasets/anomaly"):
         original_label_file = os.path.join(datasetdir, self.dataset, "fullsamples",
                                            "%s_1_orig_labels.csv" % self.dataset)
         labelsdf = pd.read_csv(original_label_file, header=0, sep=",")

@@ -1,9 +1,12 @@
 import os
-import numpy as np
+import sys
+import random
+from argparse import ArgumentParser
 import tensorflow as tf
 import numpy.random as rnd
 from sklearn import mixture
 
+from ..common.utils import Timer
 from ..common.gen_samples import *
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 

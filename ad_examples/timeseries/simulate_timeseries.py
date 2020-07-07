@@ -1,10 +1,12 @@
+import logging
+import random
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random as rnd
+import pandas as pd
 from scipy.stats import poisson
-from pandas import Series
-from ..common.utils import *
-from ..common.data_plotter import *
+
+from ..common.utils import dir_create, get_command_args, configure_logger
 from ..common.timeseries_datasets import TSeries
 
 """
@@ -146,15 +148,15 @@ def generate_synthetic_activity_data():
 
 
 def read_activity_data():
-    activities = pd.read_csv("../datasets/simulated_timeseries/activities_2000.csv",
+    activities = pd.read_csv("./ad_examples/datasets/timeseries/simulated_timeseries/activities_2000.csv",
                              header=None, sep=",", usecols=[1]
                              )
     activities = np.asarray(activities, dtype=np.int)
-    samples = pd.read_csv("../datasets/simulated_timeseries/samples_2000.csv",
+    samples = pd.read_csv("./ad_examples/datasets/timeseries/simulated_timeseries/samples_2000.csv",
                           header=None, sep=",", usecols=[1]
                           )
     samples = np.asarray(samples, dtype=np.float32)
-    starts = pd.read_csv("../datasets/simulated_timeseries/starts_2000.csv",
+    starts = pd.read_csv("./ad_examples/datasets/timeseries/simulated_timeseries/starts_2000.csv",
                          header=None, sep=",", usecols=[1]
                          )
     starts = np.asarray(starts, dtype=np.int)

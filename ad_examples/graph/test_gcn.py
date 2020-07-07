@@ -1,9 +1,9 @@
-import numpy.random as rnd
-import tensorflow as tf
 import os
+import logging
+import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-from ..common.gen_samples import *
+from ..common.utils import dir_create, get_command_args, configure_logger
 from .simple_gcn import SimpleGCNAttack, AdversarialUpdater, set_random_seeds, \
     get_gcn_option_list, GcnOpts, GraphAdjacency, create_gcn_default
 from .gcn_test_support import read_datasets_for_illustration, get_target_and_attack_nodes, \

@@ -1,14 +1,15 @@
 Python libraries required:
 --------------------------
-    numpy (1.14.2)
-    scipy (1.0.0)
-    scikit-learn (0.19.1)
+    six (1.15.0)
+    numpy (1.18.4)
+    scipy (1.4.1)
+    scikit-learn (0.23.0)
     cvxopt (1.1.9)
     pandas (0.22.0)
     ranking (0.3.1)
     statsmodels (0.9.0)
-    matplotlib (2.1.0)
-    tensorflow (1.6.0)
+    matplotlib (3.2.2)
+    tensorflow (1.15.3)
 
 `requirements.txt` lists all these libraries. To install:
 
@@ -43,9 +44,9 @@ Check output:
 
 ```
 baseline found:
-[0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 7, 7, 8, 8, 8, 9, 9, 9]
+[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 4, 4, 5, 6, 6, 6, 6, 7, 8, 8, 8]
 AAD found:
-[0, 0, 0, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 7, 7, 8, 8, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14, 15, 16]
+[0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 8, 9, 9, 9, 10, 11, 12, 13, 14, 14, 14, 15]
 ```
 
 To uninstall:
@@ -62,7 +63,7 @@ See [test_aad.ipynb](test_aad.ipynb) for sample notebook usage. This notebook co
 Note(s):
 --------------------------
 
-  1. The code has been tested with **python 2.7** and **python 3.6.1**.
+  1. The code has been tested with **python 3.6+**.
   
   2. Although the package has a dependency on tensorflow, it is not required for AAD and hence tensorflow will not be installed automatically.
 
@@ -129,7 +130,7 @@ There are multiple datasets (synthetic/real) supported. Change the code to work 
 
 To execute the code:
 
-1. **Run code from the checkout folder**. The outputs will be generated under 'temp' folder. The `pythonw` command is used on OSX with python 2.7, but `python` should be used with Python 3.6 on OSX, or on Linux.
+1. **Run code from the checkout folder**. The outputs will be generated under 'temp' folder.
 
 2. To avoid import errors, make sure that `PYTHONPATH` is configured correctly to include the ad_examples source dir: `.:/usr/local/lib/python`
 
@@ -159,7 +160,7 @@ The approach is explained in more detail in [(Das, S., Islam, R., et al. 2019)](
 
 To run [percept.py](https://github.com/shubhomoydas/ad_examples/blob/master/ad_examples/percept/percept.py):
 
-    pythonw -m ad_examples.percept.percept
+    python -m ad_examples.percept.percept
 
 The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_examples/blob/master/documentation/percept_taurel_fixedtau_prior.pdf) with plots illustrating how the data was actively labeled.
 
@@ -324,7 +325,7 @@ Bayesian Rulesets with AAD
 -------------------------------------------
 As we saw above, AAD helped infer the true relevance of subspaces and the most relevant subspaces were then employed as candidates for compact descriptions. This approach can be applied with other rule-mining algorithms such as (Wang, Rudin, et al. 2016) as well. (Wang, Rudin, et al. 2016) is a supervised algorithm that is first initialized with a [modestly] large set of classification rules. It then infers a much smaller subset of interpretable rules from the initial set of rules using a Bayesian framework. We will refer to these rules as **Bayesian Rulesets** (in contrast with our *Compact Descriptions*). The following command generates the plots below and illustrates both *Compact Descriptions* and *Bayesian Rulesets*. Here, we first run AAD with a budget of 30 and retrieve the top subspaces which cover all *discovered* anomalies. These subspaces (top left plot) are used as candidates for both *Compact Descriptions* (top right plot) as well as *Bayesian Rulesets* (bottom left plot). The discovered rules which imply **Anomaly** are shown in the bottom right plot. Since *Bayesian Rulesets* is supervised, we take the set of queried instances, and another set of randomly sampled unlabeled instances (having same size as queried) as the training set. The sampled unlabeled instances selected for training are assumed to be **nominal**.
 
-    pythonw -m ad_examples.aad.test_rulesets
+    python -m ad_examples.aad.test_rulesets
 
 ![Bayesian Rulesets](figures/aad/rulesets.png)
 
@@ -400,11 +401,11 @@ To generate the below plots, perform the following steps (**remember to run the 
 
     - Next, generate anomaly discovery curves:
         
-        pythonw -m ad_examples.aad.plot_aad_results
+        python -m ad_examples.aad.plot_aad_results
         
     - Finally, generate class diversity plot:
     
-        pythonw -m ad_examples.aad.plot_class_diversity
+        python -m ad_examples.aad.plot_class_diversity
 
 ![Diversity Effect](figures/aad/diversity_effect.png)
 
@@ -427,7 +428,7 @@ The architecture of GLAD is shown below.
 
 ![GLAD Architecture](figures/glad/architecture.png)
 
-The results on the *Toy2* dataset are shown below. In order to generate these figures, run the following commands (replace `python` with `pythonw` if facing problems with python 2.7):
+The results on the *Toy2* dataset are shown below. In order to generate these figures, run the following commands:
     
     python -m ad_examples.glad.test_glad --log_file=temp/glad/test_glad.log --debug --dataset=toy2 --n_anoms=60 --loda_debug --plot --op=unit
     
@@ -478,7 +479,7 @@ Anomaly Detector vs Classifier
 ------------------------------
 A question that comes up often is: *if we have a lot of labeled anomaly and nominal instances, then could we employ a classifier instead of an anomaly detector?* The answer is: **it depends on the dataset and the application**. We illustrate the difference between the behavior of an anomaly detector (AAD) and a classifier (Random Forest) in the figure below. The compact description strategy of AAD is also applicable to tree-based classifiers (such as decision trees and random forests) as demonstrated in the plots. These figures were generated by the following command.
 
-    pythonw -m ad_examples.aad.anomaly_vs_classifier --dataset=5 --algo=explain
+    python -m ad_examples.aad.anomaly_vs_classifier --dataset=5 --algo=explain
 
 ![Anomaly Detector vs Classifier](figures/aad/anomaly_vs_classifier.png)
 
@@ -487,7 +488,7 @@ Running AAD with precomputed anomaly scores
 -------------------------------------------
 In case scores from anomaly detector ensembles are available in a CSV file, then AAD can be run with the following command.
 
-    pythonw -m ad_examples.aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=./ad_examples/datasets/toy.csv --scoresfile=./ad_examples/datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
+    python -m ad_examples.aad.precomputed_aad --startcol=2 --labelindex=1 --header --randseed=42 --dataset=toy --datafile=./ad_examples/datasets/toy.csv --scoresfile=./ad_examples/datasets/toy_scores.csv --querytype=1 --detector_type=14 --constrainttype=4 --sigma2=0.5 --budget=35 --tau=0.03 --Ca=1 --Cn=1 --Cx=1 --withprior --unifprior --init=1 --runtype=simple --log_file=./temp/precomputed_aad.log --debug
 
 **Note: The detector_type is 14** for precomputed scores. The input file and scores should have the same format as in the example files (toy.csv, toy_scores.csv). Also, make sure the initialization is at uniform (`--init=1`) for good label efficiency (maximum reduction in false positives with minimum labeling effort). If the weights are initialized to zero or random, the results will be poor. *Ensembles enable us to get a good starting point for active learning in this case.*
 
@@ -496,7 +497,7 @@ How to employ AAD in your own application
 -----------------------------------------
 The [demo_aad.py](ad_examples/aad/demo_aad.py) shows the simpest AAD implementation that can be used as a template by other developers. To load a different dataset, replace `get_synthetic_samples(stype=2)` (in the code) with the appropriate function(s). The following command executes the code; check the generated log file `temp/demo_aad.log` for details such as anomaly descriptions.
 
-    pythonw -m ad_examples.aad.demo_aad
+    python -m ad_examples.aad.demo_aad
 
 
 GAN-based Anomaly Detection
@@ -562,7 +563,7 @@ The context here is graph data. See the figures below. Figure **(a)** shows a sy
 
 The figures presented below were generated by the following command:
 
-    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top
+    python -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top
 
 GCNs (Kipf and Welling, 2017) are a neural network based technique for learning on graph-structured data. Here, we will employ GCNs to predict the node labels in a partially-labeled graph (i.e., semi-supervised learning). As shown in Figure **(b)**, the nodes are either unlabeled (grey), or they are labeled (blue or red). Within this context, we have two tasks:
   1. Train a GCN transductively to predict the missing labels.
@@ -588,7 +589,7 @@ Increasing the number of layers
 
 The following command builds a model with **6** GCN layers. Each *GCN layer* involves one graph convolution operation. Therefore, the 6 GCN layer model implies a 6-hop neighborhood. As a result, the target node (in the figure below) is now within the neighborhood of the right-most attack node; this makes the attack nodes's gradients non-zero. *Note that having more than two layers has not been found to be very useful (Kipf and Welling, 2017).* The implications of having more layers on properties such as robustness are probably worth exploring. Having more layers probably increases the **attack surface** for a target node for the specific type of attack described above since more neighbors can now be used for attack. While increasing complexity of deep networks (e.g., by adding layers) sometimes adds more robustness, the situation for GCNs is a bit different because adding GCN layers implies a different model assumption (neighborhood distance) rather than just a different feature representation.
 
-    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=6
+    python -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=6
 
 ![GCN](figures/gcn/face_top_gcn_l6_n10_leaky_relu_r0100_p00010_nn5.png)
 
@@ -597,14 +598,14 @@ The following command builds a model with **6** GCN layers. Each *GCN layer* inv
 
 Within a GCN layer we first add one graph convolution. Next, we might stack zero or more neural network layers on top if it. Thus, each *GCN layer* is composed of one or more neural network layers -- of which the first layer is always a graph convolution. This increases the complexity of each GCN layer without increasing the hop-distance, and might help in identifying better hidden states. Its effect on robustness, as in the previous case, is worth exploring. Robustness of the target node in the illustrated toy dataset actually degraded in our preliminary experiments when we added extra layers to each GCN layer -- but again, more exhaustive experiments will be required before we make any conclusions. We do not show the plots here; however, they can be generated by running the following command. Here, the option `--n_sub_layers=2` adds an additional *leaky_relu* layer on top of the graph convolution in each GCN layer. The default strategy of adding additional layers is rather simplistic (see `simple_gcn.create_gcn_default()`) and should be customized for each dataset.
 
-    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=2 --n_sub_layers=2 --activation_type=leaky_relu
+    python -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --n_layers=2 --n_sub_layers=2 --activation_type=leaky_relu
 
 
 Robustness with ensembles
 -------------------------
 One commonly suggested technique to improve robustness of deep networks is to use *ensembles*. For GCNs, we can train multiple GCN models with subsampled edges. This means that although the nodes of the graph remain the same across all models, the adjacency matrices differ. The below command creates such a model with 10 members. The corresponding results are shown below. Here, we see that in Figure **(c)** the gradients are now smaller in magnitude. This implies that the attacker node's influence is somewhat diminished. As a result, the attribute(s) of the attacker need to change more (Figure **(d)**) to flip the target's label. Of course, this is just one data point and hence not scientific. **A more rigorous analysis would look at the results averaged across multiple nodes.**
 
-    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --ensemble --n_estimators=10 --edge_sample_prob=0.6
+    python -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --ensemble --n_estimators=10 --edge_sample_prob=0.6
 
 ![GCN](figures/gcn/gcn_face_top_ensemble_m10_e060.png)
 
@@ -622,7 +623,7 @@ For this, one approach might be to train the GCN in the following manner in each
 
 The below command executes this approach and the corresponding results are plotted below.
 
-    pythonw -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --adversarial_train --n_vulnerable=25 --n_sample_neighbors=3 --perturb_prob=0.1 --perturb_epsilon=0.2
+    python -m ad_examples.graph.test_gcn --debug --plot --results_dir=./temp/gcn --log_file=temp/test_gcn.log --dataset=face_top --adversarial_train --n_vulnerable=25 --n_sample_neighbors=3 --perturb_prob=0.1 --perturb_epsilon=0.2
 
 **Important:** The approach mentioned here is **EXPERIMENTAL**. There are possibly many other principled ways to implement robustness. The objective here is to make APIs available in order to try out various techniques. Other techniques include:
   1. Random perturbations to the uncertain nodes/edges

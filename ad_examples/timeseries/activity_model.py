@@ -1,18 +1,14 @@
 import random
 import numpy as np
 import numpy.random as rnd
-from pandas import concat
-from sklearn.preprocessing import MinMaxScaler
 import tensorflow as tf
-from sklearn.ensemble import IsolationForest
-from sklearn.neighbors import LocalOutlierFactor
 from sklearn import manifold
 
-from ..common.utils import *
-from ..common.timeseries_datasets import *
-from ..common.data_plotter import *
+from ..common.utils import logging, dir_create, get_command_args, configure_logger
+from ..common.timeseries_datasets import TSeries
+from ..common.data_plotter import DataPlotter
 
-from .simulate_timeseries import *
+from .simulate_timeseries import read_activity_data
 
 # Just disables the warning, doesn't enable AVX/FMA
 import os
@@ -22,7 +18,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 Simple time-series modeling with Tensorflow RNN and LSTM cells
 
 To execute:
-pythonw -m ad_examples.timeseries.activity_model --log_file=temp/timeseries/activity_model.log --debug --n_epochs=100 --n_lags=20 --algo=lstm
+python -m ad_examples.timeseries.activity_model --log_file=temp/timeseries/activity_model.log --debug --n_epochs=100 --n_lags=20 --algo=lstm
 
 Supported algo(s): lstm, basic
 """

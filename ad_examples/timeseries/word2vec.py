@@ -1,14 +1,11 @@
 import collections
 import math
-import os
-import sys
-import argparse
 import random
 
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
-from ..common.utils import *
+from ..common.utils import logger
 
 
 """

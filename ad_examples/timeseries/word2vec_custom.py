@@ -1,16 +1,7 @@
-import random
 import numpy as np
 import numpy.random as rnd
-from pandas import concat
-from sklearn.preprocessing import MinMaxScaler
-from sklearn import manifold
-import collections
-import math
 import tensorflow as tf
-from ..common.utils import *
-from ..common.timeseries_datasets import *
-from ..common.data_plotter import *
-from ..common.nn_utils import *
+from ..common.utils import Timer, logger
 
 
 """

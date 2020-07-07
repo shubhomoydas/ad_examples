@@ -1,5 +1,10 @@
 import importlib
-from .aad_globals import *
+from ..common.utils import sample
+from .aad_globals import (
+    QUERY_DETERMINISIC, QUERY_TOP_RANDOM, QUERY_QUANTILE, QUERY_RANDOM,
+    QUERY_CUSTOM_MODULE, QUERY_EUCLIDEAN, QUERY_SUBSPACE_EUCLIDEAN,
+    get_first_vals_not_marked
+)
 
 
 class Query(object):
@@ -35,7 +40,7 @@ class Query(object):
             return Query.get_custom_query_model(opts, **kwargs)
         elif querytype == QUERY_EUCLIDEAN:
             # doing it this round-about way else there will be a circular module dependency
-            module = importlib.import_module("aad.query_model_euclidean")
+            module = importlib.import_module("ad_examples.aad.query_model_euclidean")
             class_ = getattr(module, "QueryTopDiverseByEuclideanDistance")
             return class_(opts, **kwargs)
         elif querytype == QUERY_SUBSPACE_EUCLIDEAN:

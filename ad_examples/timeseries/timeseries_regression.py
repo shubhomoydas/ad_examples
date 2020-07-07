@@ -1,29 +1,36 @@
+import os
 import random
+import logging
 import numpy as np
 import numpy.random as rnd
+import matplotlib.pyplot as plt
 
 from sklearn import svm
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor as MLPRegressor_SK
 
-from ..common.utils import *
-from ..common.data_plotter import *
-from ..common.nn_utils import *
+from ..common.utils import dir_create, get_command_args, configure_logger
 
-from ..common.timeseries_datasets import *
+from ..common.timeseries_datasets import (
+    difference_series, prepare_tseries, univariate_timeseries_datasets, get_univariate_timeseries_data,
+    DiffScale, invert_difference_series
+)
+from ..common.data_plotter import DataPlotter
+from ..common.nn_utils import MLPRegressor_TF
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 """
 To execute:
-pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=12 --dataset=airline
-pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=5 --dataset=shampoo
-pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=lynx
-pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=aus_beer
-pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=us_accident
-pythonw -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=50 --dataset=wolf_sunspot
+python -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=12 --dataset=airline
+python -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=5 --dataset=shampoo
+python -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=lynx
+python -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=aus_beer
+python -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nntf --n_lags=12 --dataset=us_accident
+python -m ad_examples.timeseries.timeseries_regression --n_epochs=200 --debug --log_file=temp/timeseries/timeseries_regression.log --normalize_trend --algo=nnsk --n_lags=50 --dataset=wolf_sunspot
 
-pythonw -m ad_examples.timeseries.timeseries_regression --dataset=fisher_temp --algo=nntf --n_lags=20 --n_epochs=100 --debug --log_file=temp/timeseries/timeseries_regression.log
+python -m ad_examples.timeseries.timeseries_regression --dataset=fisher_temp --algo=nntf --n_lags=20 --n_epochs=100 --debug --log_file=temp/timeseries/timeseries_regression.log
 
 """
 
@@ -169,7 +176,7 @@ if __name__ == "__main__":
                      'svr':  'Support Vector Regression'}
     if args.algo not in allowed_algos.keys():
         print ("Invalid algo: %s. Allowed algos:" % args.algo)
-        for key, val in allowed_algos.iteritems():
+        for key, val in allowed_algos.items():
             print ("  %s: %s" % (key, val))
         exit(0)
 

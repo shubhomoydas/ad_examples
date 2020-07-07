@@ -1,11 +1,9 @@
 from __future__ import division
 
-import logging
 from sklearn.ensemble import IsolationForest
 
 from ..common.utils import *
-from .random_split_trees import *
-
+from .random_split_trees import RandomSplitTree, ArrTree, TREE_UPD_OVERWRITE, RandomSplitForest, get_tree_partitions
 
 """
 Builds isolation forest instances with partitions of features so that each

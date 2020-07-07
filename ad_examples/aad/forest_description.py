@@ -1,15 +1,10 @@
-import os
 import numpy as np
 
-import logging
-
+from ..common.utils import get_sample_feature_ranges
 from ..common.expressions import get_feature_meta_default, convert_feature_ranges_to_rules, \
     get_max_len_in_rules, convert_conjunctive_rules_to_feature_ranges
-
+from .forest_aad_detector import is_in_region
 from ..bayesian_ruleset.bayesian_ruleset import BayesianRuleset
-
-from .aad_globals import *
-from .aad_support import *
 
 
 def get_most_anomalous_subspace_indexes(model, n_top=30):
