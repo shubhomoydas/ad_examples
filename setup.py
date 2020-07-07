@@ -55,20 +55,19 @@ setup(
     package_data=package_data,
     include_package_data=True,
     install_requires=[
+        'six>=1.15.0',
         'cvxopt>=1.1.9',
-        'matplotlib>=2.1.0',
-        'numpy>=1.14.0',
+        'matplotlib>=3.2.2',
+        'numpy>=1.18.4',
         'pandas>=0.22.0',
-        'ranking',
-        'scipy>=1.0.0',
+        'ranking>=0.3.1',
+        'scipy>=1.4.1',
         'statsmodels>=0.9.0',
-        'scikit-learn>=0.19.1',
-        # 'tensorflow>=1.6.0',  # *NOT* required for AAD. Required for GLAD and a few other stuff such as timeseries
+        'scikit-learn>=0.23.0',
+        # 'tensorflow==1.15.3',  # *NOT* required for AAD. Required for GLAD and a few other stuff such as timeseries
     ],
     classifiers=[
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
     ],
