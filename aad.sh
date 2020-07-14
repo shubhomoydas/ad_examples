@@ -616,7 +616,7 @@ else
     echo "Using default file paths..."
     BASE_DIR=${DATASET_FOLDER}
     LOG_PATH=./temp/${OPERATION}
-    PYTHON_CMD="pythonw -m"
+    PYTHON_CMD="python -m"
     RESULTS_PATH="temp/${OPERATION}/$DATASET/${NAME_PREFIX}"
     SCRIPT_PATH=${PYMODULE}
 fi
