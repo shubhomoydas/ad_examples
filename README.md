@@ -191,6 +191,23 @@ Cite this work
 --------------
 In case you find this **repository** useful or use in your own work, please cite it with the following BibTeX references:
 ```
+@article{das:2020,
+	author = {Das, Shubhomoy and Wong, Weng-Keen and Dietterich, Thomas and Fern, Alan and Emmott, Andrew},
+	title = {Discovering Anomalies by Incorporating Feedback from an Expert},
+	year = {2020},
+	issue_date = {July 2020},
+	publisher = {Association for Computing Machinery},
+	volume = {14},
+	number = {4},
+	issn = {1556-4681},
+	url = {https://doi.org/10.1145/3396608},
+	doi = {10.1145/3396608},
+	journal = {ACM Trans. Knowl. Discov. Data},
+	month = jun,
+	articleno = {49},
+	numpages = {32},
+}
+
 @article{das:2019,
     author = {Shubhomoy Das and Md Rakibul Islam and Nitthilan Kannappan Jayakodi and Janardhan Rao Doppa},
     title = {Active Anomaly Detection via Ensembles: Insights, Algorithms, and Interpretability},
@@ -212,13 +229,13 @@ In case you find this **repository** useful or use in your own work, please cite
 
 Other publications may be cited as:
 ```
-@article{das:2018b,
-    author = {Shubhomoy Das and Janardhan Rao Doppa},
+@article{islam:2020b,
+    author = {Md Rakibul Islam and Shubhomoy Das and Janardhan Rao Doppa and Sriraam Natarajan},
     title = {GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression},
-    year = {2018},
-    journal = {arXiv:1810.01403},
+    year = {2020},
+    booktitle={ICML Workshop on Human in the Loop Learning},
     howpublished = {\url{https://arxiv.org/abs/1810.01403}},
-    note = {[Online; accessed 02-Oct-2018]}
+    note = {[Online; accessed 15-Jul-2020]}
 }
 
 @article{das:2018a,
