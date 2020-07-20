@@ -231,7 +231,7 @@ Other publications may be cited as:
 ```
 @article{islam:2020b,
     author = {Md Rakibul Islam and Shubhomoy Das and Janardhan Rao Doppa and Sriraam Natarajan},
-    title = {GLAD: GLocalized Anomaly Detection via Active Feature Space Suppression},
+    title = {GLAD: GLocalized Anomaly Detection via Human-in-the-Loop Learning},
     year = {2020},
     booktitle={ICML Workshop on Human in the Loop Learning},
     howpublished = {\url{https://arxiv.org/abs/1810.01403}},
