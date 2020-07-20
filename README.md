@@ -205,7 +205,7 @@ In case you find this **repository** useful or use in your own work, please cite
 	journal = {ACM Trans. Knowl. Discov. Data},
 	month = jun,
 	articleno = {49},
-	numpages = {32},
+	numpages = {32}
 }
 
 @article{das:2019,
