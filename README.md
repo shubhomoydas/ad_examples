@@ -9,7 +9,7 @@ Python libraries required:
     ranking (0.3.1)
     statsmodels (0.9.0)
     matplotlib (3.2.2)
-    tensorflow (1.15.3)
+    tensorflow (1.15.4)
 
 `requirements.txt` lists all these libraries. To install:
 
