@@ -64,7 +64,7 @@ setup(
         'scipy>=1.4.1',
         'statsmodels>=0.9.0',
         'scikit-learn>=0.23.0',
-        # 'tensorflow==1.15.3',  # *NOT* required for AAD. Required for GLAD and a few other stuff such as timeseries
+        # 'tensorflow==1.15.4',  # *NOT* required for AAD. Required for GLAD and a few other stuff such as timeseries
     ],
     classifiers=[
         'License :: OSI Approved :: MIT License',
