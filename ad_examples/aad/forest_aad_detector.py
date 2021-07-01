@@ -661,11 +661,11 @@ class AadForest(Aad, StreamingSupport):
         batch_size = 10000
         start_batch = 0
         end_batch = min(start_batch + batch_size, n)
-        x_new = csr_matrix((0, m), dtype=float)
+        result = [csr_matrix((0, m), dtype=float),]
         while start_batch < end_batch:
             starttime = timer()
             x_tmp = matrix(x[start_batch:end_batch, :], ncol=x.shape[1])
-            x_tmp_new = lil_matrix((end_batch - start_batch, m), dtype=x_new.dtype)
+            x_tmp_new = lil_matrix((end_batch - start_batch, m), dtype=float)
             for i, tree in enumerate(self.clf.estimators_):
                 n_tmp = x_tmp.shape[0]
                 node_regions = self.all_node_regions[i]
@@ -690,10 +690,10 @@ class AadForest(Aad, StreamingSupport):
                 x_tmp_new = x_tmp_new.multiply(1/norms)
                 # norms = np.sqrt(x_tmp_new.power(2).sum(axis=1))
                 # logger.debug("norms after [%d/%d]:\n%s" % (start_batch, end_batch, str(list(norms.T))))
-            x_new = vstack([x_new, x_tmp_new.tocsr()])
+            result.append(x_tmp_new.tocsr())
             start_batch = end_batch
             end_batch = min(start_batch + batch_size, n)
-        return x_new
+        return vstack(result)
 
     def _transform_to_region_features_with_lookup(self, x, x_new):
         """ Transforms from original feature space to IF node space
