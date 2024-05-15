@@ -29,7 +29,7 @@ __all__ = ["get_tree_partitions", "RandomSplitTree", "RandomSplitForest",
            "IForest", "StreamingSupport",
            "TREE_UPD_OVERWRITE", "TREE_UPD_INCREMENTAL", "tree_update_types"]
 
-INTEGER_TYPES = (numbers.Integral, np.int)
+INTEGER_TYPES = (numbers.Integral, int)
 
 IS_FIRST = 1
 IS_NOT_FIRST = 0
