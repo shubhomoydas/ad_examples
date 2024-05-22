@@ -69,7 +69,7 @@ Note(s):
 
 
 This repository includes, among other examples, my own original research in active learning and data drift detection:
-  - [AAD: Active Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work)) (Das, Wong, et al. 2020), (Das, Wong, et al. 2016), (Das, Wong, et al. 2017), (Das, Islam, et al. 2019)
+  - [AAD and HiLAD: Human in the Loop Anomaly Discovery](#active-anomaly-discovery-aad) ([cite](#cite-this-work)) (Das, Islam, et al. 2024), (Das, Wong, et al. 2020), (Das, Wong, et al. 2016), (Das, Wong, et al. 2017)
   - [GLAD: GLocalized Anomaly Detection](#glocalized-anomaly-detection) ([cite](#cite-this-work)) (Islam, Das, et al. 2020)
   - [Data drift detection](DriftDetection.md#data-drift-detection) ([cite](#cite-this-work)) (Das, Islam, et al. 2019)
 
@@ -168,11 +168,11 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 
 
 **Reference(s)**:
+  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2024). *Effectiveness of Tree-based Ensembles for Anomaly Discovery: Insights, Batch and Streaming Active Learning*, Journal of Artificial Intelligence Research 80 (2024) 127-172. [(pdf)](https://arxiv.org/pdf/1901.08930) (**This is the most comprehensive version.**)
+
   - Das, S., Wong, W-K., Dietterich, T., Fern, A. and Emmott, A. (2020). *Discovering Anomalies by Incorporating Feedback from an Expert*, ACM Transactions on Knowledge Discovery from Data (TKDD) 14, 4, Article 49 (July 2020), 32 pages. DOI:https://doi.org/10.1145/3396608.
 
   - Islam, R., Das, S., Doppa, J.R., Natarajan, S. (2020). *GLAD: GLocalized Anomaly Detection via Human-in-the-Loop Learning*. Workshop on Human in the Loop Learning at 37th International Conference on Machine Learning (ICML) [(pdf)](https://arxiv.org/pdf/1810.01403.pdf)
-
-  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2024). *Effectiveness of Tree-based Ensembles for Anomaly Discovery: Insights, Batch and Streaming Active Learning*, Journal of Artificial Intelligence Research 80 (2024) 127-172. [(pdf)](https://arxiv.org/pdf/1901.08930) (**This is the most comprehensive version.**)
 
   - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
 
