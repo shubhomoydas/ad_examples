@@ -215,7 +215,7 @@ In case you find this **repository** useful or use in your own work, please cite
     issue_date = {May 2024},
     volume = {80},
     journal = {J. Artif. Int. Res.},
-    month = {feb},
+    month = {may},
     numpages = {46},
     pages = {127--172}
 }
