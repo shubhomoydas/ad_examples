@@ -1,14 +1,14 @@
 Python libraries required:
 --------------------------
-    six (1.15.0)
-    numpy (1.18.4)
-    scipy (1.4.1)
+    six (1.16.0)
+    numpy (1.26.4)
+    scipy (1.13.0)
     scikit-learn (0.23.0)
-    cvxopt (1.1.9)
-    pandas (0.22.0)
-    ranking (0.3.1)
-    statsmodels (0.9.0)
-    matplotlib (3.2.2)
+    cvxopt (1.3.2)
+    pandas (2.2.2)
+    ranking (0.3.2)
+    statsmodels (0.14.2)
+    matplotlib (3.8.4)
     tensorflow (1.15.4)
 
 `requirements.txt` lists all these libraries. To install:
@@ -172,7 +172,7 @@ The above command will generate a [pdf file](https://github.com/shubhomoydas/ad_
 
   - Islam, R., Das, S., Doppa, J.R., Natarajan, S. (2020). *GLAD: GLocalized Anomaly Detection via Human-in-the-Loop Learning*. Workshop on Human in the Loop Learning at 37th International Conference on Machine Learning (ICML) [(pdf)](https://arxiv.org/pdf/1810.01403.pdf)
 
-  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2019). *Active Anomaly Detection via Ensembles: Insights, Algorithms, and Interpretability*. [(pdf)](https://arxiv.org/pdf/1901.08930.pdf) (**This is the most comprehensive version.**)
+  - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2024). *Effectiveness of Tree-based Ensembles for Anomaly Discovery: Insights, Batch and Streaming Active Learning*, Journal of Artificial Intelligence Research 80 (2024) 127-172. [(pdf)](https://arxiv.org/pdf/1901.08930) (**This is the most comprehensive version.**)
 
   - Das, S., Islam, R., Jayakodi, N.K. and Doppa, J.R. (2018). *Active Anomaly Detection via Ensembles*. [(pdf)](https://arxiv.org/pdf/1809.06477.pdf)
 
