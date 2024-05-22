@@ -208,13 +208,16 @@ In case you find this **repository** useful or use in your own work, please cite
 	numpages = {32}
 }
 
-@article{das:2019,
+@article{das:2024,
     author = {Shubhomoy Das and Md Rakibul Islam and Nitthilan Kannappan Jayakodi and Janardhan Rao Doppa},
-    title = {Active Anomaly Detection via Ensembles: Insights, Algorithms, and Interpretability},
-    year = {2019},
-    journal = {arXiv:1901.08930},
-    howpublished = {\url{https://arxiv.org/abs/1901.08930}},
-    note = {[Online; accessed 27-Jan-2019]}
+    title = {Effectiveness of Tree-based Ensembles for Anomaly Discovery: Insights, Batch and Streaming Active Learning},
+    year = {2024},
+    issue_date = {May 2024},
+    volume = {80},
+    journal = {J. Artif. Int. Res.},
+    month = {feb},
+    numpages = {46},
+    pages = {127--172}
 }
 
 @misc{github:shubhomoydas:ad_examples,
